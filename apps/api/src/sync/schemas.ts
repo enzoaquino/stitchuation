@@ -4,7 +4,7 @@ const syncChangeSchema = z.object({
   type: z.enum(["thread"]),
   action: z.enum(["upsert", "delete"]),
   id: z.string().uuid(),
-  data: z.record(z.unknown()).optional(),
+  data: z.record(z.string(), z.unknown()).optional(),
   updatedAt: z.string().datetime(),
   deletedAt: z.string().datetime().optional(),
 });
