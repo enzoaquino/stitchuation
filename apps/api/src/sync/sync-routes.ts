@@ -2,8 +2,9 @@ import { Hono } from "hono";
 import { SyncService } from "./sync-service.js";
 import { syncRequestSchema } from "./schemas.js";
 import { authMiddleware } from "../auth/middleware.js";
+import type { AuthEnv } from "../auth/types.js";
 
-const syncRoutes = new Hono();
+const syncRoutes = new Hono<AuthEnv>();
 const syncService = new SyncService();
 
 syncRoutes.use("/*", authMiddleware);

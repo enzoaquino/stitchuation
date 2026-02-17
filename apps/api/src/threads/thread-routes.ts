@@ -3,9 +3,10 @@ import { z } from "zod";
 import { ThreadService } from "./thread-service.js";
 import { createThreadSchema, updateThreadSchema } from "./schemas.js";
 import { authMiddleware } from "../auth/middleware.js";
+import type { AuthEnv } from "../auth/types.js";
 import { NotFoundError } from "../errors.js";
 
-const threadRoutes = new Hono();
+const threadRoutes = new Hono<AuthEnv>();
 const threadService = new ThreadService();
 const uuidSchema = z.string().uuid();
 
