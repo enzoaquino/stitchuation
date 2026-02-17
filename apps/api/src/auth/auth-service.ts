@@ -5,6 +5,13 @@ import { users } from "../db/schema.js";
 import { signAccessToken, signRefreshToken } from "./jwt.js";
 import type { RegisterInput, LoginInput } from "./schemas.js";
 
+export class AuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AuthError";
+  }
+}
+
 export class AuthService {
   async register(input: RegisterInput) {
     const passwordHash = await bcrypt.hash(input.password, 12);
@@ -38,12 +45,12 @@ export class AuthService {
       .limit(1);
 
     if (!user || !user.passwordHash) {
-      throw new Error("Invalid email or password");
+      throw new AuthError("Invalid email or password");
     }
 
     const valid = await bcrypt.compare(input.password, user.passwordHash);
     if (!valid) {
-      throw new Error("Invalid email or password");
+      throw new AuthError("Invalid email or password");
     }
 
     const tokenPayload = { userId: user.id, email: user.email };

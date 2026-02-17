@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { AuthService } from "../../src/auth/auth-service.js";
+import { AuthService, AuthError } from "../../src/auth/auth-service.js";
+import { verifyAccessToken, verifyRefreshToken } from "../../src/auth/jwt.js";
 
 describe("AuthService", () => {
   let authService: AuthService;
@@ -21,6 +22,23 @@ describe("AuthService", () => {
       expect(result.accessToken).toBeDefined();
       expect(result.refreshToken).toBeDefined();
       expect(result.user.id).toBeDefined();
+    });
+
+    it("returns tokens containing correct userId and email", async () => {
+      const email = `jwt-verify-${Date.now()}@example.com`;
+      const result = await authService.register({
+        email,
+        password: "securepassword123",
+        displayName: "JWT User",
+      });
+
+      const accessPayload = verifyAccessToken(result.accessToken);
+      expect(accessPayload.userId).toBe(result.user.id);
+      expect(accessPayload.email).toBe(email);
+
+      const refreshPayload = verifyRefreshToken(result.refreshToken);
+      expect(refreshPayload.userId).toBe(result.user.id);
+      expect(refreshPayload.email).toBe(email);
     });
 
     it("rejects duplicate emails", async () => {
@@ -60,7 +78,7 @@ describe("AuthService", () => {
       expect(result.refreshToken).toBeDefined();
     });
 
-    it("rejects invalid password", async () => {
+    it("rejects invalid password with AuthError", async () => {
       const email = `bad-pw-${Date.now()}@example.com`;
       await authService.register({
         email,
@@ -68,18 +86,26 @@ describe("AuthService", () => {
         displayName: "Bad PW User",
       });
 
-      await expect(
-        authService.login({ email, password: "wrongpassword" })
-      ).rejects.toThrow("Invalid email or password");
+      try {
+        await authService.login({ email, password: "wrongpassword" });
+        expect.unreachable("Should have thrown");
+      } catch (error) {
+        expect(error).toBeInstanceOf(AuthError);
+        expect((error as AuthError).message).toBe("Invalid email or password");
+      }
     });
 
-    it("rejects unknown email", async () => {
-      await expect(
-        authService.login({
+    it("rejects unknown email with AuthError", async () => {
+      try {
+        await authService.login({
           email: "nobody@example.com",
           password: "whatever",
-        })
-      ).rejects.toThrow("Invalid email or password");
+        });
+        expect.unreachable("Should have thrown");
+      } catch (error) {
+        expect(error).toBeInstanceOf(AuthError);
+        expect((error as AuthError).message).toBe("Invalid email or password");
+      }
     });
   });
 });

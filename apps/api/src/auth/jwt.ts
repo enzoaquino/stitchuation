@@ -1,11 +1,31 @@
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "dev-refresh-secret";
+function requireEnv(name: string, fallback: string): string {
+  const value = process.env[name];
+  if (value) return value;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(`${name} must be set in production`);
+  }
+  return fallback;
+}
+
+const JWT_SECRET = requireEnv("JWT_SECRET", "dev-secret");
+const JWT_REFRESH_SECRET = requireEnv("JWT_REFRESH_SECRET", "dev-refresh-secret");
 
 export interface TokenPayload {
   userId: string;
   email: string;
+}
+
+function validatePayload(decoded: jwt.JwtPayload | string): TokenPayload {
+  if (
+    typeof decoded === "string" ||
+    typeof decoded.userId !== "string" ||
+    typeof decoded.email !== "string"
+  ) {
+    throw new Error("Invalid token payload");
+  }
+  return { userId: decoded.userId, email: decoded.email };
 }
 
 export function signAccessToken(payload: TokenPayload): string {
@@ -17,9 +37,11 @@ export function signRefreshToken(payload: TokenPayload): string {
 }
 
 export function verifyAccessToken(token: string): TokenPayload {
-  return jwt.verify(token, JWT_SECRET) as TokenPayload;
+  const decoded = jwt.verify(token, JWT_SECRET);
+  return validatePayload(decoded);
 }
 
 export function verifyRefreshToken(token: string): TokenPayload {
-  return jwt.verify(token, JWT_REFRESH_SECRET) as TokenPayload;
+  const decoded = jwt.verify(token, JWT_REFRESH_SECRET);
+  return validatePayload(decoded);
 }
