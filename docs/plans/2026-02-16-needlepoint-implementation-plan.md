@@ -10,6 +10,158 @@
 
 **Design doc:** `docs/plans/2026-02-16-needlepoint-app-design.md`
 
+**Design system:** `docs/plans/2026-02-16-design-system.md`
+
+---
+
+## Milestone 0: iOS Design System Foundation
+
+### Task 0: Implement design system tokens
+
+**Files:**
+- Create: `apps/ios/Needlepoint/DesignSystem/Colors.swift`
+- Create: `apps/ios/Needlepoint/DesignSystem/Typography.swift`
+- Create: `apps/ios/Needlepoint/DesignSystem/Spacing.swift`
+- Create: `apps/ios/Needlepoint/DesignSystem/Components/ThreadSwatch.swift`
+
+Refer to `docs/plans/2026-02-16-design-system.md` for all values.
+
+**Step 1: Add font files**
+
+Download and add to the Xcode project:
+- PlayfairDisplay-Regular.ttf, PlayfairDisplay-SemiBold.ttf, PlayfairDisplay-Bold.ttf
+- SourceSerif4-Regular.ttf, SourceSerif4-Medium.ttf, SourceSerif4-SemiBold.ttf
+
+Register in Info.plist under `UIAppFonts`.
+
+**Step 2: Create `Colors.swift`**
+
+```swift
+import SwiftUI
+
+extension Color {
+    // Backgrounds
+    static let linen = Color(hex: "#F5F0E8")
+    static let parchment = Color(hex: "#EDE6D8")
+    static let cream = Color(hex: "#FAF7F2")
+
+    // Text
+    static let espresso = Color(hex: "#3B2F2F")
+    static let walnut = Color(hex: "#5C4A3D")
+    static let clay = Color(hex: "#8B7355")
+
+    // Accents
+    static let terracotta = Color(hex: "#C4704B")
+    static let terracottaLight = Color(hex: "#D4896A")
+    static let terracottaMuted = Color(hex: "#E8C4B0")
+    static let sage = Color(hex: "#7A8B6F")
+    static let dustyRose = Color(hex: "#C4919B")
+    static let slate = Color(hex: "#8B8589")
+}
+
+extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+        let scanner = Scanner(string: hex)
+        var rgbValue: UInt64 = 0
+        scanner.scanHexInt64(&rgbValue)
+        self.init(
+            red: Double((rgbValue & 0xFF0000) >> 16) / 255.0,
+            green: Double((rgbValue & 0x00FF00) >> 8) / 255.0,
+            blue: Double(rgbValue & 0x0000FF) / 255.0
+        )
+    }
+}
+```
+
+**Step 3: Create `Typography.swift`**
+
+```swift
+import SwiftUI
+
+extension Font {
+    static func playfair(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        switch weight {
+        case .bold: return .custom("PlayfairDisplay-Bold", size: size)
+        case .semibold: return .custom("PlayfairDisplay-SemiBold", size: size)
+        default: return .custom("PlayfairDisplay-Regular", size: size)
+        }
+    }
+
+    static func sourceSerif(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        switch weight {
+        case .semibold: return .custom("SourceSerif4-SemiBold", size: size)
+        case .medium: return .custom("SourceSerif4-Medium", size: size)
+        default: return .custom("SourceSerif4-Regular", size: size)
+        }
+    }
+}
+```
+
+**Step 4: Create `Spacing.swift`**
+
+```swift
+import Foundation
+
+enum Spacing {
+    static let xxs: CGFloat = 2
+    static let xs: CGFloat = 4
+    static let sm: CGFloat = 8
+    static let md: CGFloat = 12
+    static let lg: CGFloat = 16
+    static let xl: CGFloat = 24
+    static let xxl: CGFloat = 32
+    static let xxxl: CGFloat = 48
+}
+
+enum CornerRadius {
+    static let subtle: CGFloat = 6
+    static let card: CGFloat = 12
+    static let modal: CGFloat = 16
+}
+```
+
+**Step 5: Create `ThreadSwatch.swift`**
+
+```swift
+import SwiftUI
+
+struct ThreadSwatch: View {
+    let colorHex: String?
+    var size: CGFloat = 24
+
+    var body: some View {
+        if let hex = colorHex {
+            Circle()
+                .fill(Color(hex: hex))
+                .overlay(Circle().stroke(Color.slate, lineWidth: 0.5))
+                .frame(width: size, height: size)
+        } else {
+            Circle()
+                .fill(Color.parchment)
+                .overlay {
+                    Image(systemName: "questionmark")
+                        .font(.system(size: size * 0.4))
+                        .foregroundStyle(Color.clay)
+                }
+                .overlay(Circle().stroke(Color.slate, lineWidth: 0.5))
+                .frame(width: size, height: size)
+        }
+    }
+}
+```
+
+**Step 6: Build and verify**
+
+Cmd+B in Xcode.
+
+**Step 7: Commit**
+
+```bash
+git add apps/ios/
+git commit -m "feat(ios): add design system — colors, typography, spacing, thread swatch"
+```
+
 ---
 
 ## Milestone 1: API Project Setup & Database
@@ -1767,8 +1919,29 @@ struct ThreadListView: View {
     }
 
     var body: some View {
-        List(filteredThreads) { thread in
-            ThreadRowView(thread: thread)
+        ZStack {
+            Color.linen.ignoresSafeArea()
+            if filteredThreads.isEmpty && viewModel.searchText.isEmpty {
+                // Empty state — design system pattern
+                VStack(spacing: Spacing.lg) {
+                    Image(systemName: "tray")
+                        .font(.system(size: 48))
+                        .foregroundStyle(Color.clay)
+                    Text("No threads yet")
+                        .font(.playfair(22, weight: .semibold))
+                        .foregroundStyle(Color.espresso)
+                    Text("Tap + to add your first thread")
+                        .font(.sourceSerif(17))
+                        .foregroundStyle(Color.walnut)
+                }
+                .padding(Spacing.xxxl)
+            } else {
+                List(filteredThreads) { thread in
+                    ThreadRowView(thread: thread)
+                        .listRowBackground(Color.cream)
+                }
+                .scrollContentBackground(.hidden)
+            }
         }
         .searchable(text: $viewModel.searchText, prompt: "Search threads")
         .navigationTitle("Inventory")
@@ -1776,6 +1949,7 @@ struct ThreadListView: View {
             Button("Add", systemImage: "plus") {
                 showAddThread = true
             }
+            .tint(Color.terracotta)
         }
         .sheet(isPresented: $showAddThread) {
             AddThreadView()
@@ -1787,37 +1961,60 @@ struct ThreadListView: View {
 **Step 3: Create ThreadRowView inline**
 
 ```swift
+// Uses design system from docs/plans/2026-02-16-design-system.md
 struct ThreadRowView: View {
     let thread: NeedleThread
 
     var body: some View {
-        HStack {
-            if let hex = thread.colorHex {
-                Circle()
-                    .fill(Color(hex: hex))
-                    .frame(width: 24, height: 24)
-            }
-            VStack(alignment: .leading) {
+        HStack(spacing: Spacing.md) {
+            ThreadSwatch(colorHex: thread.colorHex)
+
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text("\(thread.brand) \(thread.number)")
-                    .font(.headline)
+                    .font(.sourceSerif(17, weight: .semibold))
+                    .foregroundStyle(Color.espresso)
                 if let name = thread.colorName {
-                    Text(name)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    Text("\(name) · \(thread.fiberType.rawValue.capitalized)")
+                        .font(.sourceSerif(15))
+                        .foregroundStyle(Color.walnut)
                 }
             }
             Spacer()
-            Stepper(value: Binding(
-                get: { thread.quantity },
-                set: { newValue in
-                    thread.quantity = newValue
-                    thread.updatedAt = Date()
+            HStack(spacing: Spacing.sm) {
+                Button { updateQuantity(-1) } label: {
+                    Image(systemName: "minus")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.terracotta)
+                        .frame(width: 28, height: 28)
+                        .background(Color.terracottaMuted.opacity(0.3))
+                        .clipShape(Circle())
                 }
-            ), in: 0...999) {
+                .buttonStyle(.plain)
+                .disabled(thread.quantity <= 0)
+
                 Text("\(thread.quantity)")
-                    .font(.title3)
-                    .monospacedDigit()
+                    .font(.system(.body, design: .monospaced).weight(.medium))
+                    .foregroundStyle(Color.espresso)
+                    .frame(minWidth: 24)
+
+                Button { updateQuantity(1) } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.terracotta)
+                        .frame(width: 28, height: 28)
+                        .background(Color.terracottaMuted.opacity(0.3))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
             }
+        }
+        .padding(.vertical, Spacing.sm)
+    }
+
+    private func updateQuantity(_ delta: Int) {
+        withAnimation(.spring(duration: 0.2)) {
+            thread.quantity = max(0, thread.quantity + delta)
+            thread.updatedAt = Date()
         }
     }
 }
@@ -2250,59 +2447,92 @@ struct LoginView: View {
         _viewModel = State(initialValue: AuthViewModel(networkClient: networkClient))
     }
 
+    // Uses design system from docs/plans/2026-02-16-design-system.md
     var body: some View {
-        VStack(spacing: 24) {
-            Text("Needlepoint")
-                .font(.largeTitle.bold())
+        ZStack {
+            Color.linen.ignoresSafeArea()
 
-            SignInWithAppleButton(.signIn) { request in
-                request.requestedScopes = [.email, .fullName]
-            } onCompletion: { result in
-                // Handle Apple sign-in
-            }
-            .frame(height: 50)
-            .padding(.horizontal)
+            VStack(spacing: Spacing.xl) {
+                Spacer()
 
-            Divider()
+                Text("Needlepoint")
+                    .font(.playfair(34, weight: .bold))
+                    .foregroundStyle(Color.espresso)
 
-            Group {
-                if viewModel.isRegistering {
-                    TextField("Display Name", text: $viewModel.displayName)
+                Text("Your craft companion")
+                    .font(.sourceSerif(17))
+                    .foregroundStyle(Color.walnut)
+
+                Spacer().frame(height: Spacing.lg)
+
+                SignInWithAppleButton(.signIn) { request in
+                    request.requestedScopes = [.email, .fullName]
+                } onCompletion: { result in
+                    // Handle Apple sign-in
                 }
-                TextField("Email", text: $viewModel.email)
-                    .textContentType(.emailAddress)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                SecureField("Password", text: $viewModel.password)
-                    .textContentType(viewModel.isRegistering ? .newPassword : .password)
-            }
-            .textFieldStyle(.roundedBorder)
-            .padding(.horizontal)
+                .frame(height: 50)
+                .cornerRadius(CornerRadius.subtle)
+                .padding(.horizontal, Spacing.xl)
 
-            if let error = viewModel.errorMessage {
-                Text(error)
-                    .foregroundStyle(.red)
-                    .font(.caption)
-            }
+                HStack {
+                    Rectangle().fill(Color.clay.opacity(0.3)).frame(height: 0.5)
+                    Text("or")
+                        .font(.sourceSerif(13))
+                        .foregroundStyle(Color.clay)
+                    Rectangle().fill(Color.clay.opacity(0.3)).frame(height: 0.5)
+                }
+                .padding(.horizontal, Spacing.xl)
 
-            Button(viewModel.isRegistering ? "Create Account" : "Log In") {
-                Task {
+                VStack(spacing: Spacing.md) {
                     if viewModel.isRegistering {
-                        await viewModel.register()
-                    } else {
-                        await viewModel.login()
+                        TextField("Display Name", text: $viewModel.displayName)
                     }
+                    TextField("Email", text: $viewModel.email)
+                        .textContentType(.emailAddress)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                    SecureField("Password", text: $viewModel.password)
+                        .textContentType(viewModel.isRegistering ? .newPassword : .password)
                 }
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(viewModel.isLoading)
+                .textFieldStyle(.roundedBorder)
+                .font(.sourceSerif(17))
+                .padding(.horizontal, Spacing.xl)
 
-            Button(viewModel.isRegistering ? "Already have an account? Log in" : "Create an account") {
-                viewModel.isRegistering.toggle()
+                if let error = viewModel.errorMessage {
+                    Text(error)
+                        .foregroundStyle(Color.terracotta)
+                        .font(.sourceSerif(13))
+                }
+
+                Button {
+                    Task {
+                        if viewModel.isRegistering {
+                            await viewModel.register()
+                        } else {
+                            await viewModel.login()
+                        }
+                    }
+                } label: {
+                    Text(viewModel.isRegistering ? "Create Account" : "Log In")
+                        .font(.sourceSerif(17, weight: .semibold))
+                        .foregroundStyle(Color.cream)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Spacing.md)
+                        .background(Color.terracotta)
+                        .cornerRadius(CornerRadius.subtle)
+                }
+                .disabled(viewModel.isLoading)
+                .padding(.horizontal, Spacing.xl)
+
+                Button(viewModel.isRegistering ? "Already have an account? Log in" : "Create an account") {
+                    viewModel.isRegistering.toggle()
+                }
+                .font(.sourceSerif(13))
+                .foregroundStyle(Color.terracotta)
+
+                Spacer()
             }
-            .font(.footnote)
         }
-        .padding()
     }
 }
 ```
@@ -2324,6 +2554,7 @@ git commit -m "feat(ios): add login and registration views with Sign in with App
 
 | Milestone | Tasks | Description |
 |-----------|-------|-------------|
+| 0 | 0 | iOS design system foundation (colors, typography, spacing, components) |
 | 1 | 1-2 | API project setup, database schema |
 | 2 | 3-6 | Auth service, routes, middleware |
 | 3 | 7-8 | Thread CRUD service and routes |
@@ -2332,8 +2563,10 @@ git commit -m "feat(ios): add login and registration views with Sign in with App
 | 6 | 16-17 | iOS networking and sync engine |
 | 7 | 18 | iOS auth views |
 
-**Total: 18 tasks across 7 milestones.**
+**Total: 19 tasks across 8 milestones.**
 
-Milestones 1-4 (API) can be built and tested entirely from the command line. Milestones 5-7 (iOS) require Xcode.
+Milestone 0 (design system) and Milestones 5-7 (iOS) require Xcode. Milestones 1-4 (API) can be built and tested entirely from the command line.
 
 The API is designed to be fully functional and tested before the iOS app connects to it.
+
+All iOS views use the design system tokens from Milestone 0 — see `docs/plans/2026-02-16-design-system.md` for the full specification.
