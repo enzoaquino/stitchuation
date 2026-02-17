@@ -49,6 +49,45 @@ describe("Thread Routes", () => {
     expect(body.length).toBeGreaterThan(0);
   });
 
+  it("GET /threads/:id returns a single thread", async () => {
+    const createRes = await app.request("/threads", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ brand: "GetById", number: "001", quantity: 1 }),
+    });
+    const created = await createRes.json();
+
+    const res = await app.request(`/threads/${created.id}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.brand).toBe("GetById");
+    expect(body.id).toBe(created.id);
+  });
+
+  it("GET /threads/:id returns 404 for non-existent thread", async () => {
+    const res = await app.request("/threads/00000000-0000-0000-0000-000000000000", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    expect(res.status).toBe(404);
+  });
+
+  it("GET /threads/:id returns 400 for invalid UUID", async () => {
+    const res = await app.request("/threads/not-a-uuid", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid thread ID");
+  });
+
   it("PUT /threads/:id updates a thread", async () => {
     const createRes = await app.request("/threads", {
       method: "POST",
@@ -91,6 +130,14 @@ describe("Thread Routes", () => {
     });
 
     expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+
+    // Verify thread is no longer accessible
+    const getRes = await app.request(`/threads/${created.id}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    expect(getRes.status).toBe(404);
   });
 
   it("rejects unauthenticated requests", async () => {
@@ -125,7 +172,7 @@ describe("Thread Routes", () => {
   });
 
   it("returns 404 for updating non-existent thread", async () => {
-    const res = await app.request(`/threads/00000000-0000-0000-0000-000000000000`, {
+    const res = await app.request("/threads/00000000-0000-0000-0000-000000000000", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -137,12 +184,38 @@ describe("Thread Routes", () => {
     expect(res.status).toBe(404);
   });
 
+  it("returns 400 for updating with invalid UUID", async () => {
+    const res = await app.request("/threads/not-a-uuid", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ quantity: 5 }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid thread ID");
+  });
+
   it("returns 404 for deleting non-existent thread", async () => {
-    const res = await app.request(`/threads/00000000-0000-0000-0000-000000000000`, {
+    const res = await app.request("/threads/00000000-0000-0000-0000-000000000000", {
       method: "DELETE",
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     expect(res.status).toBe(404);
+  });
+
+  it("returns 400 for deleting with invalid UUID", async () => {
+    const res = await app.request("/threads/not-a-uuid", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid thread ID");
   });
 });

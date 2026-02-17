@@ -1,6 +1,7 @@
 import { eq, and, isNull } from "drizzle-orm";
 import { db } from "../db/connection.js";
 import { threads } from "../db/schema.js";
+import { NotFoundError } from "../errors.js";
 import type { CreateThreadInput, UpdateThreadInput } from "./schemas.js";
 
 export class ThreadService {
@@ -49,7 +50,7 @@ export class ThreadService {
       .where(and(eq(threads.id, id), eq(threads.userId, userId), isNull(threads.deletedAt)))
       .returning();
 
-    if (!updated) throw new Error("Thread not found");
+    if (!updated) throw new NotFoundError("Thread");
     return updated;
   }
 
@@ -61,7 +62,7 @@ export class ThreadService {
       .where(and(eq(threads.id, id), eq(threads.userId, userId), isNull(threads.deletedAt)))
       .returning();
 
-    if (!deleted) throw new Error("Thread not found");
+    if (!deleted) throw new NotFoundError("Thread");
     return deleted;
   }
 }

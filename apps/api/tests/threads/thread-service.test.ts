@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { ThreadService } from "../../src/threads/thread-service.js";
 import { AuthService } from "../../src/auth/auth-service.js";
+import { NotFoundError } from "../../src/errors.js";
 
 describe("ThreadService", () => {
   let threadService: ThreadService;
@@ -37,6 +38,13 @@ describe("ThreadService", () => {
   });
 
   it("lists threads for a user", async () => {
+    // Create a thread to ensure list is not empty (independent of other tests)
+    await threadService.create(userId, {
+      brand: "ListTest",
+      number: "001",
+      quantity: 1,
+    });
+
     const threads = await threadService.listByUser(userId);
     expect(threads.length).toBeGreaterThan(0);
   });
@@ -84,6 +92,23 @@ describe("ThreadService", () => {
     expect(found).toBeUndefined();
   });
 
+  it("rejects updating a soft-deleted thread", async () => {
+    const thread = await threadService.create(userId, {
+      brand: "SoftDelUpdate",
+      number: "555",
+      quantity: 1,
+    });
+
+    await threadService.softDelete(userId, thread.id);
+
+    try {
+      await threadService.update(userId, thread.id, { quantity: 10 });
+      expect.unreachable("Should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(NotFoundError);
+    }
+  });
+
   it("prevents accessing another user's thread", async () => {
     const thread = await threadService.create(userId, {
       brand: "DMC",
@@ -95,16 +120,20 @@ describe("ThreadService", () => {
     expect(fetched).toBeNull();
   });
 
-  it("prevents updating another user's thread", async () => {
+  it("prevents updating another user's thread with NotFoundError", async () => {
     const thread = await threadService.create(userId, {
       brand: "DMC",
       number: "888",
       quantity: 1,
     });
 
-    await expect(
-      threadService.update("00000000-0000-0000-0000-000000000000", thread.id, { quantity: 99 })
-    ).rejects.toThrow("Thread not found");
+    try {
+      await threadService.update("00000000-0000-0000-0000-000000000000", thread.id, { quantity: 99 });
+      expect.unreachable("Should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(NotFoundError);
+      expect((error as NotFoundError).message).toBe("Thread not found");
+    }
   });
 
   it("creates a thread with a client-provided UUID", async () => {

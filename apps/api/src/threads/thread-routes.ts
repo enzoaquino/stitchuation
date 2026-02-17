@@ -1,10 +1,13 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import { ThreadService } from "./thread-service.js";
 import { createThreadSchema, updateThreadSchema } from "./schemas.js";
 import { authMiddleware } from "../auth/middleware.js";
+import { NotFoundError } from "../errors.js";
 
 const threadRoutes = new Hono();
 const threadService = new ThreadService();
+const uuidSchema = z.string().uuid();
 
 threadRoutes.use("/*", authMiddleware);
 
@@ -12,6 +15,20 @@ threadRoutes.get("/", async (c) => {
   const userId = c.get("userId");
   const threads = await threadService.listByUser(userId);
   return c.json(threads);
+});
+
+threadRoutes.get("/:id", async (c) => {
+  const userId = c.get("userId");
+  const idResult = uuidSchema.safeParse(c.req.param("id"));
+  if (!idResult.success) {
+    return c.json({ error: "Invalid thread ID" }, 400);
+  }
+
+  const thread = await threadService.getById(userId, idResult.data);
+  if (!thread) {
+    return c.json({ error: "Thread not found" }, 404);
+  }
+  return c.json(thread);
 });
 
 threadRoutes.post("/", async (c) => {
@@ -35,7 +52,10 @@ threadRoutes.post("/", async (c) => {
 
 threadRoutes.put("/:id", async (c) => {
   const userId = c.get("userId");
-  const id = c.req.param("id");
+  const idResult = uuidSchema.safeParse(c.req.param("id"));
+  if (!idResult.success) {
+    return c.json({ error: "Invalid thread ID" }, 400);
+  }
 
   let body;
   try {
@@ -50,22 +70,31 @@ threadRoutes.put("/:id", async (c) => {
   }
 
   try {
-    const thread = await threadService.update(userId, id, parsed.data);
+    const thread = await threadService.update(userId, idResult.data, parsed.data);
     return c.json(thread);
-  } catch {
-    return c.json({ error: "Thread not found" }, 404);
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return c.json({ error: error.message }, 404);
+    }
+    throw error;
   }
 });
 
 threadRoutes.delete("/:id", async (c) => {
   const userId = c.get("userId");
-  const id = c.req.param("id");
+  const idResult = uuidSchema.safeParse(c.req.param("id"));
+  if (!idResult.success) {
+    return c.json({ error: "Invalid thread ID" }, 400);
+  }
 
   try {
-    await threadService.softDelete(userId, id);
+    await threadService.softDelete(userId, idResult.data);
     return c.json({ success: true });
-  } catch {
-    return c.json({ error: "Thread not found" }, 404);
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return c.json({ error: error.message }, 404);
+    }
+    throw error;
   }
 });
 

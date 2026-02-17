@@ -15,7 +15,7 @@ export const createThreadSchema = z.object({
   notes: z.string().max(1000).optional(),
 });
 
-export const updateThreadSchema = createThreadSchema.partial();
+export const updateThreadSchema = createThreadSchema.omit({ id: true }).partial();
 
 export type CreateThreadInput = z.infer<typeof createThreadSchema>;
 export type UpdateThreadInput = z.infer<typeof updateThreadSchema>;
