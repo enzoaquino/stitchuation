@@ -22,10 +22,18 @@ Monorepo: `apps/api/` (TypeScript) and `apps/ios/` (Swift)
 ## Code Style
 
 - Conventional commits with scope: `feat(api):`, `feat(ios):`, `test(api):`
-- API tests use Vitest; iOS tests use XCTest
-- TDD: write failing test first, implement, verify, commit
 - Zod schemas for all API input validation
 - SwiftData models include `syncedAt` (local-only) for sync tracking
+
+## Testing (MANDATORY)
+
+Every feature, service, route, and component MUST have unit tests. No code ships without tests.
+
+- **API**: Vitest. Tests live in `apps/api/tests/` mirroring `src/` structure.
+- **iOS**: XCTest. Tests live in `apps/ios/NeedlepointTests/`.
+- **TDD workflow**: Write failing test first → implement → verify test passes → commit.
+- **No exceptions**: If you write code, you write tests for it. This includes services, routes, middleware, utilities, models, and view models.
+- Run `cd apps/api && npx vitest run` to verify all API tests pass before committing.
 
 ## Design System
 
