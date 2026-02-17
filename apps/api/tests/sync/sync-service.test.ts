@@ -163,6 +163,122 @@ describe("SyncService", () => {
     expect(thread).toBeNull();
   });
 
+  it("server wins on equal timestamps (tie-breaking)", async () => {
+    const thread = await threadService.create(userId, {
+      brand: "DMC",
+      number: "TieBreak",
+      quantity: 1,
+    });
+
+    // Server updates to quantity 10
+    await threadService.update(userId, thread.id, { quantity: 10 });
+
+    // Fetch server's updatedAt and send client change with exact same timestamp
+    const serverThread = await threadService.getById(userId, thread.id);
+    const sameTimestamp = serverThread!.updatedAt.toISOString();
+
+    await syncService.sync(userId, {
+      lastSync: null,
+      changes: [
+        {
+          type: "thread",
+          action: "upsert",
+          id: thread.id,
+          data: { quantity: 99 },
+          updatedAt: sameTimestamp,
+        },
+      ],
+    });
+
+    const result = await threadService.getById(userId, thread.id);
+    expect(result?.quantity).toBe(10); // Server wins on tie
+  });
+
+  it("prevents cross-user sync modification", async () => {
+    // Create a thread for the main user
+    const thread = await threadService.create(userId, {
+      brand: "DMC",
+      number: "CrossUser",
+      quantity: 5,
+    });
+
+    // Create a second user
+    const authService = new AuthService();
+    const { user: otherUser } = await authService.register({
+      email: `sync-other-${Date.now()}@example.com`,
+      password: "securepassword123",
+      displayName: "Other User",
+    });
+
+    // Other user tries to modify the thread via sync
+    const newerTimestamp = new Date(Date.now() + 60000).toISOString();
+    await syncService.sync(otherUser.id, {
+      lastSync: null,
+      changes: [
+        {
+          type: "thread",
+          action: "upsert",
+          id: thread.id,
+          data: { quantity: 999 },
+          updatedAt: newerTimestamp,
+        },
+      ],
+    });
+
+    // Original thread should be unchanged
+    const result = await threadService.getById(userId, thread.id);
+    expect(result?.quantity).toBe(5);
+  });
+
+  it("ignores disallowed fields in sync data (column injection)", async () => {
+    const threadId = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    await syncService.sync(userId, {
+      lastSync: null,
+      changes: [
+        {
+          type: "thread",
+          action: "upsert",
+          id: threadId,
+          data: {
+            brand: "DMC",
+            number: "Inject",
+            quantity: 1,
+            deletedAt: "2025-01-01T00:00:00Z",
+            userId: "00000000-0000-0000-0000-000000000000",
+          },
+          updatedAt: now,
+        },
+      ],
+    });
+
+    // Thread should exist (deletedAt was ignored)
+    const thread = await threadService.getById(userId, threadId);
+    expect(thread).not.toBeNull();
+    expect(thread?.brand).toBe("DMC");
+  });
+
+  it("does not leak userId in sync response data", async () => {
+    await threadService.create(userId, {
+      brand: "DMC",
+      number: "LeakTest",
+      quantity: 1,
+    });
+
+    const result = await syncService.sync(userId, {
+      lastSync: new Date(Date.now() - 5000).toISOString(),
+      changes: [],
+    });
+
+    const found = result.changes.find((c) => c.data?.number === "LeakTest");
+    expect(found).toBeDefined();
+    expect(found!.data).not.toHaveProperty("userId");
+    expect(found!.data).not.toHaveProperty("createdAt");
+    expect(found!.data).not.toHaveProperty("deletedAt");
+    expect(found!.data).toHaveProperty("brand");
+  });
+
   it("returns empty changes array for initial sync with no server data", async () => {
     // Create a fresh user with no data
     const authService = new AuthService();

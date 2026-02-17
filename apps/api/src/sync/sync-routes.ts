@@ -23,8 +23,17 @@ syncRoutes.post("/", async (c) => {
     return c.json({ error: parsed.error.flatten() }, 400);
   }
 
-  const result = await syncService.sync(userId, parsed.data);
-  return c.json(result);
+  try {
+    const result = await syncService.sync(userId, parsed.data);
+    return c.json(result);
+  } catch (error: any) {
+    const pgCode = error.code ?? error.cause?.code;
+    if (pgCode === "23514" || pgCode === "22P02") {
+      // Check constraint or invalid enum value
+      return c.json({ error: "Invalid thread data" }, 400);
+    }
+    throw error;
+  }
 });
 
 export { syncRoutes };

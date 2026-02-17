@@ -135,6 +135,37 @@ describe("Sync Routes", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 for invalid enum value in thread data", async () => {
+    const res = await app.request("/sync", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        lastSync: null,
+        changes: [
+          {
+            type: "thread",
+            action: "upsert",
+            id: crypto.randomUUID(),
+            data: {
+              brand: "DMC",
+              number: "310",
+              quantity: 1,
+              fiberType: "invalid_fiber_type",
+            },
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid thread data");
+  });
+
   it("returns 400 for invalid change ID (non-UUID)", async () => {
     const res = await app.request("/sync", {
       method: "POST",
