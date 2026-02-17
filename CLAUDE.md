@@ -1,6 +1,7 @@
-# Needlepoint
+# Stitchuation
 
 Needlepoint thread inventory and project management app for iOS/iPad with a TypeScript REST API.
+App name: **Stitchuation** (see `docs/plans/2026-02-17-app-naming-design.md`).
 
 ## Architecture
 
@@ -16,6 +17,7 @@ Monorepo: `apps/api/` (TypeScript) and `apps/ios/` (Swift)
 - Design doc: `docs/plans/2026-02-16-needlepoint-app-design.md`
 - Design system: `docs/plans/2026-02-16-design-system.md`
 - Implementation plan: `docs/plans/2026-02-16-needlepoint-implementation-plan.md`
+- App naming: `docs/plans/2026-02-17-app-naming-design.md`
 
 ## Code Style
 
