@@ -25,6 +25,7 @@ COPY drizzle.config.ts ./
 COPY entrypoint.sh ./
 
 RUN chmod +x entrypoint.sh
+RUN mkdir -p /app/uploads && chown node:node /app/uploads
 
 USER node
 
