@@ -1,0 +1,165 @@
+import SwiftUI
+import PhotosUI
+
+struct AddCanvasView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var designer = ""
+    @State private var designName = ""
+    @State private var acquiredAt: Date?
+    @State private var showDatePicker = false
+    @State private var size = ""
+    @State private var meshCount = ""
+    @State private var notes = ""
+
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var selectedImageData: Data?
+
+    @State private var addAnother = false
+
+    private var meshCountValue: Int? {
+        guard !meshCount.isEmpty else { return nil }
+        return Int(meshCount)
+    }
+
+    private var isMeshCountValid: Bool {
+        meshCount.isEmpty || (meshCountValue != nil && meshCountValue! > 0)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                        if let selectedImageData, let uiImage = UIImage(data: selectedImageData) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(height: 200)
+                                .frame(maxWidth: .infinity)
+                                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                        } else {
+                            VStack(spacing: Spacing.md) {
+                                Image(systemName: "photo.badge.plus")
+                                    .font(.system(size: 32))
+                                    .foregroundStyle(Color.terracotta)
+                                Text("Add Photo")
+                                    .font(.sourceSerif(15))
+                                    .foregroundStyle(Color.walnut)
+                            }
+                            .frame(height: 140)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.parchment)
+                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                        }
+                    }
+                    .onChange(of: selectedPhoto) { _, newItem in
+                        Task {
+                            if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                                selectedImageData = data
+                            }
+                        }
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.vertical, Spacing.sm)
+                }
+
+                Section {
+                    TextField("Designer (e.g. Melissa Shirley)", text: $designer)
+                    TextField("Design Name", text: $designName)
+                } header: {
+                    Text("Canvas Info")
+                        .font(.playfair(15, weight: .semibold))
+                        .foregroundStyle(Color.walnut)
+                        .textCase(nil)
+                }
+
+                Section {
+                    Toggle("Date Acquired", isOn: $showDatePicker)
+                    if showDatePicker {
+                        DatePicker(
+                            "Acquired",
+                            selection: Binding(
+                                get: { acquiredAt ?? Date() },
+                                set: { acquiredAt = $0 }
+                            ),
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.graphical)
+                        .tint(Color.terracotta)
+                    }
+
+                    TextField("Size (e.g. 13x18, 10\" round)", text: $size)
+
+                    HStack {
+                        TextField("Mesh Count", text: $meshCount)
+                            .keyboardType(.numberPad)
+                        if !meshCount.isEmpty {
+                            Text("mesh")
+                                .font(.sourceSerif(15))
+                                .foregroundStyle(Color.clay)
+                        }
+                    }
+                    if !isMeshCountValid {
+                        Text("Enter a positive number")
+                            .font(.sourceSerif(12))
+                            .foregroundStyle(Color.terracotta)
+                    }
+
+                    TextField("Notes", text: $notes, axis: .vertical)
+                        .lineLimit(3...6)
+                } header: {
+                    Text("Details")
+                        .font(.playfair(15, weight: .semibold))
+                        .foregroundStyle(Color.walnut)
+                        .textCase(nil)
+                }
+
+                Toggle("Add Another", isOn: $addAnother)
+            }
+            .font(.sourceSerif(17))
+            .scrollContentBackground(.hidden)
+            .background(Color.linen)
+            .navigationTitle("Add Canvas")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(Color.terracotta)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { saveCanvas() }
+                        .disabled(designer.isEmpty || designName.isEmpty || !isMeshCountValid)
+                        .foregroundStyle(Color.terracotta)
+                }
+            }
+        }
+    }
+
+    private func saveCanvas() {
+        let canvas = StashCanvas(
+            designer: designer,
+            designName: designName,
+            acquiredAt: showDatePicker ? acquiredAt : nil,
+            size: size.isEmpty ? nil : size,
+            meshCount: meshCountValue,
+            notes: notes.isEmpty ? nil : notes
+        )
+        modelContext.insert(canvas)
+
+        if addAnother {
+            designName = ""
+            acquiredAt = nil
+            showDatePicker = false
+            size = ""
+            meshCount = ""
+            notes = ""
+            selectedPhoto = nil
+            selectedImageData = nil
+        } else {
+            dismiss()
+        }
+    }
+}
