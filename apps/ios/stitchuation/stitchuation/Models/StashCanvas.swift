@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class Canvas {
+final class StashCanvas {
     @Attribute(.unique) var id: UUID
     var designer: String
     var designName: String

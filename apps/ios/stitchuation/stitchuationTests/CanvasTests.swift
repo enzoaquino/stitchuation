@@ -4,7 +4,7 @@ import Foundation
 
 struct CanvasTests {
     @Test func initSetsRequiredFields() {
-        let canvas = Canvas(designer: "Melissa Shirley", designName: "Nutcracker")
+        let canvas = StashCanvas(designer: "Melissa Shirley", designName: "Nutcracker")
 
         #expect(canvas.designer == "Melissa Shirley")
         #expect(canvas.designName == "Nutcracker")
@@ -13,7 +13,7 @@ struct CanvasTests {
 
     @Test func initSetsTimestamps() {
         let before = Date()
-        let canvas = Canvas(designer: "Test", designName: "Test")
+        let canvas = StashCanvas(designer: "Test", designName: "Test")
         let after = Date()
 
         #expect(canvas.createdAt >= before)
@@ -23,7 +23,7 @@ struct CanvasTests {
     }
 
     @Test func initDefaultsOptionalFieldsToNil() {
-        let canvas = Canvas(designer: "Test", designName: "Test")
+        let canvas = StashCanvas(designer: "Test", designName: "Test")
 
         #expect(canvas.acquiredAt == nil)
         #expect(canvas.imageKey == nil)
@@ -36,7 +36,7 @@ struct CanvasTests {
 
     @Test func initWithAllFields() {
         let date = Date()
-        let canvas = Canvas(
+        let canvas = StashCanvas(
             designer: "Kirk & Bradley",
             designName: "Gingerbread",
             acquiredAt: date,
@@ -57,7 +57,7 @@ struct CanvasTests {
 
     @Test func initWithClientProvidedUUID() {
         let customId = UUID()
-        let canvas = Canvas(id: customId, designer: "Test", designName: "Test")
+        let canvas = StashCanvas(id: customId, designer: "Test", designName: "Test")
 
         #expect(canvas.id == customId)
     }
