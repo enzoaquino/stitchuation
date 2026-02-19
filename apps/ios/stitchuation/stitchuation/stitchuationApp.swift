@@ -19,7 +19,7 @@ struct stitchuationApp: App {
 
     init() {
         do {
-            modelContainer = try ModelContainer(for: NeedleThread.self, StashCanvas.self)
+            modelContainer = try ModelContainer(for: NeedleThread.self, StashCanvas.self, StitchProject.self, JournalEntry.self, JournalImage.self)
         } catch {
             fatalError("Failed to create ModelContainer: \(error)")
         }

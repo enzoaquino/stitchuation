@@ -16,6 +16,9 @@ final class StashCanvas {
     var deletedAt: Date?
     var syncedAt: Date?
 
+    @Relationship(inverse: \StitchProject.canvas)
+    var project: StitchProject?
+
     init(
         id: UUID = UUID(),
         designer: String,
