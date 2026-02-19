@@ -3,17 +3,23 @@ import { SyncService } from "../../src/sync/sync-service.js";
 import { AuthService } from "../../src/auth/auth-service.js";
 import { ThreadService } from "../../src/threads/thread-service.js";
 import { CanvasService } from "../../src/canvases/canvas-service.js";
+import { ProjectService } from "../../src/projects/project-service.js";
+import { JournalService } from "../../src/projects/journal-service.js";
 
 describe("SyncService", () => {
   let syncService: SyncService;
   let threadService: ThreadService;
   let canvasService: CanvasService;
+  let projectService: ProjectService;
+  let journalService: JournalService;
   let userId: string;
 
   beforeAll(async () => {
     syncService = new SyncService();
     threadService = new ThreadService();
     canvasService = new CanvasService();
+    projectService = new ProjectService();
+    journalService = new JournalService();
     const authService = new AuthService();
     const { user } = await authService.register({
       email: `sync-test-${Date.now()}@example.com`,
@@ -463,6 +469,402 @@ describe("SyncService", () => {
       const canvas = await canvasService.getById(userId, canvasId);
       expect(canvas).not.toBeNull();
       expect(canvas?.designer).toBe("SafeDesigner");
+    });
+  });
+
+  describe("project sync", () => {
+    it("pushes new projects from client", async () => {
+      // Create a canvas first (projects require a canvasId)
+      const canvas = await canvasService.create(userId, {
+        designer: "Project Sync Designer",
+        designName: "Project Sync Canvas",
+      });
+
+      const projectId = crypto.randomUUID();
+      const result = await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "project",
+            action: "upsert",
+            id: projectId,
+            data: {
+              canvasId: canvas.id,
+              status: "wip",
+            },
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      });
+
+      expect(result.serverTimestamp).toBeDefined();
+
+      const project = await projectService.getById(userId, projectId);
+      expect(project).not.toBeNull();
+      expect(project?.canvasId).toBe(canvas.id);
+      expect(project?.status).toBe("wip");
+    });
+
+    it("pulls project changes since lastSync", async () => {
+      const before = new Date(Date.now() - 1000).toISOString();
+
+      const canvas = await canvasService.create(userId, {
+        designer: "Pull Project Designer",
+        designName: "Pull Project Canvas",
+      });
+
+      const project = await projectService.create(userId, { canvasId: canvas.id });
+
+      const result = await syncService.sync(userId, {
+        lastSync: before,
+        changes: [],
+      });
+
+      const found = result.changes.find(
+        (c: any) => c.type === "project" && c.id === project.id
+      );
+      expect(found).toBeDefined();
+      expect(found!.data?.canvasId).toBe(canvas.id);
+      expect(found!.data?.status).toBe("wip");
+    });
+
+    it("applies client project update when client is newer", async () => {
+      const canvas = await canvasService.create(userId, {
+        designer: "Update Sync Designer",
+        designName: "Update Sync Canvas",
+      });
+
+      const project = await projectService.create(userId, { canvasId: canvas.id });
+
+      const newerTimestamp = new Date(Date.now() + 60000).toISOString();
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "project",
+            action: "upsert",
+            id: project.id,
+            data: { status: "at_finishing" },
+            updatedAt: newerTimestamp,
+          },
+        ],
+      });
+
+      const serverProject = await projectService.getById(userId, project.id);
+      expect(serverProject?.status).toBe("at_finishing");
+    });
+
+    it("handles project delete via sync", async () => {
+      const canvas = await canvasService.create(userId, {
+        designer: "Delete Sync Designer",
+        designName: "Delete Sync Canvas",
+      });
+
+      const projectId = crypto.randomUUID();
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "project",
+            action: "upsert",
+            id: projectId,
+            data: {
+              canvasId: canvas.id,
+              status: "wip",
+            },
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      });
+
+      const deleteTimestamp = new Date(Date.now() + 1000).toISOString();
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "project",
+            action: "delete",
+            id: projectId,
+            updatedAt: deleteTimestamp,
+            deletedAt: deleteTimestamp,
+          },
+        ],
+      });
+
+      const project = await projectService.getById(userId, projectId);
+      expect(project).toBeNull();
+    });
+  });
+
+  describe("journalEntry sync", () => {
+    it("pushes new journal entries from client", async () => {
+      const canvas = await canvasService.create(userId, {
+        designer: "Journal Sync Designer",
+        designName: "Journal Sync Canvas",
+      });
+      const project = await projectService.create(userId, { canvasId: canvas.id });
+
+      const entryId = crypto.randomUUID();
+      const result = await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "journalEntry",
+            action: "upsert",
+            id: entryId,
+            data: {
+              projectId: project.id,
+              notes: "Started stitching the border",
+            },
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      });
+
+      expect(result.serverTimestamp).toBeDefined();
+
+      const entry = await journalService.getEntry(userId, entryId);
+      expect(entry).not.toBeNull();
+      expect(entry?.projectId).toBe(project.id);
+      expect(entry?.notes).toBe("Started stitching the border");
+    });
+
+    it("pulls journal entry changes since lastSync", async () => {
+      const before = new Date(Date.now() - 1000).toISOString();
+
+      const canvas = await canvasService.create(userId, {
+        designer: "Pull Entry Designer",
+        designName: "Pull Entry Canvas",
+      });
+      const project = await projectService.create(userId, { canvasId: canvas.id });
+      const entry = await journalService.createEntry(userId, project.id, {
+        notes: "Pull test entry",
+      });
+
+      const result = await syncService.sync(userId, {
+        lastSync: before,
+        changes: [],
+      });
+
+      const found = result.changes.find(
+        (c: any) => c.type === "journalEntry" && c.id === entry.id
+      );
+      expect(found).toBeDefined();
+      expect(found!.data?.notes).toBe("Pull test entry");
+      expect(found!.data?.projectId).toBe(project.id);
+    });
+
+    it("applies client journal entry update when client is newer", async () => {
+      const canvas = await canvasService.create(userId, {
+        designer: "Update Entry Designer",
+        designName: "Update Entry Canvas",
+      });
+      const project = await projectService.create(userId, { canvasId: canvas.id });
+      const entry = await journalService.createEntry(userId, project.id, {
+        notes: "Original notes",
+      });
+
+      const newerTimestamp = new Date(Date.now() + 60000).toISOString();
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "journalEntry",
+            action: "upsert",
+            id: entry.id,
+            data: { notes: "Updated notes from client" },
+            updatedAt: newerTimestamp,
+          },
+        ],
+      });
+
+      const serverEntry = await journalService.getEntry(userId, entry.id);
+      expect(serverEntry?.notes).toBe("Updated notes from client");
+    });
+
+    it("handles journal entry delete via sync", async () => {
+      const canvas = await canvasService.create(userId, {
+        designer: "Delete Entry Designer",
+        designName: "Delete Entry Canvas",
+      });
+      const project = await projectService.create(userId, { canvasId: canvas.id });
+
+      const entryId = crypto.randomUUID();
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "journalEntry",
+            action: "upsert",
+            id: entryId,
+            data: {
+              projectId: project.id,
+              notes: "Entry to delete",
+            },
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      });
+
+      const deleteTimestamp = new Date(Date.now() + 1000).toISOString();
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "journalEntry",
+            action: "delete",
+            id: entryId,
+            updatedAt: deleteTimestamp,
+            deletedAt: deleteTimestamp,
+          },
+        ],
+      });
+
+      const entry = await journalService.getEntry(userId, entryId);
+      expect(entry).toBeNull();
+    });
+  });
+
+  describe("journalImage sync", () => {
+    it("pushes new journal images from client", async () => {
+      const canvas = await canvasService.create(userId, {
+        designer: "Image Sync Designer",
+        designName: "Image Sync Canvas",
+      });
+      const project = await projectService.create(userId, { canvasId: canvas.id });
+      const entry = await journalService.createEntry(userId, project.id, {
+        notes: "Entry for image sync",
+      });
+
+      const imageId = crypto.randomUUID();
+      const result = await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "journalImage",
+            action: "upsert",
+            id: imageId,
+            data: {
+              entryId: entry.id,
+              imageKey: "uploads/progress-photo-1.jpg",
+              sortOrder: 0,
+            },
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      });
+
+      expect(result.serverTimestamp).toBeDefined();
+
+      const images = await journalService.listImages(entry.id);
+      const found = images.find((i) => i.id === imageId);
+      expect(found).not.toBeNull();
+      expect(found?.imageKey).toBe("uploads/progress-photo-1.jpg");
+      expect(found?.sortOrder).toBe(0);
+    });
+
+    it("pulls journal image changes since lastSync", async () => {
+      const before = new Date(Date.now() - 1000).toISOString();
+
+      const canvas = await canvasService.create(userId, {
+        designer: "Pull Image Designer",
+        designName: "Pull Image Canvas",
+      });
+      const project = await projectService.create(userId, { canvasId: canvas.id });
+      const entry = await journalService.createEntry(userId, project.id, {
+        notes: "Entry for pull image test",
+      });
+      const image = await journalService.addImage(entry.id, "uploads/pull-test.jpg", 1);
+
+      const result = await syncService.sync(userId, {
+        lastSync: before,
+        changes: [],
+      });
+
+      const found = result.changes.find(
+        (c: any) => c.type === "journalImage" && c.id === image.id
+      );
+      expect(found).toBeDefined();
+      expect(found!.data?.imageKey).toBe("uploads/pull-test.jpg");
+      expect(found!.data?.sortOrder).toBe(1);
+      expect(found!.data?.entryId).toBe(entry.id);
+    });
+
+    it("applies client journal image update when client is newer", async () => {
+      const canvas = await canvasService.create(userId, {
+        designer: "Update Image Designer",
+        designName: "Update Image Canvas",
+      });
+      const project = await projectService.create(userId, { canvasId: canvas.id });
+      const entry = await journalService.createEntry(userId, project.id, {
+        notes: "Entry for image update test",
+      });
+      const image = await journalService.addImage(entry.id, "uploads/original.jpg", 0);
+
+      const newerTimestamp = new Date(Date.now() + 60000).toISOString();
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "journalImage",
+            action: "upsert",
+            id: image.id,
+            data: { sortOrder: 5 },
+            updatedAt: newerTimestamp,
+          },
+        ],
+      });
+
+      const images = await journalService.listImages(entry.id);
+      const updated = images.find((i) => i.id === image.id);
+      expect(updated?.sortOrder).toBe(5);
+    });
+
+    it("handles journal image delete via sync", async () => {
+      const canvas = await canvasService.create(userId, {
+        designer: "Delete Image Designer",
+        designName: "Delete Image Canvas",
+      });
+      const project = await projectService.create(userId, { canvasId: canvas.id });
+      const entry = await journalService.createEntry(userId, project.id, {
+        notes: "Entry for image delete test",
+      });
+
+      const imageId = crypto.randomUUID();
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "journalImage",
+            action: "upsert",
+            id: imageId,
+            data: {
+              entryId: entry.id,
+              imageKey: "uploads/delete-me.jpg",
+              sortOrder: 0,
+            },
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      });
+
+      const deleteTimestamp = new Date(Date.now() + 1000).toISOString();
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "journalImage",
+            action: "delete",
+            id: imageId,
+            updatedAt: deleteTimestamp,
+            deletedAt: deleteTimestamp,
+          },
+        ],
+      });
+
+      const images = await journalService.listImages(entry.id);
+      const found = images.find((i) => i.id === imageId);
+      expect(found).toBeUndefined();
     });
   });
 });

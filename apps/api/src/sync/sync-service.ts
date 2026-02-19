@@ -1,6 +1,6 @@
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, inArray } from "drizzle-orm";
 import { db } from "../db/connection.js";
-import { threads, canvases } from "../db/schema.js";
+import { threads, canvases, projects, journalEntries, journalImages } from "../db/schema.js";
 import type { SyncChange, SyncRequest } from "./schemas.js";
 
 // Allowlisted fields that clients may set via sync
@@ -26,6 +26,25 @@ const ALLOWED_CANVAS_FIELDS = new Set([
   "notes",
 ]);
 
+const ALLOWED_PROJECT_FIELDS = new Set([
+  "canvasId",
+  "status",
+  "startedAt",
+  "finishingAt",
+  "completedAt",
+]);
+
+const ALLOWED_JOURNAL_ENTRY_FIELDS = new Set([
+  "projectId",
+  "notes",
+]);
+
+const ALLOWED_JOURNAL_IMAGE_FIELDS = new Set([
+  "entryId",
+  "imageKey",
+  "sortOrder",
+]);
+
 function pickAllowedFields(data: Record<string, unknown>, allowedFields: Set<string>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
@@ -47,6 +66,12 @@ export class SyncService {
           await this.processThreadChange(tx, userId, change);
         } else if (change.type === "canvas") {
           await this.processCanvasChange(tx, userId, change);
+        } else if (change.type === "project") {
+          await this.processProjectChange(tx, userId, change);
+        } else if (change.type === "journalEntry") {
+          await this.processJournalEntryChange(tx, userId, change);
+        } else if (change.type === "journalImage") {
+          await this.processJournalImageChange(tx, userId, change);
         }
       }
     });
@@ -185,6 +210,172 @@ export class SyncService {
     }
   }
 
+  private async processProjectChange(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], userId: string, change: SyncChange) {
+    const clientUpdatedAt = new Date(change.updatedAt);
+
+    if (change.action === "delete") {
+      const deletedAt = change.deletedAt ? new Date(change.deletedAt) : new Date();
+
+      const [existing] = await tx
+        .select()
+        .from(projects)
+        .where(and(eq(projects.id, change.id), eq(projects.userId, userId)))
+        .limit(1);
+
+      if (existing && existing.updatedAt < clientUpdatedAt) {
+        await tx
+          .update(projects)
+          .set({ deletedAt, updatedAt: clientUpdatedAt })
+          .where(and(eq(projects.id, change.id), eq(projects.userId, userId)));
+      }
+      return;
+    }
+
+    const [existing] = await tx
+      .select()
+      .from(projects)
+      .where(and(eq(projects.id, change.id), eq(projects.userId, userId)))
+      .limit(1);
+
+    if (!existing) {
+      const allowed = change.data ? pickAllowedFields(change.data, ALLOWED_PROJECT_FIELDS) : {};
+      await tx.insert(projects).values({
+        id: change.id,
+        userId,
+        canvasId: (allowed.canvasId as string) ?? "",
+        status: (allowed.status as any) ?? "wip",
+        startedAt: allowed.startedAt ? new Date(allowed.startedAt as string) : undefined,
+        finishingAt: allowed.finishingAt ? new Date(allowed.finishingAt as string) : undefined,
+        completedAt: allowed.completedAt ? new Date(allowed.completedAt as string) : undefined,
+        createdAt: clientUpdatedAt,
+        updatedAt: clientUpdatedAt,
+      }).onConflictDoNothing();
+    } else if (existing.updatedAt < clientUpdatedAt) {
+      const updateData: Record<string, unknown> = {
+        updatedAt: clientUpdatedAt,
+      };
+      if (change.data) {
+        const allowed = pickAllowedFields(change.data, ALLOWED_PROJECT_FIELDS);
+        if (allowed.startedAt) {
+          allowed.startedAt = new Date(allowed.startedAt as string);
+        }
+        if (allowed.finishingAt) {
+          allowed.finishingAt = new Date(allowed.finishingAt as string);
+        }
+        if (allowed.completedAt) {
+          allowed.completedAt = new Date(allowed.completedAt as string);
+        }
+        Object.assign(updateData, allowed);
+      }
+      await tx
+        .update(projects)
+        .set(updateData)
+        .where(and(eq(projects.id, change.id), eq(projects.userId, userId)));
+    }
+  }
+
+  private async processJournalEntryChange(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], userId: string, change: SyncChange) {
+    const clientUpdatedAt = new Date(change.updatedAt);
+
+    if (change.action === "delete") {
+      const deletedAt = change.deletedAt ? new Date(change.deletedAt) : new Date();
+
+      const [existing] = await tx
+        .select()
+        .from(journalEntries)
+        .where(and(eq(journalEntries.id, change.id), eq(journalEntries.userId, userId)))
+        .limit(1);
+
+      if (existing && existing.updatedAt < clientUpdatedAt) {
+        await tx
+          .update(journalEntries)
+          .set({ deletedAt, updatedAt: clientUpdatedAt })
+          .where(and(eq(journalEntries.id, change.id), eq(journalEntries.userId, userId)));
+      }
+      return;
+    }
+
+    const [existing] = await tx
+      .select()
+      .from(journalEntries)
+      .where(and(eq(journalEntries.id, change.id), eq(journalEntries.userId, userId)))
+      .limit(1);
+
+    if (!existing) {
+      const allowed = change.data ? pickAllowedFields(change.data, ALLOWED_JOURNAL_ENTRY_FIELDS) : {};
+      await tx.insert(journalEntries).values({
+        id: change.id,
+        userId,
+        projectId: (allowed.projectId as string) ?? "",
+        notes: allowed.notes as string | undefined,
+        createdAt: clientUpdatedAt,
+        updatedAt: clientUpdatedAt,
+      }).onConflictDoNothing();
+    } else if (existing.updatedAt < clientUpdatedAt) {
+      const updateData: Record<string, unknown> = {
+        updatedAt: clientUpdatedAt,
+      };
+      if (change.data) {
+        Object.assign(updateData, pickAllowedFields(change.data, ALLOWED_JOURNAL_ENTRY_FIELDS));
+      }
+      await tx
+        .update(journalEntries)
+        .set(updateData)
+        .where(and(eq(journalEntries.id, change.id), eq(journalEntries.userId, userId)));
+    }
+  }
+
+  private async processJournalImageChange(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], userId: string, change: SyncChange) {
+    const clientUpdatedAt = new Date(change.updatedAt);
+
+    if (change.action === "delete") {
+      const deletedAt = change.deletedAt ? new Date(change.deletedAt) : new Date();
+
+      const [existing] = await tx
+        .select()
+        .from(journalImages)
+        .where(eq(journalImages.id, change.id))
+        .limit(1);
+
+      if (existing && existing.updatedAt < clientUpdatedAt) {
+        await tx
+          .update(journalImages)
+          .set({ deletedAt, updatedAt: clientUpdatedAt })
+          .where(eq(journalImages.id, change.id));
+      }
+      return;
+    }
+
+    const [existing] = await tx
+      .select()
+      .from(journalImages)
+      .where(eq(journalImages.id, change.id))
+      .limit(1);
+
+    if (!existing) {
+      const allowed = change.data ? pickAllowedFields(change.data, ALLOWED_JOURNAL_IMAGE_FIELDS) : {};
+      await tx.insert(journalImages).values({
+        id: change.id,
+        entryId: (allowed.entryId as string) ?? "",
+        imageKey: (allowed.imageKey as string) ?? "",
+        sortOrder: (allowed.sortOrder as number) ?? 0,
+        createdAt: clientUpdatedAt,
+        updatedAt: clientUpdatedAt,
+      }).onConflictDoNothing();
+    } else if (existing.updatedAt < clientUpdatedAt) {
+      const updateData: Record<string, unknown> = {
+        updatedAt: clientUpdatedAt,
+      };
+      if (change.data) {
+        Object.assign(updateData, pickAllowedFields(change.data, ALLOWED_JOURNAL_IMAGE_FIELDS));
+      }
+      await tx
+        .update(journalImages)
+        .set(updateData)
+        .where(eq(journalImages.id, change.id));
+    }
+  }
+
   private async getChangesSince(userId: string, lastSync: string | null) {
     const since = lastSync ? new Date(lastSync) : new Date(0);
 
@@ -197,6 +388,35 @@ export class SyncService {
       .select()
       .from(canvases)
       .where(and(eq(canvases.userId, userId), gt(canvases.updatedAt, since)));
+
+    const changedProjects = await db
+      .select()
+      .from(projects)
+      .where(and(eq(projects.userId, userId), gt(projects.updatedAt, since)));
+
+    const changedJournalEntries = await db
+      .select()
+      .from(journalEntries)
+      .where(and(eq(journalEntries.userId, userId), gt(journalEntries.updatedAt, since)));
+
+    // Journal images don't have userId — query via entries belonging to the user
+    let changedJournalImages: (typeof journalImages.$inferSelect)[] = [];
+    const userEntryIds = await db
+      .select({ id: journalEntries.id })
+      .from(journalEntries)
+      .where(eq(journalEntries.userId, userId));
+
+    if (userEntryIds.length > 0) {
+      changedJournalImages = await db
+        .select()
+        .from(journalImages)
+        .where(
+          and(
+            inArray(journalImages.entryId, userEntryIds.map((e) => e.id)),
+            gt(journalImages.updatedAt, since),
+          ),
+        );
+    }
 
     const threadChanges = changedThreads.map((t) => ({
       type: "thread" as const,
@@ -238,6 +458,58 @@ export class SyncService {
       deletedAt: c.deletedAt?.toISOString(),
     }));
 
-    return [...threadChanges, ...canvasChanges];
+    const projectChanges = changedProjects.map((p) => ({
+      type: "project" as const,
+      action: p.deletedAt ? ("delete" as const) : ("upsert" as const),
+      id: p.id,
+      data: p.deletedAt
+        ? undefined
+        : {
+            canvasId: p.canvasId,
+            status: p.status,
+            startedAt: p.startedAt?.toISOString(),
+            finishingAt: p.finishingAt?.toISOString(),
+            completedAt: p.completedAt?.toISOString(),
+          },
+      updatedAt: p.updatedAt.toISOString(),
+      deletedAt: p.deletedAt?.toISOString(),
+    }));
+
+    const journalEntryChanges = changedJournalEntries.map((e) => ({
+      type: "journalEntry" as const,
+      action: e.deletedAt ? ("delete" as const) : ("upsert" as const),
+      id: e.id,
+      data: e.deletedAt
+        ? undefined
+        : {
+            projectId: e.projectId,
+            notes: e.notes,
+          },
+      updatedAt: e.updatedAt.toISOString(),
+      deletedAt: e.deletedAt?.toISOString(),
+    }));
+
+    const journalImageChanges = changedJournalImages.map((i) => ({
+      type: "journalImage" as const,
+      action: i.deletedAt ? ("delete" as const) : ("upsert" as const),
+      id: i.id,
+      data: i.deletedAt
+        ? undefined
+        : {
+            entryId: i.entryId,
+            imageKey: i.imageKey,
+            sortOrder: i.sortOrder,
+          },
+      updatedAt: i.updatedAt.toISOString(),
+      deletedAt: i.deletedAt?.toISOString(),
+    }));
+
+    return [
+      ...threadChanges,
+      ...canvasChanges,
+      ...projectChanges,
+      ...journalEntryChanges,
+      ...journalImageChanges,
+    ];
   }
 }
