@@ -168,6 +168,7 @@ struct AddCanvasView: View {
         }
 
         if addAnother {
+            // Designer intentionally kept — users often add multiple canvases from the same designer
             designName = ""
             acquiredAt = nil
             showDatePicker = false

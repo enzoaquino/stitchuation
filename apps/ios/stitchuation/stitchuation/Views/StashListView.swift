@@ -18,12 +18,7 @@ struct StashListView: View {
     @State private var showAddCanvas = false
 
     var filteredCanvases: [StashCanvas] {
-        guard !viewModel.searchText.isEmpty else { return canvases }
-        let search = viewModel.searchText.lowercased()
-        return canvases.filter { canvas in
-            canvas.designer.lowercased().contains(search)
-                || canvas.designName.lowercased().contains(search)
-        }
+        viewModel.filteredCanvases(from: canvases)
     }
 
     var body: some View {
@@ -74,11 +69,7 @@ struct StashListView: View {
     }
 
     private func deleteCanvases(at offsets: IndexSet) {
-        for index in offsets {
-            let canvas = filteredCanvases[index]
-            canvas.deletedAt = Date()
-            canvas.updatedAt = Date()
-        }
+        viewModel.deleteCanvases(from: filteredCanvases, at: offsets)
     }
 }
 

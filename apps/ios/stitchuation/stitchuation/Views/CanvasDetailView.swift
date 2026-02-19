@@ -83,7 +83,7 @@ struct CanvasDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $showEditSheet) {
+        .sheet(isPresented: $showEditSheet, onDismiss: { loadCanvas() }) {
             if let canvas {
                 EditCanvasView(canvas: canvas)
             }
@@ -91,8 +91,9 @@ struct CanvasDetailView: View {
         .confirmationDialog("Delete Canvas", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
                 if let canvas {
-                    canvas.deletedAt = Date()
-                    canvas.updatedAt = Date()
+                    let now = Date()
+                    canvas.deletedAt = now
+                    canvas.updatedAt = now
                     dismiss()
                 }
             }
