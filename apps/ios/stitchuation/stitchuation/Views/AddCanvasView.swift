@@ -5,6 +5,7 @@ import PhotosUI
 struct AddCanvasView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.networkClient) private var networkClient
 
     @State private var designer = ""
     @State private var designName = ""
@@ -150,6 +151,22 @@ struct AddCanvasView: View {
         )
         modelContext.insert(canvas)
 
+        if let imageData = selectedImageData, let networkClient {
+            let canvasId = canvas.id
+            Task {
+                do {
+                    let compressed = compressImage(imageData, maxBytes: 10 * 1024 * 1024)
+                    _ = try await networkClient.uploadImage(
+                        path: "/canvases/\(canvasId.uuidString)/image",
+                        imageData: compressed,
+                        filename: "\(canvasId.uuidString).jpg"
+                    )
+                } catch {
+                    // Image upload failed — canvas still saved locally
+                }
+            }
+        }
+
         if addAnother {
             designName = ""
             acquiredAt = nil
@@ -162,5 +179,16 @@ struct AddCanvasView: View {
         } else {
             dismiss()
         }
+    }
+
+    private func compressImage(_ data: Data, maxBytes: Int) -> Data {
+        guard let uiImage = UIImage(data: data) else { return data }
+        var quality: CGFloat = 0.8
+        var compressed = uiImage.jpegData(compressionQuality: quality) ?? data
+        while compressed.count > maxBytes && quality > 0.1 {
+            quality -= 0.1
+            compressed = uiImage.jpegData(compressionQuality: quality) ?? data
+        }
+        return compressed
     }
 }

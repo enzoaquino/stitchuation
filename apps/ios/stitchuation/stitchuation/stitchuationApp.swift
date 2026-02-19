@@ -28,6 +28,7 @@ struct stitchuationApp: App {
     var body: some Scene {
         WindowGroup {
             contentView
+                .environment(\.networkClient, networkClient)
                 .task {
                     let auth = AuthViewModel(networkClient: networkClient)
                     await auth.checkExistingSession()
