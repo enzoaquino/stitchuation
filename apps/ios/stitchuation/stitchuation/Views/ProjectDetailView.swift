@@ -1,0 +1,226 @@
+import SwiftUI
+import SwiftData
+
+struct ProjectDetailView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+
+    let projectId: UUID
+
+    @State private var project: StitchProject?
+    @State private var showAddEntry = false
+    @State private var showDeleteConfirmation = false
+
+    var body: some View {
+        ZStack {
+            Color.linen.ignoresSafeArea()
+
+            if let project {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Spacing.xl) {
+                        // Canvas image
+                        CanvasThumbnail(imageKey: project.canvas.imageKey, size: .infinity)
+                            .frame(height: 250)
+                            .frame(maxWidth: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                            .padding(.horizontal, Spacing.lg)
+
+                        // Status section
+                        VStack(alignment: .leading, spacing: Spacing.md) {
+                            HStack {
+                                ProjectStatusBadge(status: project.status)
+                                Spacer()
+                                if let button = advanceStatusButton(for: project) {
+                                    Button(button.label) {
+                                        advanceStatus()
+                                    }
+                                    .font(.sourceSerif(15, weight: .medium))
+                                    .foregroundStyle(Color.terracotta)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, Spacing.lg)
+
+                        // Info section
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Divider().background(Color.slate.opacity(0.3))
+
+                            Text(project.canvas.designer)
+                                .font(.sourceSerif(19))
+                                .foregroundStyle(Color.walnut)
+
+                            if let startedAt = project.startedAt {
+                                DetailRow(label: "Started", value: startedAt.formatted(date: .abbreviated, time: .omitted))
+                            }
+                            if let finishingAt = project.finishingAt {
+                                DetailRow(label: "Finishing", value: finishingAt.formatted(date: .abbreviated, time: .omitted))
+                            }
+                            if let completedAt = project.completedAt {
+                                DetailRow(label: "Completed", value: completedAt.formatted(date: .abbreviated, time: .omitted))
+                            }
+                        }
+                        .padding(.horizontal, Spacing.lg)
+
+                        // Journal section
+                        VStack(alignment: .leading, spacing: Spacing.md) {
+                            Divider().background(Color.slate.opacity(0.3))
+
+                            Text("Journal")
+                                .font(.playfair(22, weight: .semibold))
+                                .foregroundStyle(Color.espresso)
+
+                            if sortedEntries.isEmpty {
+                                Text("No journal entries yet. Tap + to add your first entry.")
+                                    .font(.sourceSerif(15))
+                                    .foregroundStyle(Color.clay)
+                                    .padding(.vertical, Spacing.md)
+                            } else {
+                                ForEach(sortedEntries, id: \.id) { entry in
+                                    JournalEntryCard(entry: entry)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.bottom, Spacing.xxxl)
+                    }
+                    .padding(.vertical, Spacing.lg)
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    Button {
+                        showAddEntry = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 56, height: 56)
+                            .background(Color.terracotta)
+                            .clipShape(Circle())
+                            .shadow(color: Color.espresso.opacity(0.2), radius: 8, x: 0, y: 4)
+                    }
+                    .padding(Spacing.xl)
+                }
+            } else {
+                ProgressView()
+                    .tint(Color.terracotta)
+            }
+        }
+        .navigationTitle(project?.canvas.designName ?? "")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if project != nil {
+                Menu {
+                    Button("Delete Project", systemImage: "trash", role: .destructive) {
+                        showDeleteConfirmation = true
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundStyle(Color.terracotta)
+                }
+            }
+        }
+        .sheet(isPresented: $showAddEntry, onDismiss: { loadProject() }) {
+            if let project {
+                AddJournalEntryView(project: project)
+            }
+        }
+        .confirmationDialog("Delete Project", isPresented: $showDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                if let project {
+                    let now = Date()
+                    project.deletedAt = now
+                    project.updatedAt = now
+                    dismiss()
+                }
+            }
+        } message: {
+            Text("Are you sure you want to delete this project?")
+        }
+        .task {
+            loadProject()
+        }
+    }
+
+    private var sortedEntries: [JournalEntry] {
+        guard let project else { return [] }
+        return project.entries
+            .filter { $0.deletedAt == nil }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private func loadProject() {
+        let id = projectId
+        let descriptor = FetchDescriptor<StitchProject>(
+            predicate: #Predicate { $0.id == id && $0.deletedAt == nil }
+        )
+        project = try? modelContext.fetch(descriptor).first
+    }
+
+    private struct StatusButton {
+        let label: String
+    }
+
+    private func advanceStatusButton(for project: StitchProject) -> StatusButton? {
+        switch project.status {
+        case .wip:
+            return StatusButton(label: "Move to Finishing")
+        case .atFinishing:
+            return StatusButton(label: "Mark Complete")
+        case .completed:
+            return nil
+        }
+    }
+
+    private func advanceStatus() {
+        guard let project else { return }
+        let now = Date()
+        switch project.status {
+        case .wip:
+            project.status = .atFinishing
+            project.finishingAt = now
+        case .atFinishing:
+            project.status = .completed
+            project.completedAt = now
+        case .completed:
+            break
+        }
+        project.updatedAt = now
+    }
+}
+
+struct JournalEntryCard: View {
+    let entry: JournalEntry
+
+    private var sortedImages: [JournalImage] {
+        entry.images
+            .filter { $0.deletedAt == nil }
+            .sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
+                .font(.sourceSerif(13))
+                .foregroundStyle(Color.clay)
+
+            if let notes = entry.notes, !notes.isEmpty {
+                Text(notes)
+                    .font(.sourceSerif(15))
+                    .foregroundStyle(Color.espresso)
+            }
+
+            if !sortedImages.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: Spacing.sm) {
+                        ForEach(sortedImages, id: \.id) { image in
+                            CanvasThumbnail(imageKey: image.imageKey, size: 80)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.cream)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+    }
+}
