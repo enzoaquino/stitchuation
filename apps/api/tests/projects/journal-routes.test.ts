@@ -447,6 +447,47 @@ describe("Journal Image Routes", () => {
     expect(body.success).toBe(true);
   });
 
+  it("DELETE /projects/:id/entries/:entryId/images/:imageId rejects cross-user deletion", async () => {
+    // Upload an image as the original user
+    const jpegHeader = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+    const jpegData = new Uint8Array(100);
+    jpegData.set(jpegHeader);
+    const blob = new Blob([jpegData], { type: "image/jpeg" });
+
+    const formData = new FormData();
+    formData.append("image", new File([blob], "cross-user.jpg", { type: "image/jpeg" }));
+
+    const uploadRes = await app.request(`/projects/${projectId}/entries/${entryId}/images`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: formData,
+    });
+    const uploaded = await uploadRes.json();
+
+    // Register another user
+    const otherRes = await app.request("/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: `cross-user-img-${Date.now()}@example.com`,
+        password: "securepassword123",
+        displayName: "Other User",
+      }),
+    });
+    const otherBody = await otherRes.json();
+
+    // Other user tries to delete the image
+    const deleteRes = await app.request(
+      `/projects/${projectId}/entries/${entryId}/images/${uploaded.id}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${otherBody.accessToken}` },
+      },
+    );
+
+    expect(deleteRes.status).toBe(404);
+  });
+
   it("DELETE /projects/:id/entries/:entryId/images/:imageId returns 404 for non-existent image", async () => {
     const res = await app.request(
       `/projects/${projectId}/entries/${entryId}/images/00000000-0000-0000-0000-000000000000`,

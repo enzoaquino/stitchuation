@@ -820,6 +820,47 @@ describe("SyncService", () => {
       expect(updated?.sortOrder).toBe(5);
     });
 
+    it("prevents cross-user journal image modification via sync", async () => {
+      const canvas = await canvasService.create(userId, {
+        designer: "CrossUser Image Designer",
+        designName: "CrossUser Image Canvas",
+      });
+      const project = await projectService.create(userId, { canvasId: canvas.id });
+      const entry = await journalService.createEntry(userId, project.id, {
+        notes: "Entry for cross-user image test",
+      });
+      const image = await journalService.addImage(entry.id, "uploads/protected.jpg", 0);
+
+      // Create another user
+      const authService = new AuthService();
+      const { user: otherUser } = await authService.register({
+        email: `sync-cross-img-${Date.now()}@example.com`,
+        password: "securepassword123",
+        displayName: "Cross User Image",
+      });
+
+      // Other user tries to modify the image via sync
+      const newerTimestamp = new Date(Date.now() + 60000).toISOString();
+      await syncService.sync(otherUser.id, {
+        lastSync: null,
+        changes: [
+          {
+            type: "journalImage",
+            action: "upsert",
+            id: image.id,
+            data: { sortOrder: 99, imageKey: "uploads/hacked.jpg" },
+            updatedAt: newerTimestamp,
+          },
+        ],
+      });
+
+      // Original image should be unchanged
+      const images = await journalService.listImages(entry.id);
+      const found = images.find((i) => i.id === image.id);
+      expect(found?.imageKey).toBe("uploads/protected.jpg");
+      expect(found?.sortOrder).toBe(0);
+    });
+
     it("handles journal image delete via sync", async () => {
       const canvas = await canvasService.create(userId, {
         designer: "Delete Image Designer",

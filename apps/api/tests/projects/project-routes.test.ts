@@ -246,6 +246,50 @@ describe("Project Routes", () => {
     expect(body.completedAt).toBeTruthy();
   });
 
+  it("PUT /projects/:id/status returns 400 when already completed", async () => {
+    const canvasRes = await app.request("/canvases", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ designer: "Status3", designName: "Already Done" }),
+    });
+    const canvasBody = await canvasRes.json();
+
+    const createRes = await app.request("/projects", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ canvasId: canvasBody.id }),
+    });
+    const created = await createRes.json();
+
+    // Advance to at_finishing
+    await app.request(`/projects/${created.id}/status`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    // Advance to completed
+    await app.request(`/projects/${created.id}/status`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    // Try to advance past completed — should fail
+    const res = await app.request(`/projects/${created.id}/status`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBeDefined();
+  });
+
   it("DELETE /projects/:id soft deletes a project", async () => {
     const canvasRes = await app.request("/canvases", {
       method: "POST",
