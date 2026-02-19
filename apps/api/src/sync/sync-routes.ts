@@ -31,7 +31,7 @@ syncRoutes.post("/", async (c) => {
     const pgCode = error.code ?? error.cause?.code;
     if (pgCode === "23514" || pgCode === "22P02") {
       // Check constraint or invalid enum value
-      return c.json({ error: "Invalid thread data" }, 400);
+      return c.json({ error: "Invalid sync data" }, 400);
     }
     throw error;
   }

@@ -163,7 +163,7 @@ describe("Sync Routes", () => {
 
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("Invalid thread data");
+    expect(body.error).toBe("Invalid sync data");
   });
 
   it("returns 400 for invalid change ID (non-UUID)", async () => {

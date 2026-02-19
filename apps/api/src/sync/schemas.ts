@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const syncChangeSchema = z.object({
-  type: z.enum(["thread"]),
+  type: z.enum(["thread", "canvas"]),
   action: z.enum(["upsert", "delete"]),
   id: z.string().uuid(),
   data: z.record(z.string(), z.unknown()).optional(),
