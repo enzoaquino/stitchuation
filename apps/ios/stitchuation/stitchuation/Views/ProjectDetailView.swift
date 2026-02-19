@@ -192,7 +192,7 @@ struct JournalEntryCard: View {
 
     private var sortedImages: [JournalImage] {
         entry.images
-            .filter { $0.deletedAt == nil }
+            .filter { $0.deletedAt == nil && !$0.imageKey.isEmpty }
             .sorted { $0.sortOrder < $1.sortOrder }
     }
 

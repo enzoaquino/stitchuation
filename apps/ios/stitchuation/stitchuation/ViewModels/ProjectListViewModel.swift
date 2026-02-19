@@ -22,9 +22,4 @@ final class ProjectListViewModel {
         }
     }
 
-    func deleteProject(_ project: StitchProject) {
-        let now = Date()
-        project.deletedAt = now
-        project.updatedAt = now
-    }
 }

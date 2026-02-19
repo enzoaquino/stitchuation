@@ -66,11 +66,4 @@ struct ProjectListViewModelTests {
         #expect(grouped[0].0 == .wip)
     }
 
-    @Test func deleteProjectSoftDeletes() {
-        let project = makeProject(designer: "A", designName: "D1")
-        #expect(project.deletedAt == nil)
-        viewModel.deleteProject(project)
-        #expect(project.deletedAt != nil)
-        #expect(project.updatedAt == project.deletedAt)
-    }
 }

@@ -229,7 +229,9 @@ final class SyncEngine {
         let allImageDescriptor = FetchDescriptor<JournalImage>()
         let allImages = try context.fetch(allImageDescriptor)
         let unsyncedImages = allImages.filter { image in
-            image.syncedAt == nil || image.updatedAt > (image.syncedAt ?? .distantPast)
+            // Skip images with empty imageKey — upload hasn't completed yet
+            !image.imageKey.isEmpty &&
+            (image.syncedAt == nil || image.updatedAt > (image.syncedAt ?? .distantPast))
         }
 
         let imageChanges: [SyncChange] = unsyncedImages.map { image in
