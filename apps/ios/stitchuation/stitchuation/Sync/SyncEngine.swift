@@ -113,7 +113,7 @@ final class SyncEngine {
             thread.syncedAt == nil || thread.updatedAt > (thread.syncedAt ?? .distantPast)
         }
 
-        let changes: [SyncChange] = unsynced.map { thread in
+        let threadChanges: [SyncChange] = unsynced.map { thread in
             let isDeleted = thread.deletedAt != nil
             var data: [String: AnyCodable]?
             if !isDeleted {
@@ -139,7 +139,38 @@ final class SyncEngine {
             )
         }
 
-        let request = SyncRequest(lastSync: lastSyncTimestamp, changes: changes)
+        // Gather unsynced canvases
+        let allCanvasDescriptor = FetchDescriptor<StashCanvas>()
+        let allCanvases = try context.fetch(allCanvasDescriptor)
+        let unsyncedCanvases = allCanvases.filter { canvas in
+            canvas.syncedAt == nil || canvas.updatedAt > (canvas.syncedAt ?? .distantPast)
+        }
+
+        let canvasChanges: [SyncChange] = unsyncedCanvases.map { canvas in
+            let isDeleted = canvas.deletedAt != nil
+            var data: [String: AnyCodable]?
+            if !isDeleted {
+                data = [
+                    "designer": AnyCodable(canvas.designer),
+                    "designName": AnyCodable(canvas.designName),
+                    "acquiredAt": AnyCodable(canvas.acquiredAt.map { formatter.string(from: $0) } ?? NSNull()),
+                    "imageKey": AnyCodable(canvas.imageKey ?? NSNull()),
+                    "size": AnyCodable(canvas.size ?? NSNull()),
+                    "meshCount": AnyCodable(canvas.meshCount ?? NSNull()),
+                    "notes": AnyCodable(canvas.notes ?? NSNull()),
+                ]
+            }
+            return SyncChange(
+                type: "canvas",
+                action: isDeleted ? "delete" : "upsert",
+                id: canvas.id.uuidString,
+                data: data,
+                updatedAt: formatter.string(from: canvas.updatedAt),
+                deletedAt: canvas.deletedAt.map { formatter.string(from: $0) }
+            )
+        }
+
+        let request = SyncRequest(lastSync: lastSyncTimestamp, changes: threadChanges + canvasChanges)
         let response: SyncResponse = try await networkClient.request(
             method: "POST",
             path: "/sync",
@@ -148,40 +179,70 @@ final class SyncEngine {
 
         // Apply server changes with last-write-wins
         for change in response.changes {
-            guard change.type == "thread", let uuid = UUID(uuidString: change.id) else { continue }
-
-            let fetchDescriptor = FetchDescriptor<NeedleThread>(
-                predicate: #Predicate { $0.id == uuid }
-            )
-            let existing = try context.fetch(fetchDescriptor).first
+            guard let uuid = UUID(uuidString: change.id) else { continue }
             let serverUpdatedAt = formatter.date(from: change.updatedAt) ?? Date()
 
-            if change.action == "delete" {
-                if let thread = existing {
-                    // Only apply if server is newer
-                    guard serverUpdatedAt >= thread.updatedAt else { continue }
-                    thread.deletedAt = formatter.date(from: change.deletedAt ?? change.updatedAt)
-                    thread.updatedAt = serverUpdatedAt
-                    thread.syncedAt = Date()
+            if change.type == "thread" {
+                let fetchDescriptor = FetchDescriptor<NeedleThread>(
+                    predicate: #Predicate { $0.id == uuid }
+                )
+                let existing = try context.fetch(fetchDescriptor).first
+
+                if change.action == "delete" {
+                    if let thread = existing {
+                        guard serverUpdatedAt >= thread.updatedAt else { continue }
+                        thread.deletedAt = formatter.date(from: change.deletedAt ?? change.updatedAt)
+                        thread.updatedAt = serverUpdatedAt
+                        thread.syncedAt = Date()
+                    }
+                } else if change.action == "upsert" {
+                    if let thread = existing {
+                        guard serverUpdatedAt >= thread.updatedAt else { continue }
+                        applyData(change.data, to: thread)
+                        thread.updatedAt = serverUpdatedAt
+                        thread.syncedAt = Date()
+                    } else {
+                        let thread = NeedleThread(
+                            id: uuid,
+                            brand: stringValue(change.data, key: "brand") ?? "",
+                            number: stringValue(change.data, key: "number") ?? ""
+                        )
+                        applyData(change.data, to: thread)
+                        thread.updatedAt = serverUpdatedAt
+                        thread.syncedAt = Date()
+                        context.insert(thread)
+                    }
                 }
-            } else if change.action == "upsert" {
-                if let thread = existing {
-                    // Last-write-wins: only apply if server is newer
-                    guard serverUpdatedAt >= thread.updatedAt else { continue }
-                    applyData(change.data, to: thread)
-                    thread.updatedAt = serverUpdatedAt
-                    thread.syncedAt = Date()
-                } else {
-                    // Create new from server
-                    let thread = NeedleThread(
-                        id: uuid,
-                        brand: stringValue(change.data, key: "brand") ?? "",
-                        number: stringValue(change.data, key: "number") ?? ""
-                    )
-                    applyData(change.data, to: thread)
-                    thread.updatedAt = serverUpdatedAt
-                    thread.syncedAt = Date()
-                    context.insert(thread)
+            } else if change.type == "canvas" {
+                let fetchDescriptor = FetchDescriptor<StashCanvas>(
+                    predicate: #Predicate { $0.id == uuid }
+                )
+                let existing = try context.fetch(fetchDescriptor).first
+
+                if change.action == "delete" {
+                    if let canvas = existing {
+                        guard serverUpdatedAt >= canvas.updatedAt else { continue }
+                        canvas.deletedAt = formatter.date(from: change.deletedAt ?? change.updatedAt)
+                        canvas.updatedAt = serverUpdatedAt
+                        canvas.syncedAt = Date()
+                    }
+                } else if change.action == "upsert" {
+                    if let canvas = existing {
+                        guard serverUpdatedAt >= canvas.updatedAt else { continue }
+                        applyCanvasData(change.data, to: canvas)
+                        canvas.updatedAt = serverUpdatedAt
+                        canvas.syncedAt = Date()
+                    } else {
+                        let canvas = StashCanvas(
+                            id: uuid,
+                            designer: stringValue(change.data, key: "designer") ?? "",
+                            designName: stringValue(change.data, key: "designName") ?? ""
+                        )
+                        applyCanvasData(change.data, to: canvas)
+                        canvas.updatedAt = serverUpdatedAt
+                        canvas.syncedAt = Date()
+                        context.insert(canvas)
+                    }
                 }
             }
         }
@@ -189,6 +250,9 @@ final class SyncEngine {
         // Mark all pushed changes as synced
         for thread in unsynced {
             thread.syncedAt = Date()
+        }
+        for canvas in unsyncedCanvases {
+            canvas.syncedAt = Date()
         }
 
         try context.save()
@@ -220,6 +284,35 @@ final class SyncEngine {
         }
         if let v = data["notes"] {
             thread.notes = v.value is NSNull ? nil : v.value as? String
+        }
+    }
+
+    private func applyCanvasData(_ data: [String: AnyCodable]?, to canvas: StashCanvas) {
+        guard let data else { return }
+        if let designer = data["designer"]?.value as? String { canvas.designer = designer }
+        if let designName = data["designName"]?.value as? String { canvas.designName = designName }
+        if let v = data["acquiredAt"] {
+            if v.value is NSNull {
+                canvas.acquiredAt = nil
+            } else if let str = v.value as? String {
+                canvas.acquiredAt = Self.dateFormatter.date(from: str)
+            }
+        }
+        if let v = data["imageKey"] {
+            canvas.imageKey = v.value is NSNull ? nil : v.value as? String
+        }
+        if let v = data["size"] {
+            canvas.size = v.value is NSNull ? nil : v.value as? String
+        }
+        if let v = data["meshCount"] {
+            if v.value is NSNull {
+                canvas.meshCount = nil
+            } else if let num = v.value as? Int {
+                canvas.meshCount = num
+            }
+        }
+        if let v = data["notes"] {
+            canvas.notes = v.value is NSNull ? nil : v.value as? String
         }
     }
 
