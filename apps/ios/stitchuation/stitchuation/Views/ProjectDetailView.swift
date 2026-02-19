@@ -190,6 +190,9 @@ struct ProjectDetailView: View {
 struct JournalEntryCard: View {
     let entry: JournalEntry
 
+    @State private var selectedImageIndex = 0
+    @State private var showImageViewer = false
+
     private var sortedImages: [JournalImage] {
         entry.images
             .filter { $0.deletedAt == nil && !$0.imageKey.isEmpty }
@@ -209,12 +212,9 @@ struct JournalEntryCard: View {
             }
 
             if !sortedImages.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: Spacing.sm) {
-                        ForEach(sortedImages, id: \.id) { image in
-                            CanvasThumbnail(imageKey: image.imageKey, size: 80)
-                        }
-                    }
+                JournalImageGrid(images: sortedImages) { index in
+                    selectedImageIndex = index
+                    showImageViewer = true
                 }
             }
         }
@@ -222,5 +222,8 @@ struct JournalEntryCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.cream)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+        .fullScreenCover(isPresented: $showImageViewer) {
+            ImageViewerView(images: sortedImages, initialIndex: selectedImageIndex)
+        }
     }
 }
