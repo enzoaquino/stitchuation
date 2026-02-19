@@ -11,6 +11,9 @@ const canvasRoutes = new Hono<AuthEnv>();
 const canvasService = new CanvasService();
 const uuidSchema = z.string().uuid();
 
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/heic"]);
+
 canvasRoutes.use("/*", authMiddleware);
 
 canvasRoutes.get("/", async (c) => {
@@ -117,6 +120,14 @@ canvasRoutes.post("/:id/image", async (c) => {
 
   if (!file || !(file instanceof File)) {
     return c.json({ error: "No image file provided" }, 400);
+  }
+
+  if (file.size > MAX_IMAGE_SIZE) {
+    return c.json({ error: "Image must be under 10MB" }, 400);
+  }
+
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    return c.json({ error: "Image must be JPEG, PNG, or HEIC" }, 400);
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());

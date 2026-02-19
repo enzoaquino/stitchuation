@@ -114,6 +114,22 @@ describe("Image Routes", () => {
     expect(res.status).toBe(404);
   });
 
+  it("POST /canvases/:id/image rejects disallowed MIME types", async () => {
+    const formData = new FormData();
+    const blob = new Blob([new Uint8Array([0x00, 0x00])], { type: "application/pdf" });
+    formData.append("image", blob, "test.pdf");
+
+    const res = await app.request(`/canvases/${canvasId}/image`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: formData,
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Image must be JPEG, PNG, or HEIC");
+  });
+
   it("DELETE /canvases/:id/image removes the image", async () => {
     // Upload first
     const formData = new FormData();
