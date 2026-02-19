@@ -156,11 +156,16 @@ struct AddCanvasView: View {
             Task {
                 do {
                     let compressed = compressImage(imageData, maxBytes: 10 * 1024 * 1024)
-                    _ = try await networkClient.uploadImage(
+                    let responseData = try await networkClient.uploadImage(
                         path: "/canvases/\(canvasId.uuidString)/image",
                         imageData: compressed,
                         filename: "\(canvasId.uuidString).jpg"
                     )
+                    // Update local model with the imageKey from API response
+                    if let json = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
+                       let imageKey = json["imageKey"] as? String {
+                        canvas.imageKey = imageKey
+                    }
                 } catch {
                     // Image upload failed — canvas still saved locally
                 }
