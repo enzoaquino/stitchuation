@@ -25,6 +25,7 @@ struct JournalImageGrid: View {
         gridCell(index: 0)
             .frame(height: 200)
             .frame(maxWidth: .infinity)
+            .clipped()
     }
 
     private var doubleLayout: some View {
@@ -33,6 +34,7 @@ struct JournalImageGrid: View {
             gridCell(index: 1)
         }
         .frame(height: 160)
+        .clipped()
     }
 
     private var tripleLayout: some View {
@@ -47,6 +49,7 @@ struct JournalImageGrid: View {
             .frame(maxWidth: .infinity)
         }
         .frame(height: 200)
+        .clipped()
     }
 
     private var quadLayout: some View {
@@ -61,6 +64,7 @@ struct JournalImageGrid: View {
             }
         }
         .frame(height: 200)
+        .clipped()
     }
 
     // MARK: - Grid Cell

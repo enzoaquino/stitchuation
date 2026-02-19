@@ -134,10 +134,24 @@ struct AddJournalEntryView: View {
 
         if let networkClient, !imagesToUpload.isEmpty {
             let projectIdString = project.id.uuidString
+            let canvasIdString = project.canvas.id.uuidString
             let entryIdString = entry.id.uuidString
+            let entryNotesForServer = entryNotes.isEmpty ? nil : entryNotes
             Task {
-                for (journalImage, imageData) in imagesToUpload {
-                    do {
+                do {
+                    // Ensure project exists on server before uploading images
+                    let projectBody: [String: Any] = ["id": projectIdString, "canvasId": canvasIdString]
+                    let projectJSON = try JSONSerialization.data(withJSONObject: projectBody)
+                    _ = try? await networkClient.postJSON(path: "/projects", body: projectJSON)
+
+                    // Ensure entry exists on server
+                    var entryBody: [String: Any] = ["id": entryIdString]
+                    if let notes = entryNotesForServer { entryBody["notes"] = notes }
+                    let entryJSON = try JSONSerialization.data(withJSONObject: entryBody)
+                    _ = try? await networkClient.postJSON(path: "/projects/\(projectIdString)/entries", body: entryJSON)
+
+                    // Now upload images
+                    for (journalImage, imageData) in imagesToUpload {
                         let compressed = compressImage(imageData, maxBytes: 10 * 1024 * 1024)
                         let responseData = try await networkClient.uploadImage(
                             path: "/projects/\(projectIdString)/entries/\(entryIdString)/images",
@@ -151,9 +165,9 @@ struct AddJournalEntryView: View {
                                 journalImage.updatedAt = Date()
                             }
                         }
-                    } catch {
-                        // Network failed — image saved locally, sync will reconcile
                     }
+                } catch {
+                    // Network failed — images saved locally, sync will reconcile
                 }
             }
         }

@@ -175,7 +175,10 @@ struct AddCanvasView: View {
                     // Update local model with the imageKey from API response
                     if let json = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
                        let imageKey = json["imageKey"] as? String {
-                        canvas.imageKey = imageKey
+                        await MainActor.run {
+                            canvas.imageKey = imageKey
+                            canvas.updatedAt = Date()
+                        }
                     }
                 } catch {
                     // Network failed — canvas still saved locally, sync will reconcile

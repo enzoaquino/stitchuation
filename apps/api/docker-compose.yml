@@ -24,6 +24,8 @@ services:
       JWT_SECRET: docker-dev-secret # Change in production
       JWT_REFRESH_SECRET: docker-dev-refresh-secret # Change in production
       PORT: "3000"
+    volumes:
+      - uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -35,3 +37,4 @@ services:
 
 volumes:
   pgdata:
+  uploads:
