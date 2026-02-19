@@ -153,8 +153,19 @@ struct AddCanvasView: View {
 
         if let imageData = selectedImageData, let networkClient {
             let canvasId = canvas.id
+            let canvasDesigner = canvas.designer
+            let canvasDesignName = canvas.designName
             Task {
                 do {
+                    // Create canvas on server first so image upload has a target
+                    let body: [String: Any] = [
+                        "id": canvasId.uuidString,
+                        "designer": canvasDesigner,
+                        "designName": canvasDesignName,
+                    ]
+                    let jsonData = try JSONSerialization.data(withJSONObject: body)
+                    _ = try await networkClient.postJSON(path: "/canvases", body: jsonData)
+
                     let compressed = compressImage(imageData, maxBytes: 10 * 1024 * 1024)
                     let responseData = try await networkClient.uploadImage(
                         path: "/canvases/\(canvasId.uuidString)/image",
@@ -167,7 +178,7 @@ struct AddCanvasView: View {
                         canvas.imageKey = imageKey
                     }
                 } catch {
-                    // Image upload failed — canvas still saved locally
+                    // Network failed — canvas still saved locally, sync will reconcile
                 }
             }
         }

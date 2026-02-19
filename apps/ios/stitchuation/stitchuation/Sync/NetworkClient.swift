@@ -108,6 +108,41 @@ actor NetworkClient {
         let refreshToken: String
     }
 
+    func postJSON(path: String, body: Data) async throws -> Data {
+        var urlRequest = URLRequest(url: baseURL.appendingPathComponent(path))
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        if let token = accessToken {
+            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        urlRequest.httpBody = body
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: urlRequest)
+        } catch {
+            throw APIError.network(error.localizedDescription)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.serverError(0)
+        }
+
+        switch httpResponse.statusCode {
+        case 200...299:
+            return data
+        case 401:
+            throw APIError.unauthorized
+        case 400...499:
+            throw APIError.badRequest(String(data: data, encoding: .utf8) ?? "")
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
     func fetchData(path: String) async throws -> Data {
         var urlRequest = URLRequest(url: baseURL.appendingPathComponent(path))
         urlRequest.httpMethod = "GET"
