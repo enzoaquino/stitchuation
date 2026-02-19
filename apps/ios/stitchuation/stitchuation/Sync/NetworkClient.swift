@@ -108,6 +108,49 @@ actor NetworkClient {
         let refreshToken: String
     }
 
+    func uploadImage(path: String, imageData: Data, filename: String) async throws -> Data {
+        let boundary = UUID().uuidString
+        var urlRequest = URLRequest(url: baseURL.appendingPathComponent(path))
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        if let token = accessToken {
+            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+
+        urlRequest.httpBody = body
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: urlRequest)
+        } catch {
+            throw APIError.network(error.localizedDescription)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.serverError(0)
+        }
+
+        switch httpResponse.statusCode {
+        case 200...299:
+            return data
+        case 401:
+            throw APIError.unauthorized
+        case 400...499:
+            throw APIError.badRequest(String(data: data, encoding: .utf8) ?? "")
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
     private func attemptTokenRefresh() async throws -> Bool {
         guard !isRefreshing, let refresh = refreshToken else {
             clearTokens()
