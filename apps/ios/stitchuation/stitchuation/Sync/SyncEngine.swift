@@ -170,7 +170,89 @@ final class SyncEngine {
             )
         }
 
-        let request = SyncRequest(lastSync: lastSyncTimestamp, changes: threadChanges + canvasChanges)
+        // Gather unsynced projects
+        let allProjectDescriptor = FetchDescriptor<StitchProject>()
+        let allProjects = try context.fetch(allProjectDescriptor)
+        let unsyncedProjects = allProjects.filter { project in
+            project.syncedAt == nil || project.updatedAt > (project.syncedAt ?? .distantPast)
+        }
+
+        let projectChanges: [SyncChange] = unsyncedProjects.map { project in
+            let isDeleted = project.deletedAt != nil
+            var data: [String: AnyCodable]?
+            if !isDeleted {
+                data = [
+                    "canvasId": AnyCodable(project.canvas.id.uuidString),
+                    "status": AnyCodable(project.status.rawValue),
+                    "startedAt": AnyCodable(project.startedAt.map { formatter.string(from: $0) } ?? NSNull()),
+                    "finishingAt": AnyCodable(project.finishingAt.map { formatter.string(from: $0) } ?? NSNull()),
+                    "completedAt": AnyCodable(project.completedAt.map { formatter.string(from: $0) } ?? NSNull()),
+                ]
+            }
+            return SyncChange(
+                type: "project",
+                action: isDeleted ? "delete" : "upsert",
+                id: project.id.uuidString,
+                data: data,
+                updatedAt: formatter.string(from: project.updatedAt),
+                deletedAt: project.deletedAt.map { formatter.string(from: $0) }
+            )
+        }
+
+        // Gather unsynced journal entries
+        let allEntryDescriptor = FetchDescriptor<JournalEntry>()
+        let allEntries = try context.fetch(allEntryDescriptor)
+        let unsyncedEntries = allEntries.filter { entry in
+            entry.syncedAt == nil || entry.updatedAt > (entry.syncedAt ?? .distantPast)
+        }
+
+        let entryChanges: [SyncChange] = unsyncedEntries.map { entry in
+            let isDeleted = entry.deletedAt != nil
+            var data: [String: AnyCodable]?
+            if !isDeleted {
+                data = [
+                    "projectId": AnyCodable(entry.project.id.uuidString),
+                    "notes": AnyCodable(entry.notes ?? NSNull()),
+                ]
+            }
+            return SyncChange(
+                type: "journalEntry",
+                action: isDeleted ? "delete" : "upsert",
+                id: entry.id.uuidString,
+                data: data,
+                updatedAt: formatter.string(from: entry.updatedAt),
+                deletedAt: entry.deletedAt.map { formatter.string(from: $0) }
+            )
+        }
+
+        // Gather unsynced journal images
+        let allImageDescriptor = FetchDescriptor<JournalImage>()
+        let allImages = try context.fetch(allImageDescriptor)
+        let unsyncedImages = allImages.filter { image in
+            image.syncedAt == nil || image.updatedAt > (image.syncedAt ?? .distantPast)
+        }
+
+        let imageChanges: [SyncChange] = unsyncedImages.map { image in
+            let isDeleted = image.deletedAt != nil
+            var data: [String: AnyCodable]?
+            if !isDeleted {
+                data = [
+                    "entryId": AnyCodable(image.entry.id.uuidString),
+                    "imageKey": AnyCodable(image.imageKey),
+                    "sortOrder": AnyCodable(image.sortOrder),
+                ]
+            }
+            return SyncChange(
+                type: "journalImage",
+                action: isDeleted ? "delete" : "upsert",
+                id: image.id.uuidString,
+                data: data,
+                updatedAt: formatter.string(from: image.updatedAt),
+                deletedAt: image.deletedAt.map { formatter.string(from: $0) }
+            )
+        }
+
+        let request = SyncRequest(lastSync: lastSyncTimestamp, changes: threadChanges + canvasChanges + projectChanges + entryChanges + imageChanges)
         let response: SyncResponse = try await networkClient.request(
             method: "POST",
             path: "/sync",
@@ -244,6 +326,127 @@ final class SyncEngine {
                         context.insert(canvas)
                     }
                 }
+            } else if change.type == "project" {
+                let fetchDescriptor = FetchDescriptor<StitchProject>(
+                    predicate: #Predicate { $0.id == uuid }
+                )
+                let existing = try context.fetch(fetchDescriptor).first
+
+                if change.action == "delete" {
+                    if let project = existing {
+                        guard serverUpdatedAt >= project.updatedAt else { continue }
+                        project.deletedAt = formatter.date(from: change.deletedAt ?? change.updatedAt)
+                        project.updatedAt = serverUpdatedAt
+                        project.syncedAt = Date()
+                    }
+                } else if change.action == "upsert" {
+                    if let project = existing {
+                        guard serverUpdatedAt >= project.updatedAt else { continue }
+                        applyProjectData(change.data, to: project)
+                        project.updatedAt = serverUpdatedAt
+                        project.syncedAt = Date()
+                    } else {
+                        let canvasIdStr = stringValue(change.data, key: "canvasId")
+                        let canvasUUID = UUID(uuidString: canvasIdStr ?? "")
+                        var canvas: StashCanvas?
+                        if let canvasUUID {
+                            let canvasFetch = FetchDescriptor<StashCanvas>(
+                                predicate: #Predicate { $0.id == canvasUUID }
+                            )
+                            canvas = try context.fetch(canvasFetch).first
+                        }
+                        guard let canvas else { continue }
+                        let project = StitchProject(
+                            id: uuid,
+                            canvas: canvas
+                        )
+                        applyProjectData(change.data, to: project)
+                        project.updatedAt = serverUpdatedAt
+                        project.syncedAt = Date()
+                        context.insert(project)
+                    }
+                }
+            } else if change.type == "journalEntry" {
+                let fetchDescriptor = FetchDescriptor<JournalEntry>(
+                    predicate: #Predicate { $0.id == uuid }
+                )
+                let existing = try context.fetch(fetchDescriptor).first
+
+                if change.action == "delete" {
+                    if let entry = existing {
+                        guard serverUpdatedAt >= entry.updatedAt else { continue }
+                        entry.deletedAt = formatter.date(from: change.deletedAt ?? change.updatedAt)
+                        entry.updatedAt = serverUpdatedAt
+                        entry.syncedAt = Date()
+                    }
+                } else if change.action == "upsert" {
+                    if let entry = existing {
+                        guard serverUpdatedAt >= entry.updatedAt else { continue }
+                        applyJournalEntryData(change.data, to: entry)
+                        entry.updatedAt = serverUpdatedAt
+                        entry.syncedAt = Date()
+                    } else {
+                        let projectIdStr = stringValue(change.data, key: "projectId")
+                        let projectUUID = UUID(uuidString: projectIdStr ?? "")
+                        var project: StitchProject?
+                        if let projectUUID {
+                            let projectFetch = FetchDescriptor<StitchProject>(
+                                predicate: #Predicate { $0.id == projectUUID }
+                            )
+                            project = try context.fetch(projectFetch).first
+                        }
+                        guard let project else { continue }
+                        let entry = JournalEntry(
+                            id: uuid,
+                            project: project
+                        )
+                        applyJournalEntryData(change.data, to: entry)
+                        entry.updatedAt = serverUpdatedAt
+                        entry.syncedAt = Date()
+                        context.insert(entry)
+                    }
+                }
+            } else if change.type == "journalImage" {
+                let fetchDescriptor = FetchDescriptor<JournalImage>(
+                    predicate: #Predicate { $0.id == uuid }
+                )
+                let existing = try context.fetch(fetchDescriptor).first
+
+                if change.action == "delete" {
+                    if let image = existing {
+                        guard serverUpdatedAt >= image.updatedAt else { continue }
+                        image.deletedAt = formatter.date(from: change.deletedAt ?? change.updatedAt)
+                        image.updatedAt = serverUpdatedAt
+                        image.syncedAt = Date()
+                    }
+                } else if change.action == "upsert" {
+                    if let image = existing {
+                        guard serverUpdatedAt >= image.updatedAt else { continue }
+                        applyJournalImageData(change.data, to: image)
+                        image.updatedAt = serverUpdatedAt
+                        image.syncedAt = Date()
+                    } else {
+                        let entryIdStr = stringValue(change.data, key: "entryId")
+                        let entryUUID = UUID(uuidString: entryIdStr ?? "")
+                        var entry: JournalEntry?
+                        if let entryUUID {
+                            let entryFetch = FetchDescriptor<JournalEntry>(
+                                predicate: #Predicate { $0.id == entryUUID }
+                            )
+                            entry = try context.fetch(entryFetch).first
+                        }
+                        guard let entry else { continue }
+                        let image = JournalImage(
+                            id: uuid,
+                            entry: entry,
+                            imageKey: stringValue(change.data, key: "imageKey") ?? ""
+                        )
+                        applyJournalImageData(change.data, to: image)
+                        image.updatedAt = serverUpdatedAt
+                        image.syncedAt = Date()
+                        context.insert(image)
+                    }
+                }
             }
         }
 
@@ -253,6 +456,15 @@ final class SyncEngine {
         }
         for canvas in unsyncedCanvases {
             canvas.syncedAt = Date()
+        }
+        for project in unsyncedProjects {
+            project.syncedAt = Date()
+        }
+        for entry in unsyncedEntries {
+            entry.syncedAt = Date()
+        }
+        for image in unsyncedImages {
+            image.syncedAt = Date()
         }
 
         try context.save()
@@ -314,6 +526,40 @@ final class SyncEngine {
         if let v = data["notes"] {
             canvas.notes = v.value is NSNull ? nil : v.value as? String
         }
+    }
+
+    private func applyProjectData(_ data: [String: AnyCodable]?, to project: StitchProject) {
+        guard let data else { return }
+        if let statusStr = data["status"]?.value as? String,
+           let status = ProjectStatus(rawValue: statusStr) {
+            project.status = status
+        }
+        if let v = data["startedAt"] {
+            if v.value is NSNull { project.startedAt = nil }
+            else if let str = v.value as? String { project.startedAt = Self.dateFormatter.date(from: str) }
+        }
+        if let v = data["finishingAt"] {
+            if v.value is NSNull { project.finishingAt = nil }
+            else if let str = v.value as? String { project.finishingAt = Self.dateFormatter.date(from: str) }
+        }
+        if let v = data["completedAt"] {
+            if v.value is NSNull { project.completedAt = nil }
+            else if let str = v.value as? String { project.completedAt = Self.dateFormatter.date(from: str) }
+        }
+    }
+
+    private func applyJournalEntryData(_ data: [String: AnyCodable]?, to entry: JournalEntry) {
+        guard let data else { return }
+        if let v = data["notes"] {
+            if v.value is NSNull { entry.notes = nil }
+            else if let str = v.value as? String { entry.notes = str }
+        }
+    }
+
+    private func applyJournalImageData(_ data: [String: AnyCodable]?, to image: JournalImage) {
+        guard let data else { return }
+        if let key = data["imageKey"]?.value as? String { image.imageKey = key }
+        if let order = data["sortOrder"]?.value as? Int { image.sortOrder = order }
     }
 
     private func stringValue(_ data: [String: AnyCodable]?, key: String) -> String? {
