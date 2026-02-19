@@ -149,7 +149,7 @@ canvasRoutes.post("/:id/image", async (c) => {
   if (!hasValidMagicBytes(buffer)) {
     return c.json({ error: "File content does not match an allowed image format" }, 400);
   }
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const ext = file.type === "image/png" ? "png" : file.type === "image/heic" ? "heic" : "jpg";
   const key = `canvases/${userId}/${idResult.data}.${ext}`;
 
   const storage = getStorage();

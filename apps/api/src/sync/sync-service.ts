@@ -337,7 +337,18 @@ export class SyncService {
         .where(eq(journalImages.id, change.id))
         .limit(1);
 
-      if (existing && existing.updatedAt < clientUpdatedAt) {
+      if (!existing) return;
+
+      // Verify the image's parent entry belongs to this user
+      const [parentEntry] = await tx
+        .select()
+        .from(journalEntries)
+        .where(and(eq(journalEntries.id, existing.entryId), eq(journalEntries.userId, userId)))
+        .limit(1);
+
+      if (!parentEntry) return; // Skip silently — entry doesn't belong to this user
+
+      if (existing.updatedAt < clientUpdatedAt) {
         await tx
           .update(journalImages)
           .set({ deletedAt, updatedAt: clientUpdatedAt })
@@ -353,26 +364,50 @@ export class SyncService {
       .limit(1);
 
     if (!existing) {
+      // New image — verify the target entry belongs to this user
       const allowed = change.data ? pickAllowedFields(change.data, ALLOWED_JOURNAL_IMAGE_FIELDS) : {};
+      const targetEntryId = (allowed.entryId as string) ?? "";
+
+      if (targetEntryId) {
+        const [parentEntry] = await tx
+          .select()
+          .from(journalEntries)
+          .where(and(eq(journalEntries.id, targetEntryId), eq(journalEntries.userId, userId)))
+          .limit(1);
+
+        if (!parentEntry) return; // Skip silently — entry doesn't belong to this user
+      }
+
       await tx.insert(journalImages).values({
         id: change.id,
-        entryId: (allowed.entryId as string) ?? "",
+        entryId: targetEntryId,
         imageKey: (allowed.imageKey as string) ?? "",
         sortOrder: (allowed.sortOrder as number) ?? 0,
         createdAt: clientUpdatedAt,
         updatedAt: clientUpdatedAt,
       }).onConflictDoNothing();
-    } else if (existing.updatedAt < clientUpdatedAt) {
-      const updateData: Record<string, unknown> = {
-        updatedAt: clientUpdatedAt,
-      };
-      if (change.data) {
-        Object.assign(updateData, pickAllowedFields(change.data, ALLOWED_JOURNAL_IMAGE_FIELDS));
+    } else {
+      // Existing image — verify the image's parent entry belongs to this user
+      const [parentEntry] = await tx
+        .select()
+        .from(journalEntries)
+        .where(and(eq(journalEntries.id, existing.entryId), eq(journalEntries.userId, userId)))
+        .limit(1);
+
+      if (!parentEntry) return; // Skip silently — entry doesn't belong to this user
+
+      if (existing.updatedAt < clientUpdatedAt) {
+        const updateData: Record<string, unknown> = {
+          updatedAt: clientUpdatedAt,
+        };
+        if (change.data) {
+          Object.assign(updateData, pickAllowedFields(change.data, ALLOWED_JOURNAL_IMAGE_FIELDS));
+        }
+        await tx
+          .update(journalImages)
+          .set(updateData)
+          .where(eq(journalImages.id, change.id));
       }
-      await tx
-        .update(journalImages)
-        .set(updateData)
-        .where(eq(journalImages.id, change.id));
     }
   }
 

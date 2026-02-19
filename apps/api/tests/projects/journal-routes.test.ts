@@ -109,6 +109,71 @@ describe("Journal Entry Routes", () => {
     expect(res.status).toBe(404);
   });
 
+  it("GET /projects/:id/entries/:entryId returns a single entry", async () => {
+    // Create an entry
+    const createRes = await app.request(`/projects/${projectId}/entries`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ notes: "Single entry fetch test" }),
+    });
+    const created = await createRes.json();
+
+    const res = await app.request(`/projects/${projectId}/entries/${created.id}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.id).toBe(created.id);
+    expect(body.notes).toBe("Single entry fetch test");
+  });
+
+  it("GET /projects/:id/entries/:entryId returns 404 for non-existent entry", async () => {
+    const res = await app.request(
+      `/projects/${projectId}/entries/00000000-0000-0000-0000-000000000000`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
+
+    expect(res.status).toBe(404);
+  });
+
+  it("GET /projects/:id/entries/:entryId returns 400 for invalid entry ID", async () => {
+    const res = await app.request(`/projects/${projectId}/entries/not-a-uuid`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid entry ID");
+  });
+
+  it("GET /projects/:id/entries/:entryId returns 404 for non-existent project", async () => {
+    // Create an entry first so the entryId is valid
+    const createRes = await app.request(`/projects/${projectId}/entries`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ notes: "Orphan test" }),
+    });
+    const created = await createRes.json();
+
+    const res = await app.request(
+      `/projects/00000000-0000-0000-0000-000000000000/entries/${created.id}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
+
+    expect(res.status).toBe(404);
+  });
+
   it("PUT /projects/:id/entries/:entryId updates entry notes", async () => {
     // Create an entry first
     const createRes = await app.request(`/projects/${projectId}/entries`, {
@@ -305,6 +370,51 @@ describe("Journal Image Routes", () => {
     });
 
     expect(res.status).toBe(400);
+  });
+
+  it("POST /projects/:id/entries/:entryId/images rejects 5th image (max 4)", async () => {
+    // Create a fresh entry for this test
+    const entryRes = await app.request(`/projects/${projectId}/entries`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ notes: "Max images test" }),
+    });
+    const freshEntry = await entryRes.json();
+
+    const makeJpeg = () => {
+      const jpegHeader = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+      const jpegData = new Uint8Array(100);
+      jpegData.set(jpegHeader);
+      return new Blob([jpegData], { type: "image/jpeg" });
+    };
+
+    // Upload 4 images
+    for (let i = 0; i < 4; i++) {
+      const formData = new FormData();
+      formData.append("image", new File([makeJpeg()], `img${i}.jpg`, { type: "image/jpeg" }));
+      const res = await app.request(`/projects/${projectId}/entries/${freshEntry.id}/images`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: formData,
+      });
+      expect(res.status).toBe(201);
+    }
+
+    // 5th upload should fail
+    const formData = new FormData();
+    formData.append("image", new File([makeJpeg()], "img4.jpg", { type: "image/jpeg" }));
+    const res = await app.request(`/projects/${projectId}/entries/${freshEntry.id}/images`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: formData,
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Maximum 4 images per entry");
   });
 
   it("DELETE /projects/:id/entries/:entryId/images/:imageId soft deletes an image", async () => {

@@ -174,6 +174,31 @@ projectRoutes.post("/:id/entries", async (c) => {
   return c.json(entry, 201);
 });
 
+projectRoutes.get("/:id/entries/:entryId", async (c) => {
+  const userId = c.get("userId");
+  const idResult = uuidSchema.safeParse(c.req.param("id"));
+  if (!idResult.success) {
+    return c.json({ error: "Invalid project ID" }, 400);
+  }
+
+  const entryIdResult = uuidSchema.safeParse(c.req.param("entryId"));
+  if (!entryIdResult.success) {
+    return c.json({ error: "Invalid entry ID" }, 400);
+  }
+
+  const project = await projectService.getById(userId, idResult.data);
+  if (!project) {
+    return c.json({ error: "Project not found" }, 404);
+  }
+
+  const entry = await journalService.getEntry(userId, entryIdResult.data);
+  if (!entry) {
+    return c.json({ error: "Journal entry not found" }, 404);
+  }
+
+  return c.json(entry);
+});
+
 projectRoutes.put("/:id/entries/:entryId", async (c) => {
   const userId = c.get("userId");
   const idResult = uuidSchema.safeParse(c.req.param("id"));
@@ -184,6 +209,12 @@ projectRoutes.put("/:id/entries/:entryId", async (c) => {
   const entryIdResult = uuidSchema.safeParse(c.req.param("entryId"));
   if (!entryIdResult.success) {
     return c.json({ error: "Invalid entry ID" }, 400);
+  }
+
+  // Verify project belongs to user
+  const project = await projectService.getById(userId, idResult.data);
+  if (!project) {
+    return c.json({ error: "Project not found" }, 404);
   }
 
   let body;
@@ -211,9 +242,20 @@ projectRoutes.put("/:id/entries/:entryId", async (c) => {
 
 projectRoutes.delete("/:id/entries/:entryId", async (c) => {
   const userId = c.get("userId");
+  const idResult = uuidSchema.safeParse(c.req.param("id"));
+  if (!idResult.success) {
+    return c.json({ error: "Invalid project ID" }, 400);
+  }
+
   const entryIdResult = uuidSchema.safeParse(c.req.param("entryId"));
   if (!entryIdResult.success) {
     return c.json({ error: "Invalid entry ID" }, 400);
+  }
+
+  // Verify project belongs to user
+  const project = await projectService.getById(userId, idResult.data);
+  if (!project) {
+    return c.json({ error: "Project not found" }, 404);
   }
 
   try {
@@ -276,9 +318,12 @@ projectRoutes.post("/:id/entries/:entryId/images", async (c) => {
 
   // Auto-increment sortOrder based on existing image count
   const existingImages = await journalService.listImages(entryIdResult.data);
+  if (existingImages.length >= 4) {
+    return c.json({ error: "Maximum 4 images per entry" }, 400);
+  }
   const sortOrder = existingImages.length;
 
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const ext = file.type === "image/png" ? "png" : file.type === "image/heic" ? "heic" : "jpg";
   const imageId = crypto.randomUUID();
   const key = `journals/${userId}/${entryIdResult.data}/${imageId}.${ext}`;
 
@@ -290,9 +335,32 @@ projectRoutes.post("/:id/entries/:entryId/images", async (c) => {
 });
 
 projectRoutes.delete("/:id/entries/:entryId/images/:imageId", async (c) => {
+  const userId = c.get("userId");
+  const idResult = uuidSchema.safeParse(c.req.param("id"));
+  if (!idResult.success) {
+    return c.json({ error: "Invalid project ID" }, 400);
+  }
+
+  const entryIdResult = uuidSchema.safeParse(c.req.param("entryId"));
+  if (!entryIdResult.success) {
+    return c.json({ error: "Invalid entry ID" }, 400);
+  }
+
   const imageIdResult = uuidSchema.safeParse(c.req.param("imageId"));
   if (!imageIdResult.success) {
     return c.json({ error: "Invalid image ID" }, 400);
+  }
+
+  // Verify project belongs to user
+  const project = await projectService.getById(userId, idResult.data);
+  if (!project) {
+    return c.json({ error: "Project not found" }, 404);
+  }
+
+  // Verify entry belongs to user
+  const entry = await journalService.getEntry(userId, entryIdResult.data);
+  if (!entry) {
+    return c.json({ error: "Journal entry not found" }, 404);
   }
 
   try {
