@@ -230,6 +230,29 @@ describe("Canvas Routes", () => {
     expect(res.status).toBe(404);
   });
 
+  it("returns 400 for updating with empty body", async () => {
+    const createRes = await app.request("/canvases", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ designer: "Empty Update", designName: "Test" }),
+    });
+    const created = await createRes.json();
+
+    const res = await app.request(`/canvases/${created.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({}),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
   it("returns 400 for deleting with invalid UUID", async () => {
     const res = await app.request("/canvases/not-a-uuid", {
       method: "DELETE",

@@ -19,4 +19,8 @@ export function getStorage(): StorageProvider {
   return storageInstance;
 }
 
+export function resetStorage(): void {
+  storageInstance = null;
+}
+
 export type { StorageProvider } from "./storage-provider.js";

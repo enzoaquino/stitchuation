@@ -10,7 +10,12 @@ export const createCanvasSchema = z.object({
   notes: z.string().max(2000).optional(),
 });
 
-export const updateCanvasSchema = createCanvasSchema.omit({ id: true }).partial();
+export const updateCanvasSchema = createCanvasSchema
+  .omit({ id: true })
+  .partial()
+  .refine((obj) => Object.keys(obj).length > 0, {
+    message: "At least one field is required",
+  });
 
 export type CreateCanvasInput = z.infer<typeof createCanvasSchema>;
 export type UpdateCanvasInput = z.infer<typeof updateCanvasSchema>;

@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, integer, pgEnum, index } from "drizzle-orm/pg-core";
 
 export const fiberTypeEnum = pgEnum("fiber_type", [
   "wool", "cotton", "silk", "synthetic", "blend", "other"
@@ -45,4 +45,7 @@ export const canvases = pgTable("canvases", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
-});
+}, (table) => [
+  index("canvases_user_id_idx").on(table.userId),
+  index("canvases_user_id_updated_at_idx").on(table.userId, table.updatedAt),
+]);
