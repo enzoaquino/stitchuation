@@ -5,6 +5,7 @@ import { createCanvasSchema, updateCanvasSchema } from "./schemas.js";
 import { authMiddleware } from "../auth/middleware.js";
 import type { AuthEnv } from "../auth/types.js";
 import { NotFoundError } from "../errors.js";
+import { getStorage } from "../storage/index.js";
 
 const canvasRoutes = new Hono<AuthEnv>();
 const canvasService = new CanvasService();
@@ -97,6 +98,63 @@ canvasRoutes.delete("/:id", async (c) => {
     }
     throw error;
   }
+});
+
+canvasRoutes.post("/:id/image", async (c) => {
+  const userId = c.get("userId");
+  const idResult = uuidSchema.safeParse(c.req.param("id"));
+  if (!idResult.success) {
+    return c.json({ error: "Invalid canvas ID" }, 400);
+  }
+
+  const canvas = await canvasService.getById(userId, idResult.data);
+  if (!canvas) {
+    return c.json({ error: "Canvas not found" }, 404);
+  }
+
+  const formData = await c.req.formData();
+  const file = formData.get("image");
+
+  if (!file || !(file instanceof File)) {
+    return c.json({ error: "No image file provided" }, 400);
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const key = `canvases/${userId}/${idResult.data}.${ext}`;
+
+  const storage = getStorage();
+
+  // Delete old image if exists
+  if (canvas.imageKey) {
+    await storage.delete(canvas.imageKey);
+  }
+
+  await storage.upload(buffer, key);
+  const updated = await canvasService.setImageKey(userId, idResult.data, key);
+
+  return c.json(updated);
+});
+
+canvasRoutes.delete("/:id/image", async (c) => {
+  const userId = c.get("userId");
+  const idResult = uuidSchema.safeParse(c.req.param("id"));
+  if (!idResult.success) {
+    return c.json({ error: "Invalid canvas ID" }, 400);
+  }
+
+  const canvas = await canvasService.getById(userId, idResult.data);
+  if (!canvas) {
+    return c.json({ error: "Canvas not found" }, 404);
+  }
+
+  if (canvas.imageKey) {
+    const storage = getStorage();
+    await storage.delete(canvas.imageKey);
+  }
+
+  const updated = await canvasService.setImageKey(userId, idResult.data, null);
+  return c.json(updated);
 });
 
 export { canvasRoutes };
