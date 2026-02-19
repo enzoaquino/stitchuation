@@ -19,6 +19,12 @@ Monorepo: `apps/api/` (TypeScript) and `apps/ios/` (Swift)
 - Implementation plan: `docs/plans/2026-02-16-needlepoint-implementation-plan.md`
 - App naming: `docs/plans/2026-02-17-app-naming-design.md`
 
+## Git Workflow
+
+- Feature branches off `main` (e.g. `feat/project-management`)
+- Merge or PR back to `main` when complete
+- No git worktrees — keep it simple
+
 ## Code Style
 
 - Conventional commits with scope: `feat(api):`, `feat(ios):`, `test(api):`
@@ -30,7 +36,7 @@ Monorepo: `apps/api/` (TypeScript) and `apps/ios/` (Swift)
 Every feature, service, route, and component MUST have unit tests. No code ships without tests.
 
 - **API**: Vitest. Tests live in `apps/api/tests/` mirroring `src/` structure.
-- **iOS**: XCTest. Tests live in `apps/ios/NeedlepointTests/`.
+- **iOS**: Swift Testing (`import Testing`, `@Test`, `#expect()`). Tests live in `apps/ios/stitchuation/stitchuationTests/`.
 - **TDD workflow**: Write failing test first → implement → verify test passes → commit.
 - **No exceptions**: If you write code, you write tests for it. This includes services, routes, middleware, utilities, models, and view models.
 - Run `cd apps/api && npx vitest run` to verify all API tests pass before committing.
@@ -40,7 +46,7 @@ Every feature, service, route, and component MUST have unit tests. No code ships
 Warm & Refined aesthetic — see design system doc for full spec.
 - Colors: linen/parchment/cream backgrounds, espresso/walnut text, terracotta accents
 - Fonts: Playfair Display (headers), Source Serif 4 (body), SF Mono (data)
-- Design tokens in `apps/ios/Needlepoint/DesignSystem/`
+- Design tokens in `apps/ios/stitchuation/stitchuation/DesignSystem/`
 - All iOS views must use design system tokens, not default SwiftUI styles
 
 ## API Commands
@@ -52,7 +58,8 @@ Warm & Refined aesthetic — see design system doc for full spec.
 
 ## Data Model
 
-Core entities: User, Thread, Project, ProjectSection, ProjectThread
+Core entities: User, Thread, Canvas, Project, ProjectSection, ProjectThread
+- Canvas (iOS: `StashCanvas` to avoid SwiftUI naming conflict) — user's stitch stash collection
 - ProjectThread bridges projects to inventory with denormalized thread data
 - Sections are optional — projects work with or without them
 - All synced models have `createdAt`, `updatedAt`, `deletedAt`
