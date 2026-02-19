@@ -108,6 +108,40 @@ actor NetworkClient {
         let refreshToken: String
     }
 
+    func fetchData(path: String) async throws -> Data {
+        var urlRequest = URLRequest(url: baseURL.appendingPathComponent(path))
+        urlRequest.httpMethod = "GET"
+
+        if let token = accessToken {
+            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: urlRequest)
+        } catch {
+            throw APIError.network(error.localizedDescription)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.serverError(0)
+        }
+
+        switch httpResponse.statusCode {
+        case 200...299:
+            return data
+        case 401:
+            throw APIError.unauthorized
+        case 400...499:
+            throw APIError.badRequest(String(data: data, encoding: .utf8) ?? "")
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    /// Uploads image data as multipart/form-data.
+    /// Always sends as image/jpeg since the client compresses to JPEG via `compressImage`.
     func uploadImage(path: String, imageData: Data, filename: String) async throws -> Data {
         let boundary = UUID().uuidString
         var urlRequest = URLRequest(url: baseURL.appendingPathComponent(path))
