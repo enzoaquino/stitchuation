@@ -9,13 +9,18 @@ const imageRoutes = new Hono<AuthEnv>();
 imageRoutes.use("/*", authMiddleware);
 
 imageRoutes.get("/*", async (c) => {
-  const key = c.req.path.replace("/images/", "");
+  const key = c.req.path.slice("/images/".length);
   if (!key) {
     return c.json({ error: "Missing image key" }, 400);
   }
 
   const storage = getStorage();
-  const filePath = await storage.getFilePath(key);
+  let filePath: string | null;
+  try {
+    filePath = await storage.getFilePath(key);
+  } catch {
+    return c.json({ error: "Invalid image key" }, 400);
+  }
 
   if (!filePath) {
     return c.json({ error: "Image not found" }, 404);

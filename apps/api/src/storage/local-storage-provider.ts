@@ -1,19 +1,31 @@
 import { mkdir, writeFile, unlink, access } from "node:fs/promises";
-import { join, dirname } from "node:path";
+import { join, dirname, resolve } from "node:path";
 import type { StorageProvider } from "./storage-provider.js";
 
 export class LocalStorageProvider implements StorageProvider {
-  constructor(private baseDir: string) {}
+  private readonly resolvedBaseDir: string;
+
+  constructor(private baseDir: string) {
+    this.resolvedBaseDir = resolve(baseDir);
+  }
+
+  private resolveSafe(key: string): string {
+    const filePath = resolve(this.resolvedBaseDir, key);
+    if (!filePath.startsWith(this.resolvedBaseDir + "/")) {
+      throw new Error("Invalid storage key");
+    }
+    return filePath;
+  }
 
   async upload(content: Buffer, key: string): Promise<string> {
-    const filePath = join(this.baseDir, key);
+    const filePath = this.resolveSafe(key);
     await mkdir(dirname(filePath), { recursive: true });
     await writeFile(filePath, content);
     return key;
   }
 
   async getFilePath(key: string): Promise<string | null> {
-    const filePath = join(this.baseDir, key);
+    const filePath = this.resolveSafe(key);
     try {
       await access(filePath);
       return filePath;
@@ -23,7 +35,7 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   async delete(key: string): Promise<void> {
-    const filePath = join(this.baseDir, key);
+    const filePath = this.resolveSafe(key);
     try {
       await unlink(filePath);
     } catch {

@@ -82,6 +82,14 @@ describe("Image Routes", () => {
     expect(res.status).toBe(404);
   });
 
+  it("GET /images/* rejects path traversal attempts", async () => {
+    const res = await app.request("/images/../../src/app.ts", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    expect([400, 404]).toContain(res.status);
+  });
+
   it("GET /images/* rejects unauthenticated requests", async () => {
     const res = await app.request("/images/some/key.jpg");
     expect(res.status).toBe(401);
@@ -112,6 +120,23 @@ describe("Image Routes", () => {
     });
 
     expect(res.status).toBe(404);
+  });
+
+  it("POST /canvases/:id/image rejects spoofed MIME type with invalid magic bytes", async () => {
+    const formData = new FormData();
+    // Claim image/jpeg but send non-image bytes
+    const blob = new Blob([new Uint8Array([0x00, 0x00, 0x00, 0x00])], { type: "image/jpeg" });
+    formData.append("image", blob, "fake.jpg");
+
+    const res = await app.request(`/canvases/${canvasId}/image`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: formData,
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("File content does not match an allowed image format");
   });
 
   it("POST /canvases/:id/image rejects disallowed MIME types", async () => {

@@ -50,6 +50,25 @@ describe("LocalStorageProvider", () => {
     expect(filePath).toBeNull();
   });
 
+  it("rejects path traversal in upload", async () => {
+    const content = Buffer.from("malicious");
+    await expect(
+      provider.upload(content, "../../etc/passwd")
+    ).rejects.toThrow("Invalid storage key");
+  });
+
+  it("rejects path traversal in getFilePath", async () => {
+    await expect(
+      provider.getFilePath("../../etc/passwd")
+    ).rejects.toThrow("Invalid storage key");
+  });
+
+  it("rejects path traversal in delete", async () => {
+    await expect(
+      provider.delete("../../etc/passwd")
+    ).rejects.toThrow("Invalid storage key");
+  });
+
   it("creates nested directories as needed", async () => {
     const content = Buffer.from("nested content");
     const key = "canvases/deep/nested/path/image.jpg";
