@@ -14,13 +14,10 @@ struct ContentView: View {
             }
 
             NavigationStack {
-                Text("Projects coming soon")
-                    .font(.sourceSerif(17))
-                    .foregroundStyle(Color.walnut)
-                    .navigationTitle("Projects")
+                StashListView()
             }
             .tabItem {
-                Label("Projects", systemImage: "folder")
+                Label("Stitch Stash", systemImage: "square.stack.3d.up")
             }
 
             NavigationStack {
