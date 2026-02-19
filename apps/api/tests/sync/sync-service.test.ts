@@ -2,15 +2,18 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { SyncService } from "../../src/sync/sync-service.js";
 import { AuthService } from "../../src/auth/auth-service.js";
 import { ThreadService } from "../../src/threads/thread-service.js";
+import { CanvasService } from "../../src/canvases/canvas-service.js";
 
 describe("SyncService", () => {
   let syncService: SyncService;
   let threadService: ThreadService;
+  let canvasService: CanvasService;
   let userId: string;
 
   beforeAll(async () => {
     syncService = new SyncService();
     threadService = new ThreadService();
+    canvasService = new CanvasService();
     const authService = new AuthService();
     const { user } = await authService.register({
       email: `sync-test-${Date.now()}@example.com`,
@@ -295,5 +298,171 @@ describe("SyncService", () => {
 
     expect(result.serverTimestamp).toBeDefined();
     expect(result.changes).toEqual([]);
+  });
+
+  describe("canvas sync", () => {
+    it("pushes new canvases from client", async () => {
+      const canvasId = crypto.randomUUID();
+      const result = await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "canvas",
+            action: "upsert",
+            id: canvasId,
+            data: {
+              designer: "Melissa Shirley",
+              designName: "Nutcracker",
+              size: "14x18",
+              meshCount: 18,
+            },
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      });
+
+      expect(result.serverTimestamp).toBeDefined();
+
+      const canvas = await canvasService.getById(userId, canvasId);
+      expect(canvas?.designer).toBe("Melissa Shirley");
+      expect(canvas?.designName).toBe("Nutcracker");
+      expect(canvas?.size).toBe("14x18");
+      expect(canvas?.meshCount).toBe(18);
+    });
+
+    it("pulls canvas changes since lastSync", async () => {
+      const before = new Date(Date.now() - 1000).toISOString();
+
+      await canvasService.create(userId, {
+        designer: "Kirk & Bradley",
+        designName: "SyncPull Test",
+      });
+
+      const result = await syncService.sync(userId, {
+        lastSync: before,
+        changes: [],
+      });
+
+      const found = result.changes.find(
+        (c: any) => c.type === "canvas" && c.data?.designName === "SyncPull Test"
+      );
+      expect(found).toBeDefined();
+      expect(found!.data?.designer).toBe("Kirk & Bradley");
+    });
+
+    it("applies client canvas change when client is newer", async () => {
+      const canvas = await canvasService.create(userId, {
+        designer: "Zecca",
+        designName: "Pumpkin Sync",
+      });
+
+      const newerTimestamp = new Date(Date.now() + 60000).toISOString();
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "canvas",
+            action: "upsert",
+            id: canvas.id,
+            data: { meshCount: 13 },
+            updatedAt: newerTimestamp,
+          },
+        ],
+      });
+
+      const serverCanvas = await canvasService.getById(userId, canvas.id);
+      expect(serverCanvas?.meshCount).toBe(13);
+    });
+
+    it("server wins on equal timestamps for canvas", async () => {
+      const canvas = await canvasService.create(userId, {
+        designer: "Lee",
+        designName: "TieBreak Canvas",
+      });
+
+      await canvasService.update(userId, canvas.id, { notes: "server version" });
+
+      const serverCanvas = await canvasService.getById(userId, canvas.id);
+      const sameTimestamp = serverCanvas!.updatedAt.toISOString();
+
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "canvas",
+            action: "upsert",
+            id: canvas.id,
+            data: { notes: "client version" },
+            updatedAt: sameTimestamp,
+          },
+        ],
+      });
+
+      const result = await canvasService.getById(userId, canvas.id);
+      expect(result?.notes).toBe("server version");
+    });
+
+    it("handles canvas delete via sync", async () => {
+      const canvasId = crypto.randomUUID();
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "canvas",
+            action: "upsert",
+            id: canvasId,
+            data: {
+              designer: "DeleteMe",
+              designName: "Gone Canvas",
+            },
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      });
+
+      const deleteTimestamp = new Date(Date.now() + 1000).toISOString();
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "canvas",
+            action: "delete",
+            id: canvasId,
+            updatedAt: deleteTimestamp,
+            deletedAt: deleteTimestamp,
+          },
+        ],
+      });
+
+      const canvas = await canvasService.getById(userId, canvasId);
+      expect(canvas).toBeNull();
+    });
+
+    it("ignores disallowed fields in canvas sync data", async () => {
+      const canvasId = crypto.randomUUID();
+      const now = new Date().toISOString();
+
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "canvas",
+            action: "upsert",
+            id: canvasId,
+            data: {
+              designer: "SafeDesigner",
+              designName: "Safe Canvas",
+              deletedAt: "2025-01-01T00:00:00Z",
+              userId: "00000000-0000-0000-0000-000000000000",
+            },
+            updatedAt: now,
+          },
+        ],
+      });
+
+      const canvas = await canvasService.getById(userId, canvasId);
+      expect(canvas).not.toBeNull();
+      expect(canvas?.designer).toBe("SafeDesigner");
+    });
   });
 });
