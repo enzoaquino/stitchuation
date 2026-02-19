@@ -21,6 +21,13 @@ struct ContentView: View {
             }
 
             NavigationStack {
+                ProjectListView()
+            }
+            .tabItem {
+                Label("Projects", systemImage: "paintbrush.pointed")
+            }
+
+            NavigationStack {
                 Text("Settings coming soon")
                     .font(.sourceSerif(17))
                     .foregroundStyle(Color.walnut)
