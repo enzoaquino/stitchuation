@@ -1,6 +1,10 @@
 import SwiftUI
 import SwiftData
 
+struct ProjectNavID: Hashable {
+    let id: UUID
+}
+
 struct CanvasDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -56,6 +60,31 @@ struct CanvasDetailView: View {
                                     .font(.sourceSerif(17))
                                     .foregroundStyle(Color.walnut)
                             }
+
+                            if let project = canvas.project, project.deletedAt == nil {
+                                Divider().background(Color.slate.opacity(0.3))
+
+                                VStack(alignment: .leading, spacing: Spacing.sm) {
+                                    HStack {
+                                        Text("Project")
+                                            .font(.playfair(17, weight: .semibold))
+                                            .foregroundStyle(Color.espresso)
+                                        Spacer()
+                                        ProjectStatusBadge(status: project.status)
+                                    }
+
+                                    NavigationLink(value: ProjectNavID(id: project.id)) {
+                                        HStack {
+                                            Text("View Journal")
+                                                .font(.sourceSerif(15, weight: .medium))
+                                                .foregroundStyle(Color.terracotta)
+                                            Image(systemName: "chevron.right")
+                                                .font(.system(size: 12, weight: .semibold))
+                                                .foregroundStyle(Color.terracotta)
+                                        }
+                                    }
+                                }
+                            }
                         }
                         .padding(.horizontal, Spacing.lg)
                     }
@@ -99,6 +128,9 @@ struct CanvasDetailView: View {
             }
         } message: {
             Text("Are you sure you want to delete this canvas?")
+        }
+        .navigationDestination(for: ProjectNavID.self) { navId in
+            ProjectDetailView(projectId: navId.id)
         }
         .task {
             loadCanvas()

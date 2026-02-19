@@ -91,6 +91,10 @@ struct CanvasRowView: View {
 
             Spacer()
 
+            if let project = canvas.project, project.deletedAt == nil {
+                ProjectStatusBadge(status: project.status)
+            }
+
             if let meshCount = canvas.meshCount {
                 Text("\(meshCount)m")
                     .font(.system(.caption, design: .monospaced))
