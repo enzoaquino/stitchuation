@@ -15,6 +15,7 @@ struct stitchuationApp: App {
     private let networkClient = NetworkClient(baseURL: apiBaseURL)
     @State private var authViewModel: AuthViewModel?
     @State private var syncEngine: SyncEngine?
+    @State private var uploadQueue: UploadQueue?
     private let modelContainer: ModelContainer
 
     init() {
@@ -40,8 +41,12 @@ struct stitchuationApp: App {
                     )
                     syncEngine = engine
 
+                    let queue = UploadQueue(modelContainer: modelContainer, networkClient: networkClient)
+                    uploadQueue = queue
+
                     if auth.isAuthenticated {
                         try? await engine.sync()
+                        await queue.processQueue()
                     }
                 }
                 #if canImport(UIKit)
@@ -50,6 +55,7 @@ struct stitchuationApp: App {
                 )) { _ in
                     guard let syncEngine, authViewModel?.isAuthenticated == true else { return }
                     Task { try? await syncEngine.sync() }
+                    Task { await uploadQueue?.processQueue() }
                 }
                 #endif
         }
