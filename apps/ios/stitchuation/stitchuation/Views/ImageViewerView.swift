@@ -72,15 +72,10 @@ struct ImageViewerView: View {
     }
 
     private func loadImage(_ journalImage: JournalImage) async {
-        guard loadedImages[journalImage.id] == nil,
-              let networkClient else { return }
-        do {
-            let data = try await networkClient.fetchData(path: "/images/\(journalImage.imageKey)")
-            if let image = UIImage(data: data) {
-                loadedImages[journalImage.id] = image
-            }
-        } catch {
-            // Failed to load — stays as spinner
+        guard loadedImages[journalImage.id] == nil else { return }
+        let image = await ImageCache.shared.image(for: journalImage.imageKey, networkClient: networkClient)
+        if let image {
+            loadedImages[journalImage.id] = image
         }
     }
 }

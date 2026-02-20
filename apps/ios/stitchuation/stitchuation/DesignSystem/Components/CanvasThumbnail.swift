@@ -64,17 +64,11 @@ struct CanvasThumbnail: View {
 
     private func loadImage() async {
         loadedImage = nil
-        guard let imageKey, let networkClient else { return }
+        guard let imageKey, !imageKey.isEmpty else { return }
         isLoading = true
         defer { isLoading = false }
 
-        do {
-            let data = try await networkClient.fetchData(path: "/images/\(imageKey)")
-            if let image = UIImage(data: data) {
-                loadedImage = image
-            }
-        } catch {
-            // Failed to load image — placeholder remains
-        }
+        let image = await ImageCache.shared.image(for: imageKey, networkClient: networkClient)
+        loadedImage = image
     }
 }
