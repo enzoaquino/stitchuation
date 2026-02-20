@@ -24,19 +24,11 @@ struct StartProjectView: View {
             ZStack {
                 Color.linen.ignoresSafeArea()
                 if availableCanvases.isEmpty {
-                    VStack(spacing: Spacing.lg) {
-                        Image(systemName: "square.stack.3d.up.slash")
-                            .font(.system(size: 48))
-                            .foregroundStyle(Color.clay)
-                        Text("No available canvases")
-                            .font(.typeStyle(.title2))
-                            .foregroundStyle(Color.espresso)
-                        Text("All canvases are already linked to projects. Add a new canvas first.")
-                            .font(.typeStyle(.body))
-                            .foregroundStyle(Color.walnut)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(Spacing.xxxl)
+                    EmptyStateView(
+                        icon: "square.stack.3d.up.slash",
+                        title: "No available canvases",
+                        message: "All canvases are already linked to projects. Add a new canvas first."
+                    )
                 } else {
                     List {
                         ForEach(availableCanvases, id: \.id) { canvas in

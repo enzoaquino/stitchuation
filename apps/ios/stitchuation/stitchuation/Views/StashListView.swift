@@ -25,18 +25,11 @@ struct StashListView: View {
         ZStack {
             Color.linen.ignoresSafeArea()
             if filteredCanvases.isEmpty && viewModel.searchText.isEmpty {
-                VStack(spacing: Spacing.lg) {
-                    Image(systemName: "square.stack.3d.up")
-                        .font(.system(size: 48))
-                        .foregroundStyle(Color.clay)
-                    Text("No canvases yet")
-                        .font(.typeStyle(.title2))
-                        .foregroundStyle(Color.espresso)
-                    Text("Tap + to add your first canvas")
-                        .font(.typeStyle(.body))
-                        .foregroundStyle(Color.walnut)
-                }
-                .padding(Spacing.xxxl)
+                EmptyStateView(
+                    icon: "square.stack.3d.up",
+                    title: "No canvases yet",
+                    message: "Tap + to add your first canvas"
+                )
             } else {
                 List {
                     ForEach(filteredCanvases, id: \.id) { canvas in

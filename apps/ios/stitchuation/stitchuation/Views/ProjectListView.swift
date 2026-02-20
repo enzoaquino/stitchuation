@@ -25,18 +25,11 @@ struct ProjectListView: View {
         ZStack {
             Color.linen.ignoresSafeArea()
             if filteredProjects.isEmpty && viewModel.searchText.isEmpty {
-                VStack(spacing: Spacing.lg) {
-                    Image(systemName: "paintbrush.pointed")
-                        .font(.system(size: 48))
-                        .foregroundStyle(Color.clay)
-                    Text("No projects yet")
-                        .font(.typeStyle(.title2))
-                        .foregroundStyle(Color.espresso)
-                    Text("Tap + to start a new project")
-                        .font(.typeStyle(.body))
-                        .foregroundStyle(Color.walnut)
-                }
-                .padding(Spacing.xxxl)
+                EmptyStateView(
+                    icon: "paintbrush.pointed",
+                    title: "No projects yet",
+                    message: "Tap + to start a new project"
+                )
             } else {
                 List {
                     ForEach(viewModel.projectsByStatus(from: filteredProjects), id: \.0) { status, statusProjects in

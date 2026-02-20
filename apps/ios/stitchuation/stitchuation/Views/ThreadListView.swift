@@ -39,18 +39,11 @@ struct ThreadListView: View {
         ZStack {
             Color.linen.ignoresSafeArea()
             if filteredThreads.isEmpty && viewModel.searchText.isEmpty {
-                VStack(spacing: Spacing.lg) {
-                    Image(systemName: "tray")
-                        .font(.system(size: 48))
-                        .foregroundStyle(Color.clay)
-                    Text("No threads yet")
-                        .font(.typeStyle(.title2))
-                        .foregroundStyle(Color.espresso)
-                    Text("Tap + to add your first thread")
-                        .font(.typeStyle(.body))
-                        .foregroundStyle(Color.walnut)
-                }
-                .padding(Spacing.xxxl)
+                EmptyStateView(
+                    icon: "tray",
+                    title: "No threads yet",
+                    message: "Tap + to add your first thread"
+                )
             } else {
                 List {
                     ForEach(filteredThreads, id: \.id) { thread in

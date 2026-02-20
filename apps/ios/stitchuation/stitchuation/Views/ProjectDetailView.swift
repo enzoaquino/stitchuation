@@ -71,10 +71,11 @@ struct ProjectDetailView: View {
                                 .foregroundStyle(Color.espresso)
 
                             if sortedEntries.isEmpty {
-                                Text("No journal entries yet. Tap + to add your first entry.")
-                                    .font(.typeStyle(.subheadline))
-                                    .foregroundStyle(Color.clay)
-                                    .padding(.vertical, Spacing.md)
+                                EmptyStateView(
+                                    icon: "book",
+                                    title: "No entries yet",
+                                    message: "Tap + to add your first journal entry"
+                                )
                             } else {
                                 ForEach(sortedEntries, id: \.id) { entry in
                                     JournalEntryCard(entry: entry)
@@ -96,7 +97,7 @@ struct ProjectDetailView: View {
                             .frame(width: 56, height: 56)
                             .background(Color.terracotta)
                             .clipShape(Circle())
-                            .shadow(color: Color.espresso.opacity(0.2), radius: 8, x: 0, y: 4)
+                            .warmShadow(.floating)
                     }
                     .padding(Spacing.xl)
                 }
@@ -223,6 +224,7 @@ struct JournalEntryCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.cream)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+        .warmShadow(.subtle)
         .fullScreenCover(isPresented: $showImageViewer) {
             ImageViewerView(images: sortedImages, initialIndex: selectedImageIndex)
         }
