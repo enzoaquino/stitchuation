@@ -40,12 +40,14 @@ struct ProjectDetailView: View {
                                 }
                             }
                         }
+                        .padding(Spacing.md)
+                        .background(Color.cream)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                        .warmShadow(.subtle)
                         .padding(.horizontal, Spacing.lg)
 
                         // Info section
                         VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Divider().background(Color.slate.opacity(0.3))
-
                             Text(project.canvas.designer)
                                 .font(.typeStyle(.title3))
                                 .foregroundStyle(Color.walnut)
@@ -60,12 +62,14 @@ struct ProjectDetailView: View {
                                 DetailRow(label: "Completed", value: completedAt.formatted(date: .abbreviated, time: .omitted))
                             }
                         }
+                        .padding(Spacing.lg)
+                        .background(Color.cream)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                        .warmShadow(.subtle)
                         .padding(.horizontal, Spacing.lg)
 
                         // Journal section
                         VStack(alignment: .leading, spacing: Spacing.md) {
-                            Divider().background(Color.slate.opacity(0.3))
-
                             Text("Journal")
                                 .font(.typeStyle(.title2))
                                 .foregroundStyle(Color.espresso)

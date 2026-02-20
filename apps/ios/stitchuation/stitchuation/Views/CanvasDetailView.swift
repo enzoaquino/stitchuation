@@ -87,6 +87,10 @@ struct CanvasDetailView: View {
                                 }
                             }
                         }
+                        .padding(Spacing.lg)
+                        .background(Color.cream)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                        .warmShadow(.subtle)
                         .padding(.horizontal, Spacing.lg)
                     }
                     .padding(.vertical, Spacing.lg)
