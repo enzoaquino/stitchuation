@@ -5,21 +5,23 @@ struct ProjectDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
-    let projectId: UUID
+    let pieceId: UUID
 
-    @State private var project: StitchProject?
+    @State private var piece: StitchPiece?
     @State private var showAddEntry = false
     @State private var showDeleteConfirmation = false
+    @State private var showReturnToStashConfirmation = false
+    @State private var showChangeStatus = false
 
     var body: some View {
         ZStack {
             Color.linen.ignoresSafeArea()
 
-            if let project {
+            if let piece {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spacing.xl) {
-                        // Canvas image
-                        CanvasThumbnail(imageKey: project.canvas.imageKey, size: .fill)
+                        // Piece image
+                        CanvasThumbnail(imageKey: piece.imageKey, size: .fill)
                             .frame(height: 250)
                             .frame(maxWidth: .infinity)
                             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
@@ -28,9 +30,13 @@ struct ProjectDetailView: View {
                         // Status section
                         VStack(alignment: .leading, spacing: Spacing.md) {
                             HStack {
-                                ProjectStatusBadge(status: project.status)
+                                Button {
+                                    showChangeStatus = true
+                                } label: {
+                                    PieceStatusBadge(status: piece.status)
+                                }
                                 Spacer()
-                                if let button = advanceStatusButton(for: project) {
+                                if let button = advanceStatusButton(for: piece) {
                                     Button(button.label) {
                                         advanceStatus()
                                     }
@@ -48,17 +54,20 @@ struct ProjectDetailView: View {
 
                         // Info section
                         VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text(project.canvas.designer)
+                            Text(piece.designer)
                                 .font(.typeStyle(.title3))
                                 .foregroundStyle(Color.walnut)
 
-                            if let startedAt = project.startedAt {
+                            if let startedAt = piece.startedAt {
                                 DetailRow(label: "Started", value: startedAt.formatted(date: .abbreviated, time: .omitted))
                             }
-                            if let finishingAt = project.finishingAt {
+                            if let stitchedAt = piece.stitchedAt {
+                                DetailRow(label: "Stitched", value: stitchedAt.formatted(date: .abbreviated, time: .omitted))
+                            }
+                            if let finishingAt = piece.finishingAt {
                                 DetailRow(label: "Finishing", value: finishingAt.formatted(date: .abbreviated, time: .omitted))
                             }
-                            if let completedAt = project.completedAt {
+                            if let completedAt = piece.completedAt {
                                 DetailRow(label: "Completed", value: completedAt.formatted(date: .abbreviated, time: .omitted))
                             }
                         }
@@ -110,11 +119,14 @@ struct ProjectDetailView: View {
                     .tint(Color.terracotta)
             }
         }
-        .navigationTitle(project?.canvas.designName ?? "")
+        .navigationTitle(piece?.designName ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if project != nil {
+            if piece != nil {
                 Menu {
+                    Button("Return to Stash", systemImage: "arrow.uturn.backward") {
+                        showReturnToStashConfirmation = true
+                    }
                     Button("Delete Project", systemImage: "trash", role: .destructive) {
                         showDeleteConfirmation = true
                     }
@@ -124,20 +136,37 @@ struct ProjectDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $showAddEntry, onDismiss: { loadProject() }) {
-            if let project {
-                AddJournalEntryView(project: project)
+        .sheet(isPresented: $showAddEntry, onDismiss: { loadPiece() }) {
+            if let piece {
+                AddJournalEntryView(piece: piece)
             }
+        }
+        .sheet(isPresented: $showChangeStatus) {
+            changeStatusSheet
+        }
+        .confirmationDialog("Return to Stash", isPresented: $showReturnToStashConfirmation) {
+            Button("Return to Stash", role: .destructive) {
+                if let piece {
+                    piece.status = .stash
+                    piece.startedAt = nil
+                    piece.stitchedAt = nil
+                    piece.finishingAt = nil
+                    piece.completedAt = nil
+                    piece.updatedAt = Date()
+                }
+            }
+        } message: {
+            Text("This will move the piece back to your stash. Journal entries will be preserved.")
         }
         .confirmationDialog("Delete Project", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
-                if let project {
+                if let piece {
                     let now = Date()
-                    project.deletedAt = now
-                    project.updatedAt = now
+                    piece.deletedAt = now
+                    piece.updatedAt = now
 
                     // Soft-delete child entries and their images
-                    for entry in project.entries where entry.deletedAt == nil {
+                    for entry in piece.entries where entry.deletedAt == nil {
                         entry.deletedAt = now
                         entry.updatedAt = now
                         for image in entry.images where image.deletedAt == nil {
@@ -155,12 +184,12 @@ struct ProjectDetailView: View {
                         }
                     }
 
-                    // Clean up pending uploads for canvas image
-                    let canvasId = project.canvas.id
-                    let canvasUploadDescriptor = FetchDescriptor<PendingUpload>(
-                        predicate: #Predicate { $0.entityType == "canvas" && $0.entityId == canvasId }
+                    // Clean up pending uploads for piece image
+                    let currentPieceId = piece.id
+                    let pieceUploadDescriptor = FetchDescriptor<PendingUpload>(
+                        predicate: #Predicate { $0.entityType == "piece" && $0.entityId == currentPieceId }
                     )
-                    if let uploads = try? modelContext.fetch(canvasUploadDescriptor) {
+                    if let uploads = try? modelContext.fetch(pieceUploadDescriptor) {
                         for upload in uploads { modelContext.delete(upload) }
                     }
 
@@ -171,54 +200,107 @@ struct ProjectDetailView: View {
             Text("Are you sure you want to delete this project?")
         }
         .task {
-            loadProject()
+            loadPiece()
         }
     }
 
+    @ViewBuilder
+    private var changeStatusSheet: some View {
+        NavigationStack {
+            ZStack {
+                Color.linen.ignoresSafeArea()
+                List {
+                    ForEach(PieceStatus.allCases, id: \.self) { status in
+                        Button {
+                            if let piece {
+                                piece.status = status
+                                piece.updatedAt = Date()
+                            }
+                            showChangeStatus = false
+                        } label: {
+                            HStack {
+                                PieceStatusBadge(status: status)
+                                Spacer()
+                                if piece?.status == status {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(Color.terracotta)
+                                }
+                            }
+                        }
+                        .listRowBackground(Color.cream)
+                    }
+                }
+                .scrollContentBackground(.hidden)
+            }
+            .navigationTitle("Change Status")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { showChangeStatus = false }
+                        .foregroundStyle(Color.terracotta)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
     private var sortedEntries: [JournalEntry] {
-        guard let project else { return [] }
-        return project.entries
+        guard let piece else { return [] }
+        return piece.entries
             .filter { $0.deletedAt == nil }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
-    private func loadProject() {
-        let id = projectId
-        let descriptor = FetchDescriptor<StitchProject>(
+    private func loadPiece() {
+        let id = pieceId
+        let descriptor = FetchDescriptor<StitchPiece>(
             predicate: #Predicate { $0.id == id && $0.deletedAt == nil }
         )
-        project = try? modelContext.fetch(descriptor).first
+        piece = try? modelContext.fetch(descriptor).first
     }
 
     private struct StatusButton {
         let label: String
     }
 
-    private func advanceStatusButton(for project: StitchProject) -> StatusButton? {
-        switch project.status {
+    private func advanceStatusButton(for piece: StitchPiece) -> StatusButton? {
+        switch piece.status {
+        case .stash:
+            return nil
+        case .kitting:
+            return StatusButton(label: "Start Stitching")
         case .wip:
-            return StatusButton(label: "Move to Finishing")
+            return StatusButton(label: "Mark Stitched")
+        case .stitched:
+            return StatusButton(label: "Send to Finishing")
         case .atFinishing:
-            return StatusButton(label: "Mark Complete")
-        case .completed:
+            return StatusButton(label: "Mark Finished")
+        case .finished:
             return nil
         }
     }
 
     private func advanceStatus() {
-        guard let project else { return }
+        guard let piece else { return }
         let now = Date()
-        switch project.status {
+        switch piece.status {
+        case .stash:
+            break
+        case .kitting:
+            piece.status = .wip
         case .wip:
-            project.status = .atFinishing
-            project.finishingAt = now
+            piece.status = .stitched
+            piece.stitchedAt = now
+        case .stitched:
+            piece.status = .atFinishing
+            piece.finishingAt = now
         case .atFinishing:
-            project.status = .completed
-            project.completedAt = now
-        case .completed:
+            piece.status = .finished
+            piece.completedAt = now
+        case .finished:
             break
         }
-        project.updatedAt = now
+        piece.updatedAt = now
     }
 }
 
