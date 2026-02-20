@@ -1,4 +1,5 @@
 import Foundation
+import Network
 import SwiftData
 import UIKit
 
@@ -13,7 +14,10 @@ final class UploadQueue {
     }
 
     /// Process all pending uploads oldest-first. Skips permanently failed ones.
+    /// Skips entirely if no network connectivity (to avoid burning retry attempts).
     func processQueue() async {
+        guard await hasNetworkConnectivity() else { return }
+
         let context = modelContainer.mainContext
         let descriptor = FetchDescriptor<PendingUpload>(
             sortBy: [SortDescriptor(\.createdAt, order: .forward)]
@@ -22,6 +26,17 @@ final class UploadQueue {
 
         for upload in uploads where !upload.hasFailed {
             await processUpload(upload, context: context)
+        }
+    }
+
+    private func hasNetworkConnectivity() async -> Bool {
+        await withCheckedContinuation { continuation in
+            let monitor = NWPathMonitor()
+            monitor.pathUpdateHandler = { path in
+                monitor.cancel()
+                continuation.resume(returning: path.status == .satisfied)
+            }
+            monitor.start(queue: DispatchQueue(label: "uploadqueue.connectivity"))
         }
     }
 
