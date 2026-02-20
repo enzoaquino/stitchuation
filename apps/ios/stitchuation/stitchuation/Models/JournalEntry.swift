@@ -4,7 +4,7 @@ import SwiftData
 @Model
 final class JournalEntry {
     @Attribute(.unique) var id: UUID
-    var project: StitchProject
+    var piece: StitchPiece
     var notes: String?
     var createdAt: Date
     var updatedAt: Date
@@ -16,11 +16,11 @@ final class JournalEntry {
 
     init(
         id: UUID = UUID(),
-        project: StitchProject,
+        piece: StitchPiece,
         notes: String? = nil
     ) {
         self.id = id
-        self.project = project
+        self.piece = piece
         self.notes = notes
         self.createdAt = Date()
         self.updatedAt = Date()
