@@ -5,6 +5,10 @@ struct LoginView: View {
     let networkClient: NetworkClient
     @Bindable var authViewModel: AuthViewModel
 
+    @State private var showTitle = false
+    @State private var showTagline = false
+    @State private var showForm = false
+
     var body: some View {
         ZStack {
             Color.linen.ignoresSafeArea()
@@ -12,82 +16,106 @@ struct LoginView: View {
             VStack(spacing: Spacing.xl) {
                 Spacer()
 
+                // Brand
                 Text("Stitchuation")
                     .font(.typeStyle(.largeTitle))
                     .foregroundStyle(Color.espresso)
+                    .opacity(showTitle ? 1 : 0)
+                    .offset(y: showTitle ? 0 : 15)
 
                 Text("Your craft companion")
-                    .font(.typeStyle(.body))
+                    .font(.sourceSerif(17, weight: .regular))
+                    .italic()
                     .foregroundStyle(Color.walnut)
+                    .opacity(showTagline ? 1 : 0)
+                    .offset(y: showTagline ? 0 : 10)
 
                 Spacer().frame(height: Spacing.lg)
 
-                SignInWithAppleButton(.signIn) { request in
-                    request.requestedScopes = [.email, .fullName]
-                } onCompletion: { _ in
-                    // TODO: Wire up Apple sign-in with backend
-                }
-                .frame(height: 50)
-                .cornerRadius(CornerRadius.subtle)
-                .padding(.horizontal, Spacing.xl)
-
-                HStack {
-                    Rectangle().fill(Color.clay.opacity(0.3)).frame(height: 0.5)
-                    Text("or")
-                        .font(.typeStyle(.footnote))
-                        .foregroundStyle(Color.clay)
-                    Rectangle().fill(Color.clay.opacity(0.3)).frame(height: 0.5)
-                }
-                .padding(.horizontal, Spacing.xl)
-
-                VStack(spacing: Spacing.md) {
-                    if authViewModel.isRegistering {
-                        TextField("Display Name", text: $authViewModel.displayName)
+                // Form
+                VStack(spacing: Spacing.xl) {
+                    SignInWithAppleButton(.signIn) { request in
+                        request.requestedScopes = [.email, .fullName]
+                    } onCompletion: { _ in
+                        // TODO: Wire up Apple sign-in with backend
                     }
-                    TextField("Email", text: $authViewModel.email)
-                        .textContentType(.emailAddress)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                    SecureField("Password", text: $authViewModel.password)
-                        .textContentType(authViewModel.isRegistering ? .newPassword : .password)
-                }
-                .textFieldStyle(.roundedBorder)
-                .font(.typeStyle(.body))
-                .padding(.horizontal, Spacing.xl)
+                    .signInWithAppleButtonStyle(.whiteOutline)
+                    .frame(height: 50)
+                    .cornerRadius(CornerRadius.subtle)
 
-                if let error = authViewModel.errorMessage {
-                    Text(error)
-                        .foregroundStyle(Color.terracotta)
-                        .font(.typeStyle(.footnote))
-                }
+                    HStack {
+                        Rectangle().fill(Color.clay.opacity(0.3)).frame(height: 0.5)
+                        Text("or")
+                            .font(.typeStyle(.footnote))
+                            .foregroundStyle(Color.clay)
+                        Rectangle().fill(Color.clay.opacity(0.3)).frame(height: 0.5)
+                    }
 
-                Button {
-                    Task {
+                    VStack(spacing: Spacing.md) {
                         if authViewModel.isRegistering {
-                            await authViewModel.register()
-                        } else {
-                            await authViewModel.login()
+                            TextField("Display Name", text: $authViewModel.displayName)
                         }
+                        TextField("Email", text: $authViewModel.email)
+                            .textContentType(.emailAddress)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                        SecureField("Password", text: $authViewModel.password)
+                            .textContentType(authViewModel.isRegistering ? .newPassword : .password)
                     }
-                } label: {
-                    Text(authViewModel.isRegistering ? "Create Account" : "Log In")
-                        .font(.typeStyle(.headline))
-                        .foregroundStyle(Color.cream)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, Spacing.md)
-                        .background(Color.terracotta)
-                        .cornerRadius(CornerRadius.subtle)
-                }
-                .disabled(authViewModel.isLoading)
-                .padding(.horizontal, Spacing.xl)
+                    .textFieldStyle(.plain)
+                    .font(.typeStyle(.body))
+                    .padding(Spacing.md)
+                    .background(Color.parchment)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
 
-                Button(authViewModel.isRegistering ? "Already have an account? Log in" : "Create an account") {
-                    authViewModel.isRegistering.toggle()
+                    if let error = authViewModel.errorMessage {
+                        Text(error)
+                            .foregroundStyle(Color.terracotta)
+                            .font(.typeStyle(.footnote))
+                    }
+
+                    Button {
+                        Task {
+                            if authViewModel.isRegistering {
+                                await authViewModel.register()
+                            } else {
+                                await authViewModel.login()
+                            }
+                        }
+                    } label: {
+                        Text(authViewModel.isRegistering ? "Create Account" : "Sign In")
+                            .font(.typeStyle(.headline))
+                            .foregroundStyle(Color.cream)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, Spacing.md)
+                            .background(Color.terracotta)
+                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                            .warmShadow(.elevated)
+                    }
+                    .disabled(authViewModel.isLoading)
+
+                    Button(authViewModel.isRegistering ? "Already have an account? Sign in" : "Create an account") {
+                        authViewModel.isRegistering.toggle()
+                    }
+                    .font(.typeStyle(.footnote))
+                    .foregroundStyle(Color.terracotta)
                 }
-                .font(.typeStyle(.footnote))
-                .foregroundStyle(Color.terracotta)
+                .padding(.horizontal, Spacing.xl)
+                .opacity(showForm ? 1 : 0)
+                .offset(y: showForm ? 0 : 15)
 
                 Spacer()
+            }
+        }
+        .onAppear {
+            withAnimation(Motion.gentle.delay(Motion.staggerDelay(index: 0))) {
+                showTitle = true
+            }
+            withAnimation(Motion.gentle.delay(Motion.staggerDelay(index: 1))) {
+                showTagline = true
+            }
+            withAnimation(Motion.gentle.delay(Motion.staggerDelay(index: 3))) {
+                showForm = true
             }
         }
     }
