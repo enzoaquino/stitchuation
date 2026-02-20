@@ -82,15 +82,21 @@ struct ThreadListView: View {
 struct ThreadRowView: View {
     @Environment(\.modelContext) private var modelContext
     let thread: NeedleThread
+    @State private var quantityScale: CGFloat = 1.0
 
     var body: some View {
         HStack(spacing: Spacing.md) {
             ThreadSwatch(colorHex: thread.colorHex)
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text("\(thread.brand) \(thread.number)")
-                    .font(.typeStyle(.headline))
-                    .foregroundStyle(Color.espresso)
+                HStack(spacing: Spacing.xs) {
+                    Text(thread.brand)
+                        .font(.typeStyle(.headline))
+                        .foregroundStyle(Color.espresso)
+                    Text(thread.number)
+                        .font(.typeStyle(.data))
+                        .foregroundStyle(Color.espresso)
+                }
                 if let name = thread.colorName {
                     Text("\(name) · \(thread.fiberType.rawValue.capitalized)")
                         .font(.typeStyle(.subheadline))
@@ -114,6 +120,7 @@ struct ThreadRowView: View {
                     .font(.typeStyle(.data))
                     .foregroundStyle(Color.espresso)
                     .frame(minWidth: 24)
+                    .scaleEffect(quantityScale)
 
                 Button { updateQuantity(1) } label: {
                     Image(systemName: "plus")
@@ -130,10 +137,14 @@ struct ThreadRowView: View {
     }
 
     private func updateQuantity(_ delta: Int) {
-        withAnimation(.spring(duration: 0.2)) {
-            thread.quantity = max(0, thread.quantity + delta)
-            thread.updatedAt = Date()
-            try? modelContext.save()
+        thread.quantity = max(0, thread.quantity + delta)
+        thread.updatedAt = Date()
+        try? modelContext.save()
+        withAnimation(Motion.bouncy) {
+            quantityScale = 1.15
+        }
+        withAnimation(Motion.bouncy.delay(0.1)) {
+            quantityScale = 1.0
         }
     }
 }
