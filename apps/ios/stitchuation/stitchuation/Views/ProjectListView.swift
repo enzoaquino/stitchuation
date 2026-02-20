@@ -115,18 +115,14 @@ struct StartProjectSheet: View {
     private var stashPieces: [StitchPiece]
 
     private static let stashPredicate = #Predicate<StitchPiece> {
-        $0.deletedAt == nil
-    }
-
-    private var availablePieces: [StitchPiece] {
-        stashPieces.filter { $0.status == .stash }
+        $0.deletedAt == nil && $0.status.rawValue == "stash"
     }
 
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.linen.ignoresSafeArea()
-                if availablePieces.isEmpty {
+                if stashPieces.isEmpty {
                     EmptyStateView(
                         icon: "square.stack.3d.up.slash",
                         title: "No available canvases",
@@ -134,7 +130,7 @@ struct StartProjectSheet: View {
                     )
                 } else {
                     List {
-                        ForEach(availablePieces, id: \.id) { piece in
+                        ForEach(stashPieces, id: \.id) { piece in
                             Button {
                                 startProject(piece)
                             } label: {

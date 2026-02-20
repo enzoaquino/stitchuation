@@ -3,7 +3,7 @@ import SwiftUI
 struct EditCanvasView: View {
     @Environment(\.dismiss) private var dismiss
 
-    @Bindable var canvas: StitchPiece
+    @Bindable var piece: StitchPiece
 
     @State private var designer: String
     @State private var designName: String
@@ -13,15 +13,15 @@ struct EditCanvasView: View {
     @State private var meshCount: String
     @State private var notes: String
 
-    init(canvas: StitchPiece) {
-        self.canvas = canvas
-        _designer = State(initialValue: canvas.designer)
-        _designName = State(initialValue: canvas.designName)
-        _acquiredAt = State(initialValue: canvas.acquiredAt)
-        _showDatePicker = State(initialValue: canvas.acquiredAt != nil)
-        _size = State(initialValue: canvas.size ?? "")
-        _meshCount = State(initialValue: canvas.meshCount.map { String($0) } ?? "")
-        _notes = State(initialValue: canvas.notes ?? "")
+    init(piece: StitchPiece) {
+        self.piece = piece
+        _designer = State(initialValue: piece.designer)
+        _designName = State(initialValue: piece.designName)
+        _acquiredAt = State(initialValue: piece.acquiredAt)
+        _showDatePicker = State(initialValue: piece.acquiredAt != nil)
+        _size = State(initialValue: piece.size ?? "")
+        _meshCount = State(initialValue: piece.meshCount.map { String($0) } ?? "")
+        _notes = State(initialValue: piece.notes ?? "")
     }
 
     private var meshCountValue: Int? {
@@ -100,13 +100,13 @@ struct EditCanvasView: View {
     }
 
     private func saveChanges() {
-        canvas.designer = designer
-        canvas.designName = designName
-        canvas.acquiredAt = showDatePicker ? acquiredAt : nil
-        canvas.size = size.isEmpty ? nil : size
-        canvas.meshCount = meshCountValue
-        canvas.notes = notes.isEmpty ? nil : notes
-        canvas.updatedAt = Date()
+        piece.designer = designer
+        piece.designName = designName
+        piece.acquiredAt = showDatePicker ? acquiredAt : nil
+        piece.size = size.isEmpty ? nil : size
+        piece.meshCount = meshCountValue
+        piece.notes = notes.isEmpty ? nil : notes
+        piece.updatedAt = Date()
         dismiss()
     }
 }

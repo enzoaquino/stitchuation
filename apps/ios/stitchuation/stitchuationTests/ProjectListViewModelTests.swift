@@ -1,15 +1,15 @@
 import Testing
 @testable import stitchuation
 
+@Suite("ProjectListViewModel Tests")
 @MainActor
 struct ProjectListViewModelTests {
-    let viewModel = ProjectListViewModel()
-
     private func makePiece(designer: String, designName: String, status: PieceStatus = .wip) -> StitchPiece {
         StitchPiece(designer: designer, designName: designName, status: status)
     }
 
     @Test func filteredPiecesReturnsActiveByDefault() {
+        let viewModel = ProjectListViewModel()
         let pieces = [
             makePiece(designer: "Alice", designName: "Flowers", status: .wip),
             makePiece(designer: "Bob", designName: "Trees", status: .finished),
@@ -20,6 +20,7 @@ struct ProjectListViewModelTests {
     }
 
     @Test func filteredPiecesShowsFinishedWhenToggled() {
+        let viewModel = ProjectListViewModel()
         viewModel.showFinished = true
         let pieces = [
             makePiece(designer: "Alice", designName: "Flowers", status: .wip),
@@ -31,6 +32,7 @@ struct ProjectListViewModelTests {
     }
 
     @Test func filteredPiecesByDesigner() {
+        let viewModel = ProjectListViewModel()
         let pieces = [
             makePiece(designer: "Alice", designName: "Flowers"),
             makePiece(designer: "Bob", designName: "Trees"),
@@ -42,6 +44,7 @@ struct ProjectListViewModelTests {
     }
 
     @Test func filteredPiecesByDesignName() {
+        let viewModel = ProjectListViewModel()
         let pieces = [
             makePiece(designer: "Alice", designName: "Flowers"),
             makePiece(designer: "Bob", designName: "Trees"),
@@ -52,6 +55,7 @@ struct ProjectListViewModelTests {
     }
 
     @Test func piecesByStatusGroupsCorrectly() {
+        let viewModel = ProjectListViewModel()
         let pieces = [
             makePiece(designer: "A", designName: "D1", status: .wip),
             makePiece(designer: "B", designName: "D2", status: .finished),
@@ -70,6 +74,7 @@ struct ProjectListViewModelTests {
     }
 
     @Test func piecesByStatusOmitsEmptyGroups() {
+        let viewModel = ProjectListViewModel()
         let pieces = [
             makePiece(designer: "A", designName: "D1", status: .wip),
         ]
@@ -79,6 +84,7 @@ struct ProjectListViewModelTests {
     }
 
     @Test func piecesByStatusShowsFinishedGroup() {
+        let viewModel = ProjectListViewModel()
         viewModel.showFinished = true
         let pieces = [
             makePiece(designer: "A", designName: "D1", status: .finished),

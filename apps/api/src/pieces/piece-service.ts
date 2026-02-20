@@ -1,7 +1,7 @@
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { db } from "../db/connection.js";
 import { stitchPieces } from "../db/schema.js";
-import { NotFoundError } from "../errors.js";
+import { NotFoundError, BadRequestError } from "../errors.js";
 import type { CreatePieceInput, UpdatePieceInput, PieceStatus } from "./schemas.js";
 import { pieceStatuses } from "./schemas.js";
 
@@ -82,7 +82,7 @@ export class PieceService {
     const currentIndex = pieceStatuses.indexOf(piece.status as PieceStatus);
 
     if (currentIndex >= pieceStatuses.length - 1) {
-      throw new Error("Piece is already finished");
+      throw new BadRequestError("Piece is already finished");
     }
 
     const nextStatus = pieceStatuses[currentIndex + 1];
@@ -96,9 +96,10 @@ export class PieceService {
     const [updated] = await db
       .update(stitchPieces)
       .set(updateData)
-      .where(and(eq(stitchPieces.id, id), eq(stitchPieces.userId, userId)))
+      .where(and(eq(stitchPieces.id, id), eq(stitchPieces.userId, userId), isNull(stitchPieces.deletedAt)))
       .returning();
 
+    if (!updated) throw new NotFoundError("Piece");
     return updated;
   }
 
@@ -106,12 +107,28 @@ export class PieceService {
     const piece = await this.getById(userId, id);
     if (!piece) throw new NotFoundError("Piece");
 
+    const now = new Date();
+    const updateData: Record<string, unknown> = { status, updatedAt: now };
+
+    // Set/clear lifecycle timestamps based on target status
+    const targetIndex = pieceStatuses.indexOf(status);
+    const kittingIndex = pieceStatuses.indexOf("kitting");
+    const stitchedIndex = pieceStatuses.indexOf("stitched");
+    const atFinishingIndex = pieceStatuses.indexOf("at_finishing");
+    const finishedIndex = pieceStatuses.indexOf("finished");
+
+    updateData.startedAt = targetIndex >= kittingIndex ? (piece.startedAt ?? now) : null;
+    updateData.stitchedAt = targetIndex >= stitchedIndex ? (piece.stitchedAt ?? now) : null;
+    updateData.finishingAt = targetIndex >= atFinishingIndex ? (piece.finishingAt ?? now) : null;
+    updateData.completedAt = targetIndex >= finishedIndex ? (piece.completedAt ?? now) : null;
+
     const [updated] = await db
       .update(stitchPieces)
-      .set({ status, updatedAt: new Date() })
-      .where(and(eq(stitchPieces.id, id), eq(stitchPieces.userId, userId)))
+      .set(updateData)
+      .where(and(eq(stitchPieces.id, id), eq(stitchPieces.userId, userId), isNull(stitchPieces.deletedAt)))
       .returning();
 
+    if (!updated) throw new NotFoundError("Piece");
     return updated;
   }
 
@@ -120,7 +137,7 @@ export class PieceService {
     if (!piece) throw new NotFoundError("Piece");
 
     if (piece.status === "stash") {
-      throw new Error("Piece is already in stash");
+      throw new BadRequestError("Piece is already in stash");
     }
 
     const [updated] = await db
@@ -133,9 +150,10 @@ export class PieceService {
         completedAt: null,
         updatedAt: new Date(),
       })
-      .where(and(eq(stitchPieces.id, id), eq(stitchPieces.userId, userId)))
+      .where(and(eq(stitchPieces.id, id), eq(stitchPieces.userId, userId), isNull(stitchPieces.deletedAt)))
       .returning();
 
+    if (!updated) throw new NotFoundError("Piece");
     return updated;
   }
 

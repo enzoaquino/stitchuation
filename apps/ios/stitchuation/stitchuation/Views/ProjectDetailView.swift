@@ -213,8 +213,7 @@ struct ProjectDetailView: View {
                     ForEach(PieceStatus.allCases, id: \.self) { status in
                         Button {
                             if let piece {
-                                piece.status = status
-                                piece.updatedAt = Date()
+                                applyStatus(status, to: piece)
                             }
                             showChangeStatus = false
                         } label: {
@@ -281,25 +280,27 @@ struct ProjectDetailView: View {
     }
 
     private func advanceStatus() {
-        guard let piece else { return }
+        guard let piece, let next = piece.status.next else { return }
+        applyStatus(next, to: piece)
+    }
+
+    private func applyStatus(_ status: PieceStatus, to piece: StitchPiece) {
         let now = Date()
-        switch piece.status {
-        case .stash:
-            break
-        case .kitting:
-            piece.status = .wip
-        case .wip:
-            piece.status = .stitched
-            piece.stitchedAt = now
-        case .stitched:
-            piece.status = .atFinishing
-            piece.finishingAt = now
-        case .atFinishing:
-            piece.status = .finished
-            piece.completedAt = now
-        case .finished:
-            break
-        }
+        piece.status = status
+
+        // Set lifecycle timestamps based on target status
+        let allCases = PieceStatus.allCases
+        let targetIndex = allCases.firstIndex(of: status)!
+        let kittingIndex = allCases.firstIndex(of: .kitting)!
+        let stitchedIndex = allCases.firstIndex(of: .stitched)!
+        let atFinishingIndex = allCases.firstIndex(of: .atFinishing)!
+        let finishedIndex = allCases.firstIndex(of: .finished)!
+
+        piece.startedAt = targetIndex >= kittingIndex ? (piece.startedAt ?? now) : nil
+        piece.stitchedAt = targetIndex >= stitchedIndex ? (piece.stitchedAt ?? now) : nil
+        piece.finishingAt = targetIndex >= atFinishingIndex ? (piece.finishingAt ?? now) : nil
+        piece.completedAt = targetIndex >= finishedIndex ? (piece.completedAt ?? now) : nil
+
         piece.updatedAt = now
     }
 }

@@ -11,8 +11,8 @@ struct PieceStatusBadge: View {
         case .kitting: return Color.dustyRose
         case .wip: return Color.terracotta
         case .stitched: return Color.sage
-        case .atFinishing: return Color.dustyRose
-        case .finished: return Color.sage
+        case .atFinishing: return Color.clay
+        case .finished: return Color.espresso
         }
     }
 

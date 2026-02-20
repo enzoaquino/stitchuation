@@ -2,6 +2,7 @@ import Testing
 import Foundation
 @testable import stitchuation
 
+@Suite("JournalImage Tests")
 struct JournalImageTests {
     @Test func initWithRequiredFields() {
         let piece = StitchPiece(designer: "Test", designName: "Test")

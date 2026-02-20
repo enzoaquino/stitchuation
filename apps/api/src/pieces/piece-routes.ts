@@ -11,7 +11,7 @@ import {
 } from "./schemas.js";
 import { authMiddleware } from "../auth/middleware.js";
 import type { AuthEnv } from "../auth/types.js";
-import { NotFoundError } from "../errors.js";
+import { NotFoundError, BadRequestError } from "../errors.js";
 import { getStorage } from "../storage/index.js";
 
 const pieceRoutes = new Hono<AuthEnv>();
@@ -128,7 +128,7 @@ pieceRoutes.delete("/:id", async (c) => {
 
 // --- Status Actions ---
 
-pieceRoutes.put("/:id/status", async (c) => {
+pieceRoutes.post("/:id/status", async (c) => {
   const userId = c.get("userId");
   const idResult = uuidSchema.safeParse(c.req.param("id"));
   if (!idResult.success) {
@@ -142,7 +142,7 @@ pieceRoutes.put("/:id/status", async (c) => {
     if (error instanceof NotFoundError) {
       return c.json({ error: error.message }, 404);
     }
-    if (error instanceof Error && error.message === "Piece is already finished") {
+    if (error instanceof BadRequestError) {
       return c.json({ error: error.message }, 400);
     }
     throw error;
@@ -193,7 +193,7 @@ pieceRoutes.put("/:id/shelve", async (c) => {
     if (error instanceof NotFoundError) {
       return c.json({ error: error.message }, 404);
     }
-    if (error instanceof Error && error.message === "Piece is already in stash") {
+    if (error instanceof BadRequestError) {
       return c.json({ error: error.message }, 400);
     }
     throw error;

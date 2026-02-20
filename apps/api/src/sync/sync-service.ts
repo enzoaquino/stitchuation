@@ -2,7 +2,10 @@ import { and, eq, gt, inArray } from "drizzle-orm";
 import { db } from "../db/connection.js";
 import { threads, stitchPieces, journalEntries, journalImages } from "../db/schema.js";
 import type { SyncChange, SyncRequest } from "./schemas.js";
+import { pieceStatuses } from "../pieces/schemas.js";
 import { getStorage } from "../storage/index.js";
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Allowlisted fields that clients may set via sync
 const ALLOWED_THREAD_FIELDS = new Set([
@@ -185,12 +188,13 @@ export class SyncService {
 
     if (!existing) {
       const allowed = change.data ? pickAllowedFields(change.data, ALLOWED_PIECE_FIELDS) : {};
+      const status = pieceStatuses.includes(allowed.status as any) ? (allowed.status as any) : "stash";
       await tx.insert(stitchPieces).values({
         id: change.id,
         userId,
         designer: (allowed.designer as string) ?? "",
         designName: (allowed.designName as string) ?? "",
-        status: (allowed.status as any) ?? "stash",
+        status,
         imageKey: allowed.imageKey as string | undefined,
         size: allowed.size as string | undefined,
         meshCount: allowed.meshCount as number | undefined,
@@ -209,6 +213,10 @@ export class SyncService {
       };
       if (change.data) {
         const allowed = pickAllowedFields(change.data, ALLOWED_PIECE_FIELDS);
+        // Validate status enum value
+        if (allowed.status !== undefined && !pieceStatuses.includes(allowed.status as any)) {
+          delete allowed.status;
+        }
         if (allowed.acquiredAt) {
           allowed.acquiredAt = new Date(allowed.acquiredAt as string);
         }
@@ -262,10 +270,12 @@ export class SyncService {
 
     if (!existing) {
       const allowed = change.data ? pickAllowedFields(change.data, ALLOWED_JOURNAL_ENTRY_FIELDS) : {};
+      const targetPieceId = allowed.pieceId as string | undefined;
+      if (!targetPieceId || !UUID_REGEX.test(targetPieceId)) return;
       await tx.insert(journalEntries).values({
         id: change.id,
         userId,
-        pieceId: (allowed.pieceId as string) ?? "",
+        pieceId: targetPieceId,
         notes: allowed.notes as string | undefined,
         createdAt: clientUpdatedAt,
         updatedAt: clientUpdatedAt,

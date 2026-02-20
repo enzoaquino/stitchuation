@@ -307,7 +307,7 @@ describe("Piece Routes - Status Actions", () => {
     accessToken = body.accessToken;
   });
 
-  it("PUT /pieces/:id/status advances from stash to kitting", async () => {
+  it("POST /pieces/:id/status advances from stash to kitting", async () => {
     const createRes = await app.request("/pieces", {
       method: "POST",
       headers: {
@@ -320,7 +320,7 @@ describe("Piece Routes - Status Actions", () => {
     expect(created.status).toBe("stash");
 
     const res = await app.request(`/pieces/${created.id}/status`, {
-      method: "PUT",
+      method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
@@ -330,7 +330,7 @@ describe("Piece Routes - Status Actions", () => {
     expect(body.startedAt).toBeTruthy();
   });
 
-  it("PUT /pieces/:id/status advances through full lifecycle", async () => {
+  it("POST /pieces/:id/status advances through full lifecycle", async () => {
     const createRes = await app.request("/pieces", {
       method: "POST",
       headers: {
@@ -343,19 +343,19 @@ describe("Piece Routes - Status Actions", () => {
 
     // stash -> kitting
     await app.request(`/pieces/${created.id}/status`, {
-      method: "PUT",
+      method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     // kitting -> wip
     await app.request(`/pieces/${created.id}/status`, {
-      method: "PUT",
+      method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     // wip -> stitched
     const stitchedRes = await app.request(`/pieces/${created.id}/status`, {
-      method: "PUT",
+      method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     const stitched = await stitchedRes.json();
@@ -364,7 +364,7 @@ describe("Piece Routes - Status Actions", () => {
 
     // stitched -> at_finishing
     const finishingRes = await app.request(`/pieces/${created.id}/status`, {
-      method: "PUT",
+      method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     const finishing = await finishingRes.json();
@@ -373,7 +373,7 @@ describe("Piece Routes - Status Actions", () => {
 
     // at_finishing -> finished
     const finishedRes = await app.request(`/pieces/${created.id}/status`, {
-      method: "PUT",
+      method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     const finished = await finishedRes.json();
@@ -381,7 +381,7 @@ describe("Piece Routes - Status Actions", () => {
     expect(finished.completedAt).toBeTruthy();
   });
 
-  it("PUT /pieces/:id/status returns 400 when already finished", async () => {
+  it("POST /pieces/:id/status returns 400 when already finished", async () => {
     const createRes = await app.request("/pieces", {
       method: "POST",
       headers: {
@@ -397,7 +397,7 @@ describe("Piece Routes - Status Actions", () => {
     const created = await createRes.json();
 
     const res = await app.request(`/pieces/${created.id}/status`, {
-      method: "PUT",
+      method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
@@ -406,18 +406,18 @@ describe("Piece Routes - Status Actions", () => {
     expect(body.error).toBe("Piece is already finished");
   });
 
-  it("PUT /pieces/:id/status returns 404 for non-existent piece", async () => {
+  it("POST /pieces/:id/status returns 404 for non-existent piece", async () => {
     const res = await app.request("/pieces/00000000-0000-0000-0000-000000000000/status", {
-      method: "PUT",
+      method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     expect(res.status).toBe(404);
   });
 
-  it("PUT /pieces/:id/status returns 400 for invalid UUID", async () => {
+  it("POST /pieces/:id/status returns 400 for invalid UUID", async () => {
     const res = await app.request("/pieces/not-a-uuid/status", {
-      method: "PUT",
+      method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 

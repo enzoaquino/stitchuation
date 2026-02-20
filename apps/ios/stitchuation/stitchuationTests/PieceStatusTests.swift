@@ -1,4 +1,5 @@
 import Testing
+import Foundation
 @testable import stitchuation
 
 @Suite("PieceStatus Tests")
@@ -46,5 +47,16 @@ struct PieceStatusTests {
         #expect(PieceStatus.stitched.isActive == true)
         #expect(PieceStatus.atFinishing.isActive == true)
         #expect(PieceStatus.finished.isActive == false)
+    }
+
+    @Test("Codable round-trip preserves all cases including at_finishing")
+    func codableRoundTrip() throws {
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        for status in PieceStatus.allCases {
+            let data = try encoder.encode(status)
+            let decoded = try decoder.decode(PieceStatus.self, from: data)
+            #expect(decoded == status)
+        }
     }
 }

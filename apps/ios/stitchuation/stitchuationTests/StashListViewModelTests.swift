@@ -1,54 +1,37 @@
 import Testing
 import Foundation
-import SwiftData
 @testable import stitchuation
 
+@Suite("StashListViewModel Tests")
 @MainActor
 struct StashListViewModelTests {
-    private func makeContainer() throws -> ModelContainer {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        return try ModelContainer(for: StitchPiece.self, configurations: config)
-    }
-
-    @Test func filteredPiecesReturnsStashOnlyByDefault() throws {
+    @Test func filteredPiecesReturnsStashOnlyByDefault() {
         let vm = StashListViewModel()
-        let container = try makeContainer()
-        let context = container.mainContext
 
         let p1 = StitchPiece(designer: "Melissa Shirley", designName: "Nutcracker")
         let p2 = StitchPiece(designer: "Kirk & Bradley", designName: "Gingerbread", status: .wip)
-        context.insert(p1)
-        context.insert(p2)
 
         let result = vm.filteredPieces(from: [p1, p2])
         #expect(result.count == 1)
         #expect(result.first?.designName == "Nutcracker")
     }
 
-    @Test func filteredPiecesShowsAllWhenToggled() throws {
+    @Test func filteredPiecesShowsAllWhenToggled() {
         let vm = StashListViewModel()
         vm.showAllPieces = true
-        let container = try makeContainer()
-        let context = container.mainContext
 
         let p1 = StitchPiece(designer: "Melissa Shirley", designName: "Nutcracker")
         let p2 = StitchPiece(designer: "Kirk & Bradley", designName: "Gingerbread", status: .wip)
-        context.insert(p1)
-        context.insert(p2)
 
         let result = vm.filteredPieces(from: [p1, p2])
         #expect(result.count == 2)
     }
 
-    @Test func filteredPiecesFiltersByDesigner() throws {
+    @Test func filteredPiecesFiltersByDesigner() {
         let vm = StashListViewModel()
-        let container = try makeContainer()
-        let context = container.mainContext
 
         let p1 = StitchPiece(designer: "Melissa Shirley", designName: "Nutcracker")
         let p2 = StitchPiece(designer: "Kirk & Bradley", designName: "Gingerbread")
-        context.insert(p1)
-        context.insert(p2)
 
         vm.searchText = "melissa"
         let result = vm.filteredPieces(from: [p1, p2])
@@ -56,15 +39,11 @@ struct StashListViewModelTests {
         #expect(result.first?.designer == "Melissa Shirley")
     }
 
-    @Test func filteredPiecesFiltersByDesignName() throws {
+    @Test func filteredPiecesFiltersByDesignName() {
         let vm = StashListViewModel()
-        let container = try makeContainer()
-        let context = container.mainContext
 
         let p1 = StitchPiece(designer: "Melissa Shirley", designName: "Nutcracker")
         let p2 = StitchPiece(designer: "Kirk & Bradley", designName: "Gingerbread")
-        context.insert(p1)
-        context.insert(p2)
 
         vm.searchText = "gingerbread"
         let result = vm.filteredPieces(from: [p1, p2])
@@ -72,41 +51,31 @@ struct StashListViewModelTests {
         #expect(result.first?.designName == "Gingerbread")
     }
 
-    @Test func filteredPiecesIsCaseInsensitive() throws {
+    @Test func filteredPiecesIsCaseInsensitive() {
         let vm = StashListViewModel()
-        let container = try makeContainer()
-        let context = container.mainContext
 
         let p1 = StitchPiece(designer: "Melissa Shirley", designName: "Nutcracker")
-        context.insert(p1)
 
         vm.searchText = "MELISSA"
         let result = vm.filteredPieces(from: [p1])
         #expect(result.count == 1)
     }
 
-    @Test func filteredPiecesReturnsEmptyWhenNoMatch() throws {
+    @Test func filteredPiecesReturnsEmptyWhenNoMatch() {
         let vm = StashListViewModel()
-        let container = try makeContainer()
-        let context = container.mainContext
 
         let p1 = StitchPiece(designer: "Melissa Shirley", designName: "Nutcracker")
-        context.insert(p1)
 
         vm.searchText = "nonexistent"
         let result = vm.filteredPieces(from: [p1])
         #expect(result.isEmpty)
     }
 
-    @Test func deletePiecesSoftDeletes() throws {
+    @Test func deletePiecesSoftDeletes() {
         let vm = StashListViewModel()
-        let container = try makeContainer()
-        let context = container.mainContext
 
         let p1 = StitchPiece(designer: "Test", designName: "Piece 1")
         let p2 = StitchPiece(designer: "Test", designName: "Piece 2")
-        context.insert(p1)
-        context.insert(p2)
 
         vm.deletePieces(from: [p1, p2], at: IndexSet(integer: 0))
 
@@ -115,13 +84,10 @@ struct StashListViewModelTests {
         #expect(p2.deletedAt == nil)
     }
 
-    @Test func deletePiecesUsesConsistentTimestamp() throws {
+    @Test func deletePiecesUsesConsistentTimestamp() {
         let vm = StashListViewModel()
-        let container = try makeContainer()
-        let context = container.mainContext
 
         let p1 = StitchPiece(designer: "Test", designName: "Piece 1")
-        context.insert(p1)
 
         vm.deletePieces(from: [p1], at: IndexSet(integer: 0))
 

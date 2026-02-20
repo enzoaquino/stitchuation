@@ -116,7 +116,7 @@ struct CanvasDetailView: View {
         }
         .sheet(isPresented: $showEditSheet, onDismiss: { loadPiece() }) {
             if let piece {
-                EditCanvasView(canvas: piece)
+                EditCanvasView(piece: piece)
             }
         }
         .confirmationDialog("Delete Piece", isPresented: $showDeleteConfirmation) {
