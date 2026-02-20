@@ -4,6 +4,10 @@ export const fiberTypeEnum = pgEnum("fiber_type", [
   "wool", "cotton", "silk", "synthetic", "blend", "other"
 ]);
 
+export const pieceStatusEnum = pgEnum("piece_status", [
+  "stash", "kitting", "wip", "stitched", "at_finishing", "finished"
+]);
+
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
@@ -32,55 +36,40 @@ export const threads = pgTable("threads", {
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
-export const canvases = pgTable("canvases", {
+export const stitchPieces = pgTable("stitch_pieces", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id),
   designer: text("designer").notNull(),
   designName: text("design_name").notNull(),
-  acquiredAt: timestamp("acquired_at", { withTimezone: true }),
+  status: pieceStatusEnum("status").notNull().default("stash"),
   imageKey: text("image_key"),
   size: text("size"),
   meshCount: integer("mesh_count"),
   notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  deletedAt: timestamp("deleted_at", { withTimezone: true }),
-}, (table) => [
-  index("canvases_user_id_idx").on(table.userId),
-  index("canvases_user_id_updated_at_idx").on(table.userId, table.updatedAt),
-]);
-
-export const projectStatusEnum = pgEnum("project_status", [
-  "wip", "at_finishing", "completed"
-]);
-
-export const projects = pgTable("projects", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  canvasId: uuid("canvas_id").notNull().references(() => canvases.id).unique(),
-  userId: uuid("user_id").notNull().references(() => users.id),
-  status: projectStatusEnum("status").notNull().default("wip"),
+  acquiredAt: timestamp("acquired_at", { withTimezone: true }),
   startedAt: timestamp("started_at", { withTimezone: true }),
+  stitchedAt: timestamp("stitched_at", { withTimezone: true }),
   finishingAt: timestamp("finishing_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
 }, (table) => [
-  index("projects_user_id_idx").on(table.userId),
-  index("projects_canvas_id_idx").on(table.canvasId),
-  index("projects_user_id_updated_at_idx").on(table.userId, table.updatedAt),
+  index("stitch_pieces_user_id_idx").on(table.userId),
+  index("stitch_pieces_user_id_updated_at_idx").on(table.userId, table.updatedAt),
+  index("stitch_pieces_user_id_status_idx").on(table.userId, table.status),
 ]);
 
 export const journalEntries = pgTable("journal_entries", {
   id: uuid("id").primaryKey().defaultRandom(),
-  projectId: uuid("project_id").notNull().references(() => projects.id),
+  pieceId: uuid("piece_id").notNull().references(() => stitchPieces.id),
   userId: uuid("user_id").notNull().references(() => users.id),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
 }, (table) => [
-  index("journal_entries_project_id_idx").on(table.projectId),
+  index("journal_entries_piece_id_idx").on(table.pieceId),
   index("journal_entries_user_id_updated_at_idx").on(table.userId, table.updatedAt),
 ]);
 

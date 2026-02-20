@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1771369343561,
-      "tag": "0000_mute_mongu",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1771472423526,
-      "tag": "0001_third_triton",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1771476884180,
-      "tag": "0002_tearful_justice",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1771538523125,
-      "tag": "0003_same_scream",
+      "when": 1771618248731,
+      "tag": "0000_right_hellion",
       "breakpoints": true
     }
   ]
