@@ -209,11 +209,14 @@ struct JournalEntryCard: View {
 
             if let notes = entry.notes, !notes.isEmpty {
                 Text(notes)
-                    .font(.typeStyle(.subheadline))
+                    .font(.typeStyle(.body))
                     .foregroundStyle(Color.espresso)
             }
 
             if !sortedImages.isEmpty {
+                if entry.notes != nil && !entry.notes!.isEmpty {
+                    Divider().background(Color.slate.opacity(0.2))
+                }
                 JournalImageGrid(images: sortedImages) { index in
                     selectedImageIndex = index
                     showImageViewer = true
