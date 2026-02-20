@@ -78,6 +78,7 @@ struct AddCanvasView: View {
                         .foregroundStyle(Color.walnut)
                         .textCase(nil)
                 }
+                .listRowBackground(Color.parchment)
 
                 Section {
                     Toggle("Date Acquired", isOn: $showDatePicker)
@@ -119,6 +120,7 @@ struct AddCanvasView: View {
                         .foregroundStyle(Color.walnut)
                         .textCase(nil)
                 }
+                .listRowBackground(Color.parchment)
 
                 Toggle("Add Another", isOn: $addAnother)
             }

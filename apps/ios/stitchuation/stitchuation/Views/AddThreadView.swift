@@ -55,6 +55,7 @@ struct AddThreadView: View {
                         .foregroundStyle(Color.walnut)
                         .textCase(nil)
                 }
+                .listRowBackground(Color.parchment)
 
                 Section {
                     Stepper("\(quantity)", value: $quantity, in: 0...999)
@@ -64,6 +65,7 @@ struct AddThreadView: View {
                         .foregroundStyle(Color.walnut)
                         .textCase(nil)
                 }
+                .listRowBackground(Color.parchment)
 
                 Section {
                     TextField("Barcode / UPC", text: $barcode)
@@ -76,6 +78,7 @@ struct AddThreadView: View {
                         .foregroundStyle(Color.walnut)
                         .textCase(nil)
                 }
+                .listRowBackground(Color.parchment)
 
                 Toggle("Add Another", isOn: $addAnother)
             }

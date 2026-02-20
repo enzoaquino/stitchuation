@@ -30,6 +30,7 @@ struct AddJournalEntryView: View {
                         .foregroundStyle(Color.walnut)
                         .textCase(nil)
                 }
+                .listRowBackground(Color.parchment)
 
                 Section {
                     if !selectedImages.isEmpty {
@@ -81,6 +82,7 @@ struct AddJournalEntryView: View {
                         .foregroundStyle(Color.walnut)
                         .textCase(nil)
                 }
+                .listRowBackground(Color.parchment)
             }
             .font(.typeStyle(.body))
             .scrollContentBackground(.hidden)

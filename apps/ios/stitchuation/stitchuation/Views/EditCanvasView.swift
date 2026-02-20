@@ -45,6 +45,7 @@ struct EditCanvasView: View {
                         .foregroundStyle(Color.walnut)
                         .textCase(nil)
                 }
+                .listRowBackground(Color.parchment)
 
                 Section {
                     Toggle("Date Acquired", isOn: $showDatePicker)
@@ -86,6 +87,7 @@ struct EditCanvasView: View {
                         .foregroundStyle(Color.walnut)
                         .textCase(nil)
                 }
+                .listRowBackground(Color.parchment)
             }
             .font(.typeStyle(.body))
             .scrollContentBackground(.hidden)
