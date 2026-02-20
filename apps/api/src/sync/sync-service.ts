@@ -2,6 +2,7 @@ import { and, eq, gt, inArray } from "drizzle-orm";
 import { db } from "../db/connection.js";
 import { threads, canvases, projects, journalEntries, journalImages } from "../db/schema.js";
 import type { SyncChange, SyncRequest } from "./schemas.js";
+import { getStorage } from "../storage/index.js";
 
 // Allowlisted fields that clients may set via sync
 const ALLOWED_THREAD_FIELDS = new Set([
@@ -167,6 +168,16 @@ export class SyncService {
           .update(canvases)
           .set({ deletedAt, updatedAt: clientUpdatedAt })
           .where(and(eq(canvases.id, change.id), eq(canvases.userId, userId)));
+
+        // Clean up image file
+        if (existing.imageKey) {
+          try {
+            const storage = getStorage();
+            await storage.delete(existing.imageKey);
+          } catch {
+            // Best-effort cleanup — do not fail sync
+          }
+        }
       }
       return;
     }
@@ -353,6 +364,16 @@ export class SyncService {
           .update(journalImages)
           .set({ deletedAt, updatedAt: clientUpdatedAt })
           .where(eq(journalImages.id, change.id));
+
+        // Clean up image file
+        if (existing.imageKey) {
+          try {
+            const storage = getStorage();
+            await storage.delete(existing.imageKey);
+          } catch {
+            // Best-effort cleanup — do not fail sync
+          }
+        }
       }
       return;
     }

@@ -5,6 +5,7 @@ import { ThreadService } from "../../src/threads/thread-service.js";
 import { CanvasService } from "../../src/canvases/canvas-service.js";
 import { ProjectService } from "../../src/projects/project-service.js";
 import { JournalService } from "../../src/projects/journal-service.js";
+import { getStorage } from "../../src/storage/index.js";
 
 describe("SyncService", () => {
   let syncService: SyncService;
@@ -906,6 +907,120 @@ describe("SyncService", () => {
       const images = await journalService.listImages(entry.id);
       const found = images.find((i) => i.id === imageId);
       expect(found).toBeUndefined();
+    });
+  });
+
+  describe("image cleanup on soft-delete", () => {
+    it("deletes canvas image file on soft-delete via sync", async () => {
+      const storage = getStorage();
+
+      // Create canvas via sync
+      const canvasId = crypto.randomUUID();
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [{
+          type: "canvas",
+          action: "upsert",
+          id: canvasId,
+          data: {
+            designer: "Delete Test",
+            designName: "Delete Canvas",
+            imageKey: `canvases/${userId}/${canvasId}.jpg`,
+          },
+          updatedAt: new Date().toISOString(),
+        }],
+      });
+
+      // Upload a fake image file
+      await storage.upload(Buffer.from([0xff, 0xd8]), `canvases/${userId}/${canvasId}.jpg`);
+
+      // Verify file exists
+      const fileBefore = await storage.getFilePath(`canvases/${userId}/${canvasId}.jpg`);
+      expect(fileBefore).not.toBeNull();
+
+      // Delete canvas via sync
+      const deleteTime = new Date(Date.now() + 1000).toISOString();
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [{
+          type: "canvas",
+          action: "delete",
+          id: canvasId,
+          updatedAt: deleteTime,
+          deletedAt: deleteTime,
+        }],
+      });
+
+      // Verify file is deleted
+      const fileAfter = await storage.getFilePath(`canvases/${userId}/${canvasId}.jpg`);
+      expect(fileAfter).toBeNull();
+    });
+
+    it("deletes journal image file on soft-delete via sync", async () => {
+      const storage = getStorage();
+
+      // Create canvas, project, entry, and image via sync
+      const canvasId = crypto.randomUUID();
+      const projectId = crypto.randomUUID();
+      const entryId = crypto.randomUUID();
+      const imageId = crypto.randomUUID();
+      const now = new Date().toISOString();
+
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [
+          {
+            type: "canvas",
+            action: "upsert",
+            id: canvasId,
+            data: { designer: "JI Delete", designName: "JI Canvas" },
+            updatedAt: now,
+          },
+          {
+            type: "project",
+            action: "upsert",
+            id: projectId,
+            data: { canvasId, status: "wip" },
+            updatedAt: now,
+          },
+          {
+            type: "journalEntry",
+            action: "upsert",
+            id: entryId,
+            data: { projectId, notes: "test" },
+            updatedAt: now,
+          },
+          {
+            type: "journalImage",
+            action: "upsert",
+            id: imageId,
+            data: { entryId, imageKey: `journals/${userId}/${entryId}/${imageId}.jpg`, sortOrder: 0 },
+            updatedAt: now,
+          },
+        ],
+      });
+
+      // Upload a fake image file
+      await storage.upload(Buffer.from([0xff, 0xd8]), `journals/${userId}/${entryId}/${imageId}.jpg`);
+      const fileBefore = await storage.getFilePath(`journals/${userId}/${entryId}/${imageId}.jpg`);
+      expect(fileBefore).not.toBeNull();
+
+      // Delete journal image via sync
+      const deleteTime = new Date(Date.now() + 1000).toISOString();
+      await syncService.sync(userId, {
+        lastSync: null,
+        changes: [{
+          type: "journalImage",
+          action: "delete",
+          id: imageId,
+          updatedAt: deleteTime,
+          deletedAt: deleteTime,
+        }],
+      });
+
+      // Verify file is deleted
+      const fileAfter = await storage.getFilePath(`journals/${userId}/${entryId}/${imageId}.jpg`);
+      expect(fileAfter).toBeNull();
     });
   });
 });
