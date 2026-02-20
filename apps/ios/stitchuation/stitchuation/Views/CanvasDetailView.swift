@@ -1,17 +1,13 @@
 import SwiftUI
 import SwiftData
 
-struct ProjectNavID: Hashable {
-    let id: UUID
-}
-
 struct CanvasDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
-    let canvasId: UUID
+    let pieceId: UUID
 
-    @State private var canvas: StashCanvas?
+    @State private var piece: StitchPiece?
     @State private var showEditSheet = false
     @State private var showDeleteConfirmation = false
 
@@ -19,41 +15,49 @@ struct CanvasDetailView: View {
         ZStack {
             Color.linen.ignoresSafeArea()
 
-            if let canvas {
+            if let piece {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spacing.xl) {
-                        CanvasThumbnail(imageKey: canvas.imageKey, size: .fill)
+                        CanvasThumbnail(imageKey: piece.imageKey, size: .fill)
                             .frame(height: 260)
                             .frame(maxWidth: .infinity)
                             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
                             .padding(.horizontal, Spacing.lg)
 
                         VStack(alignment: .leading, spacing: Spacing.md) {
-                            Text(canvas.designName)
-                                .font(.typeStyle(.title))
-                                .foregroundStyle(Color.espresso)
+                            HStack {
+                                Text(piece.designName)
+                                    .font(.typeStyle(.title))
+                                    .foregroundStyle(Color.espresso)
 
-                            Text(canvas.designer)
+                                Spacer()
+
+                                if piece.status != .stash {
+                                    PieceStatusBadge(status: piece.status)
+                                }
+                            }
+
+                            Text(piece.designer)
                                 .font(.typeStyle(.title3))
                                 .foregroundStyle(Color.walnut)
 
-                            if canvas.acquiredAt != nil || canvas.size != nil || canvas.meshCount != nil {
+                            if piece.acquiredAt != nil || piece.size != nil || piece.meshCount != nil {
                                 Divider().background(Color.slate.opacity(0.3))
 
                                 VStack(alignment: .leading, spacing: Spacing.sm) {
-                                    if let acquiredAt = canvas.acquiredAt {
+                                    if let acquiredAt = piece.acquiredAt {
                                         DetailRow(label: "Acquired", value: acquiredAt.formatted(date: .abbreviated, time: .omitted))
                                     }
-                                    if let size = canvas.size {
+                                    if let size = piece.size {
                                         DetailRow(label: "Size", value: size)
                                     }
-                                    if let meshCount = canvas.meshCount {
+                                    if let meshCount = piece.meshCount {
                                         DetailRow(label: "Mesh", value: "\(meshCount) count")
                                     }
                                 }
                             }
 
-                            if let notes = canvas.notes, !notes.isEmpty {
+                            if let notes = piece.notes, !notes.isEmpty {
                                 Divider().background(Color.slate.opacity(0.3))
 
                                 Text(notes)
@@ -61,29 +65,22 @@ struct CanvasDetailView: View {
                                     .foregroundStyle(Color.walnut)
                             }
 
-                            if let project = canvas.project, project.deletedAt == nil {
+                            if piece.status == .stash {
                                 Divider().background(Color.slate.opacity(0.3))
 
-                                VStack(alignment: .leading, spacing: Spacing.sm) {
-                                    HStack {
-                                        Text("Project")
-                                            .font(.typeStyle(.headline))
-                                            .foregroundStyle(Color.espresso)
-                                        Spacer()
-                                        ProjectStatusBadge(status: project.status)
-                                    }
-
-                                    NavigationLink(value: ProjectNavID(id: project.id)) {
-                                        HStack {
-                                            Text("View Journal")
-                                                .font(.typeStyle(.subheadline))
-                                                .fontWeight(.medium)
-                                                .foregroundStyle(Color.terracotta)
-                                            Image(systemName: "chevron.right")
-                                                .font(.system(size: 12, weight: .semibold))
-                                                .foregroundStyle(Color.terracotta)
-                                        }
-                                    }
+                                Button {
+                                    piece.status = .kitting
+                                    piece.startedAt = Date()
+                                    piece.updatedAt = Date()
+                                } label: {
+                                    Text("Start Project")
+                                        .font(.typeStyle(.headline))
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, Spacing.md)
+                                        .background(Color.terracotta)
+                                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
                                 }
                             }
                         }
@@ -100,10 +97,10 @@ struct CanvasDetailView: View {
                     .tint(Color.terracotta)
             }
         }
-        .navigationTitle(canvas?.designName ?? "")
+        .navigationTitle(piece?.designName ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if canvas != nil {
+            if piece != nil {
                 Menu {
                     Button("Edit", systemImage: "pencil") {
                         showEditSheet = true
@@ -117,22 +114,22 @@ struct CanvasDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $showEditSheet, onDismiss: { loadCanvas() }) {
-            if let canvas {
-                EditCanvasView(canvas: canvas)
+        .sheet(isPresented: $showEditSheet, onDismiss: { loadPiece() }) {
+            if let piece {
+                EditCanvasView(canvas: piece)
             }
         }
-        .confirmationDialog("Delete Canvas", isPresented: $showDeleteConfirmation) {
+        .confirmationDialog("Delete Piece", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
-                if let canvas {
+                if let piece {
                     let now = Date()
-                    canvas.deletedAt = now
-                    canvas.updatedAt = now
+                    piece.deletedAt = now
+                    piece.updatedAt = now
 
-                    // Clean up pending uploads for this canvas
-                    let canvasId = canvas.id
+                    // Clean up pending uploads for this piece
+                    let currentPieceId = piece.id
                     let uploadDescriptor = FetchDescriptor<PendingUpload>(
-                        predicate: #Predicate { $0.entityType == "canvas" && $0.entityId == canvasId }
+                        predicate: #Predicate { $0.entityType == "piece" && $0.entityId == currentPieceId }
                     )
                     if let uploads = try? modelContext.fetch(uploadDescriptor) {
                         for upload in uploads { modelContext.delete(upload) }
@@ -142,22 +139,19 @@ struct CanvasDetailView: View {
                 }
             }
         } message: {
-            Text("Are you sure you want to delete this canvas?")
-        }
-        .navigationDestination(for: ProjectNavID.self) { navId in
-            ProjectDetailView(projectId: navId.id)
+            Text("Are you sure you want to delete this piece?")
         }
         .task {
-            loadCanvas()
+            loadPiece()
         }
     }
 
-    private func loadCanvas() {
-        let id = canvasId
-        let descriptor = FetchDescriptor<StashCanvas>(
+    private func loadPiece() {
+        let id = pieceId
+        let descriptor = FetchDescriptor<StitchPiece>(
             predicate: #Predicate { $0.id == id && $0.deletedAt == nil }
         )
-        canvas = try? modelContext.fetch(descriptor).first
+        piece = try? modelContext.fetch(descriptor).first
     }
 }
 
