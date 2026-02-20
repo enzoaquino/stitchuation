@@ -35,18 +35,18 @@ struct stitchuationApp: App {
                     await auth.checkExistingSession()
                     authViewModel = auth
 
-                    let engine = SyncEngine(
-                        networkClient: networkClient,
-                        modelContainer: modelContainer
-                    )
-                    syncEngine = engine
-
                     let queue = UploadQueue(modelContainer: modelContainer, networkClient: networkClient)
                     uploadQueue = queue
 
+                    let engine = SyncEngine(
+                        networkClient: networkClient,
+                        modelContainer: modelContainer,
+                        uploadQueue: queue
+                    )
+                    syncEngine = engine
+
                     if auth.isAuthenticated {
                         try? await engine.sync()
-                        await queue.processQueue()
                     }
                 }
                 #if canImport(UIKit)
@@ -54,8 +54,8 @@ struct stitchuationApp: App {
                     for: UIApplication.willEnterForegroundNotification
                 )) { _ in
                     guard let syncEngine, authViewModel?.isAuthenticated == true else { return }
+                    // SyncEngine.sync() processes the upload queue after completing
                     Task { try? await syncEngine.sync() }
-                    Task { await uploadQueue?.processQueue() }
                 }
                 #endif
         }

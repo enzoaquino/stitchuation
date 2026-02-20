@@ -124,7 +124,7 @@ struct AddJournalEntryView: View {
 
         // Create PendingUploads for each selected image — no JournalImage records yet
         var pendingUploads: [PendingUpload] = []
-        for selectedImage in selectedImages {
+        for (index, selectedImage) in selectedImages.enumerated() {
             let imageId = UUID()
             let compressed = compressImage(selectedImage.data, maxBytes: 10 * 1024 * 1024)
             let uploadPath = "/projects/\(project.id.uuidString)/entries/\(entry.id.uuidString)/images"
@@ -133,7 +133,9 @@ struct AddJournalEntryView: View {
                 entityType: "journalImage",
                 entityId: imageId,
                 uploadPath: uploadPath,
-                imageData: compressed
+                imageData: compressed,
+                parentEntryId: entry.id,
+                sortOrder: index
             )
             modelContext.insert(pendingUpload)
             pendingUploads.append(pendingUpload)
@@ -180,10 +182,9 @@ struct AddJournalEntryView: View {
                                 modelContext.delete(pendingUpload)
                             }
                             // Cache the image
-                            await ImageCache.shared.store(
-                                UIImage(data: pendingUpload.imageData) ?? UIImage(),
-                                forKey: imageKey
-                            )
+                            if let cachedImage = UIImage(data: pendingUpload.imageData) {
+                                await ImageCache.shared.store(cachedImage, forKey: imageKey)
+                            }
                             await ImageCache.shared.storeToDisk(pendingUpload.imageData, forKey: imageKey)
                         }
                     }

@@ -195,10 +195,9 @@ struct AddCanvasView: View {
                                 modelContext.delete(pendingUpload)
                             }
                             // Cache the image immediately
-                            await ImageCache.shared.store(
-                                UIImage(data: compressed) ?? UIImage(),
-                                forKey: imageKey
-                            )
+                            if let cachedImage = UIImage(data: compressed) {
+                                await ImageCache.shared.store(cachedImage, forKey: imageKey)
+                            }
                             await ImageCache.shared.storeToDisk(compressed, forKey: imageKey)
                         }
                     } catch {

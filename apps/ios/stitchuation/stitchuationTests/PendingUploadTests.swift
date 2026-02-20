@@ -18,7 +18,7 @@ struct PendingUploadTests {
         #expect(!upload.imageData.isEmpty)
     }
 
-    @Test("supports journal image entity type")
+    @Test("supports journal image entity type with parent entry")
     func journalImageType() {
         let entryId = UUID()
         let imageId = UUID()
@@ -26,10 +26,26 @@ struct PendingUploadTests {
             entityType: "journalImage",
             entityId: imageId,
             uploadPath: "/projects/p1/entries/\(entryId.uuidString)/images",
-            imageData: Data([0xFF, 0xD8])
+            imageData: Data([0xFF, 0xD8]),
+            parentEntryId: entryId,
+            sortOrder: 2
         )
         #expect(upload.entityType == "journalImage")
         #expect(upload.entityId == imageId)
+        #expect(upload.parentEntryId == entryId)
+        #expect(upload.sortOrder == 2)
+    }
+
+    @Test("canvas upload has nil parent entry fields")
+    func canvasNoParentEntry() {
+        let upload = PendingUpload(
+            entityType: "canvas",
+            entityId: UUID(),
+            uploadPath: "/canvases/abc/image",
+            imageData: Data([0xFF, 0xD8])
+        )
+        #expect(upload.parentEntryId == nil)
+        #expect(upload.sortOrder == nil)
     }
 
     @Test("retryCount increments")

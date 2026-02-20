@@ -93,10 +93,10 @@ final class SyncEngine {
         didSet { UserDefaults.standard.set(lastSyncTimestamp, forKey: Self.lastSyncKey) }
     }
 
-    init(networkClient: NetworkClient, modelContainer: ModelContainer) {
+    init(networkClient: NetworkClient, modelContainer: ModelContainer, uploadQueue: UploadQueue) {
         self.networkClient = networkClient
         self.modelContainer = modelContainer
-        self.uploadQueue = UploadQueue(modelContainer: modelContainer, networkClient: networkClient)
+        self.uploadQueue = uploadQueue
         self.lastSyncTimestamp = UserDefaults.standard.string(forKey: Self.lastSyncKey)
     }
 

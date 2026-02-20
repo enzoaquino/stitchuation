@@ -12,6 +12,11 @@ final class PendingUpload {
     var retryCount: Int
     var lastAttemptAt: Date?
 
+    /// Parent entry ID for journalImage uploads (needed for retry to create JournalImage)
+    var parentEntryId: UUID?
+    /// Sort order for journalImage uploads (needed for retry to create JournalImage)
+    var sortOrder: Int?
+
     static let maxRetries = 5
 
     var hasFailed: Bool {
@@ -23,13 +28,17 @@ final class PendingUpload {
         entityType: String,
         entityId: UUID,
         uploadPath: String,
-        imageData: Data
+        imageData: Data,
+        parentEntryId: UUID? = nil,
+        sortOrder: Int? = nil
     ) {
         self.id = id
         self.entityType = entityType
         self.entityId = entityId
         self.uploadPath = uploadPath
         self.imageData = imageData
+        self.parentEntryId = parentEntryId
+        self.sortOrder = sortOrder
         self.createdAt = Date()
         self.retryCount = 0
     }

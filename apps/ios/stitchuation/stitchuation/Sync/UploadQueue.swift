@@ -36,13 +36,12 @@ final class UploadQueue {
             // Parse imageKey from response
             if let json = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
                let imageKey = json["imageKey"] as? String {
-                // Update the entity with the imageKey
+                // Update or create the entity with the imageKey
                 updateEntity(upload: upload, imageKey: imageKey, context: context)
-                // Write to ImageCache
-                await ImageCache.shared.store(
-                    UIImage(data: upload.imageData) ?? UIImage(),
-                    forKey: imageKey
-                )
+                // Write to ImageCache (only if data decodes to a valid image)
+                if let image = UIImage(data: upload.imageData) {
+                    await ImageCache.shared.store(image, forKey: imageKey)
+                }
                 await ImageCache.shared.storeToDisk(upload.imageData, forKey: imageKey)
             }
 
@@ -75,6 +74,20 @@ final class UploadQueue {
             if let journalImage = try? context.fetch(descriptor).first {
                 journalImage.imageKey = imageKey
                 journalImage.updatedAt = Date()
+            } else if let parentEntryId = upload.parentEntryId {
+                // Retry path: JournalImage wasn't created on first attempt, create it now
+                let entryDescriptor = FetchDescriptor<JournalEntry>(
+                    predicate: #Predicate { $0.id == parentEntryId }
+                )
+                if let entry = try? context.fetch(entryDescriptor).first {
+                    let journalImage = JournalImage(
+                        id: entityId,
+                        entry: entry,
+                        imageKey: imageKey,
+                        sortOrder: upload.sortOrder ?? 0
+                    )
+                    context.insert(journalImage)
+                }
             }
         }
     }
