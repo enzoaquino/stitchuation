@@ -7,12 +7,12 @@ struct PendingUploadTests {
     @Test("initializes with correct defaults")
     func defaults() {
         let upload = PendingUpload(
-            entityType: "canvas",
+            entityType: "piece",
             entityId: UUID(),
-            uploadPath: "/canvases/abc/image",
+            uploadPath: "/pieces/abc/image",
             imageData: Data([0xFF, 0xD8])
         )
-        #expect(upload.entityType == "canvas")
+        #expect(upload.entityType == "piece")
         #expect(upload.retryCount == 0)
         #expect(upload.lastAttemptAt == nil)
         #expect(!upload.imageData.isEmpty)
@@ -25,7 +25,7 @@ struct PendingUploadTests {
         let upload = PendingUpload(
             entityType: "journalImage",
             entityId: imageId,
-            uploadPath: "/projects/p1/entries/\(entryId.uuidString)/images",
+            uploadPath: "/pieces/p1/entries/\(entryId.uuidString)/images",
             imageData: Data([0xFF, 0xD8]),
             parentEntryId: entryId,
             sortOrder: 2
@@ -36,12 +36,12 @@ struct PendingUploadTests {
         #expect(upload.sortOrder == 2)
     }
 
-    @Test("canvas upload has nil parent entry fields")
-    func canvasNoParentEntry() {
+    @Test("piece upload has nil parent entry fields")
+    func pieceNoParentEntry() {
         let upload = PendingUpload(
-            entityType: "canvas",
+            entityType: "piece",
             entityId: UUID(),
-            uploadPath: "/canvases/abc/image",
+            uploadPath: "/pieces/abc/image",
             imageData: Data([0xFF, 0xD8])
         )
         #expect(upload.parentEntryId == nil)
@@ -51,9 +51,9 @@ struct PendingUploadTests {
     @Test("retryCount increments")
     func retryIncrement() {
         let upload = PendingUpload(
-            entityType: "canvas",
+            entityType: "piece",
             entityId: UUID(),
-            uploadPath: "/canvases/abc/image",
+            uploadPath: "/pieces/abc/image",
             imageData: Data([0xFF, 0xD8])
         )
         upload.retryCount += 1
@@ -65,9 +65,9 @@ struct PendingUploadTests {
     @Test("max retries threshold is 5")
     func maxRetries() {
         let upload = PendingUpload(
-            entityType: "canvas",
+            entityType: "piece",
             entityId: UUID(),
-            uploadPath: "/canvases/abc/image",
+            uploadPath: "/pieces/abc/image",
             imageData: Data([0xFF, 0xD8])
         )
         upload.retryCount = 5

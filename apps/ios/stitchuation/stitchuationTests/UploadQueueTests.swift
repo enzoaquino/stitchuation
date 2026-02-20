@@ -7,9 +7,9 @@ struct UploadQueueTests {
     @Test("skips permanently failed uploads")
     func skipsFailedUploads() {
         let upload = PendingUpload(
-            entityType: "canvas",
+            entityType: "piece",
             entityId: UUID(),
-            uploadPath: "/canvases/abc/image",
+            uploadPath: "/pieces/abc/image",
             imageData: Data([0xFF, 0xD8])
         )
         upload.retryCount = PendingUpload.maxRetries

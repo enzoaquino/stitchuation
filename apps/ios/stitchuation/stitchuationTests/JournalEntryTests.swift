@@ -4,28 +4,25 @@ import Foundation
 
 struct JournalEntryTests {
     @Test func initWithNotes() {
-        let canvas = StashCanvas(designer: "Test", designName: "Test")
-        let project = StitchProject(canvas: canvas)
-        let entry = JournalEntry(project: project, notes: "Finished the background")
+        let piece = StitchPiece(designer: "Test", designName: "Test")
+        let entry = JournalEntry(piece: piece, notes: "Finished the background")
 
-        #expect(entry.project === project)
+        #expect(entry.piece === piece)
         #expect(entry.notes == "Finished the background")
     }
 
     @Test func initWithoutNotes() {
-        let canvas = StashCanvas(designer: "Test", designName: "Test")
-        let project = StitchProject(canvas: canvas)
-        let entry = JournalEntry(project: project)
+        let piece = StitchPiece(designer: "Test", designName: "Test")
+        let entry = JournalEntry(piece: piece)
 
-        #expect(entry.project === project)
+        #expect(entry.piece === piece)
         #expect(entry.notes == nil)
     }
 
     @Test func initSetsTimestamps() {
         let before = Date()
-        let canvas = StashCanvas(designer: "Test", designName: "Test")
-        let project = StitchProject(canvas: canvas)
-        let entry = JournalEntry(project: project)
+        let piece = StitchPiece(designer: "Test", designName: "Test")
+        let entry = JournalEntry(piece: piece)
         let after = Date()
 
         #expect(entry.createdAt >= before)
@@ -35,9 +32,8 @@ struct JournalEntryTests {
     }
 
     @Test func initDefaultsOptionalFieldsToNil() {
-        let canvas = StashCanvas(designer: "Test", designName: "Test")
-        let project = StitchProject(canvas: canvas)
-        let entry = JournalEntry(project: project)
+        let piece = StitchPiece(designer: "Test", designName: "Test")
+        let entry = JournalEntry(piece: piece)
 
         #expect(entry.notes == nil)
         #expect(entry.deletedAt == nil)
@@ -45,18 +41,16 @@ struct JournalEntryTests {
     }
 
     @Test func initDefaultsImagesToEmptyArray() {
-        let canvas = StashCanvas(designer: "Test", designName: "Test")
-        let project = StitchProject(canvas: canvas)
-        let entry = JournalEntry(project: project)
+        let piece = StitchPiece(designer: "Test", designName: "Test")
+        let entry = JournalEntry(piece: piece)
 
         #expect(entry.images.isEmpty)
     }
 
     @Test func initWithCustomUUID() {
         let customId = UUID()
-        let canvas = StashCanvas(designer: "Test", designName: "Test")
-        let project = StitchProject(canvas: canvas)
-        let entry = JournalEntry(id: customId, project: project)
+        let piece = StitchPiece(designer: "Test", designName: "Test")
+        let entry = JournalEntry(id: customId, piece: piece)
 
         #expect(entry.id == customId)
     }

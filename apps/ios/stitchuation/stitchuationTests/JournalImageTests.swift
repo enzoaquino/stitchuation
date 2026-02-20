@@ -4,9 +4,8 @@ import Foundation
 
 struct JournalImageTests {
     @Test func initWithRequiredFields() {
-        let canvas = StashCanvas(designer: "Test", designName: "Test")
-        let project = StitchProject(canvas: canvas)
-        let entry = JournalEntry(project: project)
+        let piece = StitchPiece(designer: "Test", designName: "Test")
+        let entry = JournalEntry(piece: piece)
         let image = JournalImage(entry: entry, imageKey: "journals/abc/123/img.jpg")
 
         #expect(image.entry === entry)
@@ -15,9 +14,8 @@ struct JournalImageTests {
     }
 
     @Test func initWithCustomSortOrder() {
-        let canvas = StashCanvas(designer: "Test", designName: "Test")
-        let project = StitchProject(canvas: canvas)
-        let entry = JournalEntry(project: project)
+        let piece = StitchPiece(designer: "Test", designName: "Test")
+        let entry = JournalEntry(piece: piece)
         let image = JournalImage(entry: entry, imageKey: "journals/abc/123/img.jpg", sortOrder: 3)
 
         #expect(image.sortOrder == 3)
@@ -25,9 +23,8 @@ struct JournalImageTests {
 
     @Test func initSetsTimestamps() {
         let before = Date()
-        let canvas = StashCanvas(designer: "Test", designName: "Test")
-        let project = StitchProject(canvas: canvas)
-        let entry = JournalEntry(project: project)
+        let piece = StitchPiece(designer: "Test", designName: "Test")
+        let entry = JournalEntry(piece: piece)
         let image = JournalImage(entry: entry, imageKey: "test.jpg")
         let after = Date()
 
@@ -38,9 +35,8 @@ struct JournalImageTests {
     }
 
     @Test func initDefaultsOptionalFieldsToNil() {
-        let canvas = StashCanvas(designer: "Test", designName: "Test")
-        let project = StitchProject(canvas: canvas)
-        let entry = JournalEntry(project: project)
+        let piece = StitchPiece(designer: "Test", designName: "Test")
+        let entry = JournalEntry(piece: piece)
         let image = JournalImage(entry: entry, imageKey: "test.jpg")
 
         #expect(image.deletedAt == nil)
@@ -49,9 +45,8 @@ struct JournalImageTests {
 
     @Test func initWithCustomUUID() {
         let customId = UUID()
-        let canvas = StashCanvas(designer: "Test", designName: "Test")
-        let project = StitchProject(canvas: canvas)
-        let entry = JournalEntry(project: project)
+        let piece = StitchPiece(designer: "Test", designName: "Test")
+        let entry = JournalEntry(piece: piece)
         let image = JournalImage(id: customId, entry: entry, imageKey: "test.jpg")
 
         #expect(image.id == customId)
