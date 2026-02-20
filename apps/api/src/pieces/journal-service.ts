@@ -2,7 +2,7 @@ import { eq, and, isNull, desc, asc } from "drizzle-orm";
 import { db } from "../db/connection.js";
 import { journalEntries, journalImages } from "../db/schema.js";
 import { NotFoundError } from "../errors.js";
-import type { CreateJournalEntryInput, UpdateJournalEntryInput } from "../pieces/schemas.js";
+import type { CreateJournalEntryInput, UpdateJournalEntryInput } from "./schemas.js";
 
 export class JournalService {
   async createEntry(userId: string, pieceId: string, input: CreateJournalEntryInput) {

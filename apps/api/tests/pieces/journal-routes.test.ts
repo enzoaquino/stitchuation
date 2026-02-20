@@ -3,7 +3,7 @@ import app from "../../src/app.js";
 
 describe("Journal Entry Routes", () => {
   let accessToken: string;
-  let projectId: string;
+  let pieceId: string;
 
   beforeAll(async () => {
     // Register a user
@@ -19,8 +19,8 @@ describe("Journal Entry Routes", () => {
     const body = await res.json();
     accessToken = body.accessToken;
 
-    // Create a canvas
-    const canvasRes = await app.request("/canvases", {
+    // Create a piece
+    const pieceRes = await app.request("/pieces", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -31,23 +31,12 @@ describe("Journal Entry Routes", () => {
         designName: "Journal Test Canvas",
       }),
     });
-    const canvasBody = await canvasRes.json();
-
-    // Create a project
-    const projectRes = await app.request("/projects", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ canvasId: canvasBody.id }),
-    });
-    const projectBody = await projectRes.json();
-    projectId = projectBody.id;
+    const pieceBody = await pieceRes.json();
+    pieceId = pieceBody.id;
   });
 
-  it("POST /projects/:id/entries creates an entry with notes", async () => {
-    const res = await app.request(`/projects/${projectId}/entries`, {
+  it("POST /pieces/:id/entries creates an entry with notes", async () => {
+    const res = await app.request(`/pieces/${pieceId}/entries`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -59,11 +48,11 @@ describe("Journal Entry Routes", () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.notes).toBe("Finished the first section today!");
-    expect(body.projectId).toBe(projectId);
+    expect(body.pieceId).toBe(pieceId);
   });
 
-  it("POST /projects/:id/entries creates an entry without notes", async () => {
-    const res = await app.request(`/projects/${projectId}/entries`, {
+  it("POST /pieces/:id/entries creates an entry without notes", async () => {
+    const res = await app.request(`/pieces/${pieceId}/entries`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -74,11 +63,11 @@ describe("Journal Entry Routes", () => {
 
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.projectId).toBe(projectId);
+    expect(body.pieceId).toBe(pieceId);
   });
 
-  it("POST /projects/:id/entries rejects non-existent project", async () => {
-    const res = await app.request("/projects/00000000-0000-0000-0000-000000000000/entries", {
+  it("POST /pieces/:id/entries rejects non-existent piece", async () => {
+    const res = await app.request("/pieces/00000000-0000-0000-0000-000000000000/entries", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -90,8 +79,8 @@ describe("Journal Entry Routes", () => {
     expect(res.status).toBe(404);
   });
 
-  it("GET /projects/:id/entries lists entries", async () => {
-    const res = await app.request(`/projects/${projectId}/entries`, {
+  it("GET /pieces/:id/entries lists entries", async () => {
+    const res = await app.request(`/pieces/${pieceId}/entries`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
@@ -101,17 +90,17 @@ describe("Journal Entry Routes", () => {
     expect(body.length).toBeGreaterThan(0);
   });
 
-  it("GET /projects/:id/entries returns 404 for non-existent project", async () => {
-    const res = await app.request("/projects/00000000-0000-0000-0000-000000000000/entries", {
+  it("GET /pieces/:id/entries returns 404 for non-existent piece", async () => {
+    const res = await app.request("/pieces/00000000-0000-0000-0000-000000000000/entries", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     expect(res.status).toBe(404);
   });
 
-  it("GET /projects/:id/entries/:entryId returns a single entry", async () => {
+  it("GET /pieces/:id/entries/:entryId returns a single entry", async () => {
     // Create an entry
-    const createRes = await app.request(`/projects/${projectId}/entries`, {
+    const createRes = await app.request(`/pieces/${pieceId}/entries`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -121,7 +110,7 @@ describe("Journal Entry Routes", () => {
     });
     const created = await createRes.json();
 
-    const res = await app.request(`/projects/${projectId}/entries/${created.id}`, {
+    const res = await app.request(`/pieces/${pieceId}/entries/${created.id}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
@@ -131,9 +120,9 @@ describe("Journal Entry Routes", () => {
     expect(body.notes).toBe("Single entry fetch test");
   });
 
-  it("GET /projects/:id/entries/:entryId returns 404 for non-existent entry", async () => {
+  it("GET /pieces/:id/entries/:entryId returns 404 for non-existent entry", async () => {
     const res = await app.request(
-      `/projects/${projectId}/entries/00000000-0000-0000-0000-000000000000`,
+      `/pieces/${pieceId}/entries/00000000-0000-0000-0000-000000000000`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       },
@@ -142,8 +131,8 @@ describe("Journal Entry Routes", () => {
     expect(res.status).toBe(404);
   });
 
-  it("GET /projects/:id/entries/:entryId returns 400 for invalid entry ID", async () => {
-    const res = await app.request(`/projects/${projectId}/entries/not-a-uuid`, {
+  it("GET /pieces/:id/entries/:entryId returns 400 for invalid entry ID", async () => {
+    const res = await app.request(`/pieces/${pieceId}/entries/not-a-uuid`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
@@ -152,9 +141,9 @@ describe("Journal Entry Routes", () => {
     expect(body.error).toBe("Invalid entry ID");
   });
 
-  it("GET /projects/:id/entries/:entryId returns 404 for non-existent project", async () => {
+  it("GET /pieces/:id/entries/:entryId returns 404 for non-existent piece", async () => {
     // Create an entry first so the entryId is valid
-    const createRes = await app.request(`/projects/${projectId}/entries`, {
+    const createRes = await app.request(`/pieces/${pieceId}/entries`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -165,7 +154,7 @@ describe("Journal Entry Routes", () => {
     const created = await createRes.json();
 
     const res = await app.request(
-      `/projects/00000000-0000-0000-0000-000000000000/entries/${created.id}`,
+      `/pieces/00000000-0000-0000-0000-000000000000/entries/${created.id}`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       },
@@ -174,9 +163,9 @@ describe("Journal Entry Routes", () => {
     expect(res.status).toBe(404);
   });
 
-  it("PUT /projects/:id/entries/:entryId updates entry notes", async () => {
+  it("PUT /pieces/:id/entries/:entryId updates entry notes", async () => {
     // Create an entry first
-    const createRes = await app.request(`/projects/${projectId}/entries`, {
+    const createRes = await app.request(`/pieces/${pieceId}/entries`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -186,7 +175,7 @@ describe("Journal Entry Routes", () => {
     });
     const created = await createRes.json();
 
-    const res = await app.request(`/projects/${projectId}/entries/${created.id}`, {
+    const res = await app.request(`/pieces/${pieceId}/entries/${created.id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -200,8 +189,8 @@ describe("Journal Entry Routes", () => {
     expect(body.notes).toBe("Updated notes");
   });
 
-  it("PUT /projects/:id/entries/:entryId returns 404 for non-existent entry", async () => {
-    const res = await app.request(`/projects/${projectId}/entries/00000000-0000-0000-0000-000000000000`, {
+  it("PUT /pieces/:id/entries/:entryId returns 404 for non-existent entry", async () => {
+    const res = await app.request(`/pieces/${pieceId}/entries/00000000-0000-0000-0000-000000000000`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -213,9 +202,9 @@ describe("Journal Entry Routes", () => {
     expect(res.status).toBe(404);
   });
 
-  it("DELETE /projects/:id/entries/:entryId soft deletes an entry", async () => {
+  it("DELETE /pieces/:id/entries/:entryId soft deletes an entry", async () => {
     // Create an entry first
-    const createRes = await app.request(`/projects/${projectId}/entries`, {
+    const createRes = await app.request(`/pieces/${pieceId}/entries`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -225,7 +214,7 @@ describe("Journal Entry Routes", () => {
     });
     const created = await createRes.json();
 
-    const res = await app.request(`/projects/${projectId}/entries/${created.id}`, {
+    const res = await app.request(`/pieces/${pieceId}/entries/${created.id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${accessToken}` },
     });
@@ -235,8 +224,8 @@ describe("Journal Entry Routes", () => {
     expect(body.success).toBe(true);
   });
 
-  it("DELETE /projects/:id/entries/:entryId returns 404 for non-existent entry", async () => {
-    const res = await app.request(`/projects/${projectId}/entries/00000000-0000-0000-0000-000000000000`, {
+  it("DELETE /pieces/:id/entries/:entryId returns 404 for non-existent entry", async () => {
+    const res = await app.request(`/pieces/${pieceId}/entries/00000000-0000-0000-0000-000000000000`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${accessToken}` },
     });
@@ -247,7 +236,7 @@ describe("Journal Entry Routes", () => {
 
 describe("Journal Image Routes", () => {
   let accessToken: string;
-  let projectId: string;
+  let pieceId: string;
   let entryId: string;
 
   beforeAll(async () => {
@@ -264,8 +253,8 @@ describe("Journal Image Routes", () => {
     const body = await res.json();
     accessToken = body.accessToken;
 
-    // Create a canvas
-    const canvasRes = await app.request("/canvases", {
+    // Create a piece
+    const pieceRes = await app.request("/pieces", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -276,22 +265,11 @@ describe("Journal Image Routes", () => {
         designName: "Image Test Canvas",
       }),
     });
-    const canvasBody = await canvasRes.json();
-
-    // Create a project
-    const projectRes = await app.request("/projects", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ canvasId: canvasBody.id }),
-    });
-    const projectBody = await projectRes.json();
-    projectId = projectBody.id;
+    const pieceBody = await pieceRes.json();
+    pieceId = pieceBody.id;
 
     // Create a journal entry
-    const entryRes = await app.request(`/projects/${projectId}/entries`, {
+    const entryRes = await app.request(`/pieces/${pieceId}/entries`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -303,7 +281,7 @@ describe("Journal Image Routes", () => {
     entryId = entryBody.id;
   });
 
-  it("POST /projects/:id/entries/:entryId/images uploads a valid JPEG", async () => {
+  it("POST /pieces/:id/entries/:entryId/images uploads a valid JPEG", async () => {
     const jpegHeader = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
     const jpegData = new Uint8Array(100);
     jpegData.set(jpegHeader);
@@ -312,7 +290,7 @@ describe("Journal Image Routes", () => {
     const formData = new FormData();
     formData.append("image", new File([blob], "test.jpg", { type: "image/jpeg" }));
 
-    const res = await app.request(`/projects/${projectId}/entries/${entryId}/images`, {
+    const res = await app.request(`/pieces/${pieceId}/entries/${entryId}/images`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData,
@@ -324,7 +302,7 @@ describe("Journal Image Routes", () => {
     expect(body.sortOrder).toBe(0);
   });
 
-  it("POST /projects/:id/entries/:entryId/images auto-increments sortOrder", async () => {
+  it("POST /pieces/:id/entries/:entryId/images auto-increments sortOrder", async () => {
     const jpegHeader = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
     const jpegData = new Uint8Array(100);
     jpegData.set(jpegHeader);
@@ -333,7 +311,7 @@ describe("Journal Image Routes", () => {
     const formData = new FormData();
     formData.append("image", new File([blob], "test2.jpg", { type: "image/jpeg" }));
 
-    const res = await app.request(`/projects/${projectId}/entries/${entryId}/images`, {
+    const res = await app.request(`/pieces/${pieceId}/entries/${entryId}/images`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData,
@@ -344,14 +322,14 @@ describe("Journal Image Routes", () => {
     expect(body.sortOrder).toBe(1);
   });
 
-  it("POST /projects/:id/entries/:entryId/images rejects non-image file", async () => {
+  it("POST /pieces/:id/entries/:entryId/images rejects non-image file", async () => {
     const textData = new Uint8Array([0x48, 0x65, 0x6c, 0x6c, 0x6f]); // "Hello"
     const blob = new Blob([textData], { type: "text/plain" });
 
     const formData = new FormData();
     formData.append("image", new File([blob], "test.txt", { type: "text/plain" }));
 
-    const res = await app.request(`/projects/${projectId}/entries/${entryId}/images`, {
+    const res = await app.request(`/pieces/${pieceId}/entries/${entryId}/images`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData,
@@ -360,10 +338,10 @@ describe("Journal Image Routes", () => {
     expect(res.status).toBe(400);
   });
 
-  it("POST /projects/:id/entries/:entryId/images rejects missing file", async () => {
+  it("POST /pieces/:id/entries/:entryId/images rejects missing file", async () => {
     const formData = new FormData();
 
-    const res = await app.request(`/projects/${projectId}/entries/${entryId}/images`, {
+    const res = await app.request(`/pieces/${pieceId}/entries/${entryId}/images`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData,
@@ -372,9 +350,9 @@ describe("Journal Image Routes", () => {
     expect(res.status).toBe(400);
   });
 
-  it("POST /projects/:id/entries/:entryId/images rejects 5th image (max 4)", async () => {
+  it("POST /pieces/:id/entries/:entryId/images rejects 5th image (max 4)", async () => {
     // Create a fresh entry for this test
-    const entryRes = await app.request(`/projects/${projectId}/entries`, {
+    const entryRes = await app.request(`/pieces/${pieceId}/entries`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -395,7 +373,7 @@ describe("Journal Image Routes", () => {
     for (let i = 0; i < 4; i++) {
       const formData = new FormData();
       formData.append("image", new File([makeJpeg()], `img${i}.jpg`, { type: "image/jpeg" }));
-      const res = await app.request(`/projects/${projectId}/entries/${freshEntry.id}/images`, {
+      const res = await app.request(`/pieces/${pieceId}/entries/${freshEntry.id}/images`, {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
         body: formData,
@@ -406,7 +384,7 @@ describe("Journal Image Routes", () => {
     // 5th upload should fail
     const formData = new FormData();
     formData.append("image", new File([makeJpeg()], "img4.jpg", { type: "image/jpeg" }));
-    const res = await app.request(`/projects/${projectId}/entries/${freshEntry.id}/images`, {
+    const res = await app.request(`/pieces/${pieceId}/entries/${freshEntry.id}/images`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData,
@@ -417,7 +395,7 @@ describe("Journal Image Routes", () => {
     expect(body.error).toBe("Maximum 4 images per entry");
   });
 
-  it("DELETE /projects/:id/entries/:entryId/images/:imageId soft deletes an image", async () => {
+  it("DELETE /pieces/:id/entries/:entryId/images/:imageId soft deletes an image", async () => {
     // Upload an image first
     const jpegHeader = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
     const jpegData = new Uint8Array(100);
@@ -427,7 +405,7 @@ describe("Journal Image Routes", () => {
     const formData = new FormData();
     formData.append("image", new File([blob], "delete-test.jpg", { type: "image/jpeg" }));
 
-    const uploadRes = await app.request(`/projects/${projectId}/entries/${entryId}/images`, {
+    const uploadRes = await app.request(`/pieces/${pieceId}/entries/${entryId}/images`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData,
@@ -435,7 +413,7 @@ describe("Journal Image Routes", () => {
     const uploaded = await uploadRes.json();
 
     const res = await app.request(
-      `/projects/${projectId}/entries/${entryId}/images/${uploaded.id}`,
+      `/pieces/${pieceId}/entries/${entryId}/images/${uploaded.id}`,
       {
         method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -447,7 +425,7 @@ describe("Journal Image Routes", () => {
     expect(body.success).toBe(true);
   });
 
-  it("DELETE /projects/:id/entries/:entryId/images/:imageId rejects cross-user deletion", async () => {
+  it("DELETE /pieces/:id/entries/:entryId/images/:imageId rejects cross-user deletion", async () => {
     // Upload an image as the original user
     const jpegHeader = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
     const jpegData = new Uint8Array(100);
@@ -457,7 +435,7 @@ describe("Journal Image Routes", () => {
     const formData = new FormData();
     formData.append("image", new File([blob], "cross-user.jpg", { type: "image/jpeg" }));
 
-    const uploadRes = await app.request(`/projects/${projectId}/entries/${entryId}/images`, {
+    const uploadRes = await app.request(`/pieces/${pieceId}/entries/${entryId}/images`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData,
@@ -478,7 +456,7 @@ describe("Journal Image Routes", () => {
 
     // Other user tries to delete the image
     const deleteRes = await app.request(
-      `/projects/${projectId}/entries/${entryId}/images/${uploaded.id}`,
+      `/pieces/${pieceId}/entries/${entryId}/images/${uploaded.id}`,
       {
         method: "DELETE",
         headers: { Authorization: `Bearer ${otherBody.accessToken}` },
@@ -488,9 +466,9 @@ describe("Journal Image Routes", () => {
     expect(deleteRes.status).toBe(404);
   });
 
-  it("DELETE /projects/:id/entries/:entryId/images/:imageId returns 404 for non-existent image", async () => {
+  it("DELETE /pieces/:id/entries/:entryId/images/:imageId returns 404 for non-existent image", async () => {
     const res = await app.request(
-      `/projects/${projectId}/entries/${entryId}/images/00000000-0000-0000-0000-000000000000`,
+      `/pieces/${pieceId}/entries/${entryId}/images/00000000-0000-0000-0000-000000000000`,
       {
         method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}` },

@@ -1,22 +1,19 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { JournalService } from "../../src/projects/journal-service.js";
-import { ProjectService } from "../../src/projects/project-service.js";
-import { CanvasService } from "../../src/canvases/canvas-service.js";
+import { JournalService } from "../../src/pieces/journal-service.js";
+import { PieceService } from "../../src/pieces/piece-service.js";
 import { AuthService } from "../../src/auth/auth-service.js";
 import { NotFoundError } from "../../src/errors.js";
 
 describe("JournalService", () => {
   let journalService: JournalService;
-  let projectService: ProjectService;
-  let canvasService: CanvasService;
+  let pieceService: PieceService;
   let userId: string;
   let otherUserId: string;
-  let projectId: string;
+  let pieceId: string;
 
   beforeAll(async () => {
     journalService = new JournalService();
-    projectService = new ProjectService();
-    canvasService = new CanvasService();
+    pieceService = new PieceService();
     const authService = new AuthService();
 
     const { user } = await authService.register({
@@ -33,29 +30,28 @@ describe("JournalService", () => {
     });
     otherUserId = otherUser.id;
 
-    const canvas = await canvasService.create(userId, {
+    const piece = await pieceService.create(userId, {
       designer: "Journal Designer",
       designName: "Journal Canvas",
     });
-    const project = await projectService.create(userId, { canvasId: canvas.id });
-    projectId = project.id;
+    pieceId = piece.id;
   });
 
   describe("entries", () => {
     it("creates a journal entry with notes", async () => {
-      const entry = await journalService.createEntry(userId, projectId, {
+      const entry = await journalService.createEntry(userId, pieceId, {
         notes: "Started stitching the border today.",
       });
 
       expect(entry.id).toBeDefined();
-      expect(entry.projectId).toBe(projectId);
+      expect(entry.pieceId).toBe(pieceId);
       expect(entry.userId).toBe(userId);
       expect(entry.notes).toBe("Started stitching the border today.");
       expect(entry.deletedAt).toBeNull();
     });
 
     it("creates a journal entry without notes", async () => {
-      const entry = await journalService.createEntry(userId, projectId, {});
+      const entry = await journalService.createEntry(userId, pieceId, {});
 
       expect(entry.id).toBeDefined();
       expect(entry.notes).toBeNull();
@@ -63,7 +59,7 @@ describe("JournalService", () => {
 
     it("creates a journal entry with a client-provided UUID", async () => {
       const clientId = crypto.randomUUID();
-      const entry = await journalService.createEntry(userId, projectId, {
+      const entry = await journalService.createEntry(userId, pieceId, {
         id: clientId,
         notes: "Client UUID entry",
       });
@@ -72,7 +68,7 @@ describe("JournalService", () => {
     });
 
     it("lists entries ordered by createdAt desc", async () => {
-      const entries = await journalService.listEntries(userId, projectId);
+      const entries = await journalService.listEntries(userId, pieceId);
       expect(entries.length).toBeGreaterThan(0);
 
       for (let i = 1; i < entries.length; i++) {
@@ -81,12 +77,12 @@ describe("JournalService", () => {
     });
 
     it("isolates entries by user", async () => {
-      const entries = await journalService.listEntries(otherUserId, projectId);
+      const entries = await journalService.listEntries(otherUserId, pieceId);
       expect(entries.length).toBe(0);
     });
 
     it("gets an entry by ID", async () => {
-      const entry = await journalService.createEntry(userId, projectId, {
+      const entry = await journalService.createEntry(userId, pieceId, {
         notes: "Get by ID test",
       });
 
@@ -102,7 +98,7 @@ describe("JournalService", () => {
     });
 
     it("prevents accessing another user's entry", async () => {
-      const entry = await journalService.createEntry(userId, projectId, {
+      const entry = await journalService.createEntry(userId, pieceId, {
         notes: "Isolation test",
       });
 
@@ -111,7 +107,7 @@ describe("JournalService", () => {
     });
 
     it("updates entry notes", async () => {
-      const entry = await journalService.createEntry(userId, projectId, {
+      const entry = await journalService.createEntry(userId, pieceId, {
         notes: "Original notes",
       });
 
@@ -135,7 +131,7 @@ describe("JournalService", () => {
     });
 
     it("throws NotFoundError when updating another user's entry", async () => {
-      const entry = await journalService.createEntry(userId, projectId, {
+      const entry = await journalService.createEntry(userId, pieceId, {
         notes: "Other user update test",
       });
 
@@ -150,7 +146,7 @@ describe("JournalService", () => {
     });
 
     it("soft deletes an entry", async () => {
-      const entry = await journalService.createEntry(userId, projectId, {
+      const entry = await journalService.createEntry(userId, pieceId, {
         notes: "To be deleted",
       });
 
@@ -171,13 +167,13 @@ describe("JournalService", () => {
     });
 
     it("does not list soft-deleted entries", async () => {
-      const entry = await journalService.createEntry(userId, projectId, {
+      const entry = await journalService.createEntry(userId, pieceId, {
         notes: "Delete list test",
       });
 
       await journalService.softDeleteEntry(userId, entry.id);
 
-      const entries = await journalService.listEntries(userId, projectId);
+      const entries = await journalService.listEntries(userId, pieceId);
       const found = entries.find((e) => e.id === entry.id);
       expect(found).toBeUndefined();
     });
@@ -185,7 +181,7 @@ describe("JournalService", () => {
 
   describe("images", () => {
     it("adds an image to an entry", async () => {
-      const entry = await journalService.createEntry(userId, projectId, {
+      const entry = await journalService.createEntry(userId, pieceId, {
         notes: "Image test entry",
       });
 
@@ -199,7 +195,7 @@ describe("JournalService", () => {
     });
 
     it("lists images ordered by sortOrder", async () => {
-      const entry = await journalService.createEntry(userId, projectId, {
+      const entry = await journalService.createEntry(userId, pieceId, {
         notes: "Image sort test",
       });
 
@@ -215,7 +211,7 @@ describe("JournalService", () => {
     });
 
     it("soft deletes an image", async () => {
-      const entry = await journalService.createEntry(userId, projectId, {
+      const entry = await journalService.createEntry(userId, pieceId, {
         notes: "Image delete test",
       });
 

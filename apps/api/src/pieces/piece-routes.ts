@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { PieceService } from "./piece-service.js";
-import { JournalService } from "../projects/journal-service.js";
+import { JournalService } from "./journal-service.js";
 import {
   createPieceSchema,
   updatePieceSchema,
