@@ -1,15 +1,18 @@
 import SwiftUI
 
-struct ProjectStatusBadge: View {
-    let status: ProjectStatus
+struct PieceStatusBadge: View {
+    let status: PieceStatus
 
     @State private var badgeScale: CGFloat = 1.0
 
     private var backgroundColor: Color {
         switch status {
+        case .stash: return Color.walnut
+        case .kitting: return Color.dustyRose
         case .wip: return Color.terracotta
+        case .stitched: return Color.sage
         case .atFinishing: return Color.dustyRose
-        case .completed: return Color.sage
+        case .finished: return Color.sage
         }
     }
 

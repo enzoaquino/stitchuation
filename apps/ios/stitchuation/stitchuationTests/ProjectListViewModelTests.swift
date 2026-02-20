@@ -5,65 +5,88 @@ import Testing
 struct ProjectListViewModelTests {
     let viewModel = ProjectListViewModel()
 
-    private func makeProject(designer: String, designName: String, status: ProjectStatus = .wip) -> StitchProject {
-        let canvas = StashCanvas(designer: designer, designName: designName)
-        return StitchProject(canvas: canvas, status: status)
+    private func makePiece(designer: String, designName: String, status: PieceStatus = .wip) -> StitchPiece {
+        StitchPiece(designer: designer, designName: designName, status: status)
     }
 
-    @Test func filteredProjectsReturnsAllWhenSearchEmpty() {
-        let projects = [
-            makeProject(designer: "Alice", designName: "Flowers"),
-            makeProject(designer: "Bob", designName: "Trees"),
+    @Test func filteredPiecesReturnsActiveByDefault() {
+        let pieces = [
+            makePiece(designer: "Alice", designName: "Flowers", status: .wip),
+            makePiece(designer: "Bob", designName: "Trees", status: .finished),
+            makePiece(designer: "Carol", designName: "Stars", status: .kitting),
         ]
-        let result = viewModel.filteredProjects(from: projects)
+        let result = viewModel.filteredPieces(from: pieces)
         #expect(result.count == 2)
     }
 
-    @Test func filteredProjectsByDesigner() {
-        let projects = [
-            makeProject(designer: "Alice", designName: "Flowers"),
-            makeProject(designer: "Bob", designName: "Trees"),
+    @Test func filteredPiecesShowsFinishedWhenToggled() {
+        viewModel.showFinished = true
+        let pieces = [
+            makePiece(designer: "Alice", designName: "Flowers", status: .wip),
+            makePiece(designer: "Bob", designName: "Trees", status: .finished),
+        ]
+        let result = viewModel.filteredPieces(from: pieces)
+        #expect(result.count == 1)
+        #expect(result.first?.designName == "Trees")
+    }
+
+    @Test func filteredPiecesByDesigner() {
+        let pieces = [
+            makePiece(designer: "Alice", designName: "Flowers"),
+            makePiece(designer: "Bob", designName: "Trees"),
         ]
         viewModel.searchText = "alice"
-        let result = viewModel.filteredProjects(from: projects)
+        let result = viewModel.filteredPieces(from: pieces)
         #expect(result.count == 1)
-        #expect(result[0].canvas.designer == "Alice")
+        #expect(result[0].designer == "Alice")
     }
 
-    @Test func filteredProjectsByDesignName() {
-        let projects = [
-            makeProject(designer: "Alice", designName: "Flowers"),
-            makeProject(designer: "Bob", designName: "Trees"),
+    @Test func filteredPiecesByDesignName() {
+        let pieces = [
+            makePiece(designer: "Alice", designName: "Flowers"),
+            makePiece(designer: "Bob", designName: "Trees"),
         ]
         viewModel.searchText = "tree"
-        let result = viewModel.filteredProjects(from: projects)
+        let result = viewModel.filteredPieces(from: pieces)
         #expect(result.count == 1)
     }
 
-    @Test func projectsByStatusGroupsCorrectly() {
-        let projects = [
-            makeProject(designer: "A", designName: "D1", status: .wip),
-            makeProject(designer: "B", designName: "D2", status: .completed),
-            makeProject(designer: "C", designName: "D3", status: .wip),
-            makeProject(designer: "D", designName: "D4", status: .atFinishing),
+    @Test func piecesByStatusGroupsCorrectly() {
+        let pieces = [
+            makePiece(designer: "A", designName: "D1", status: .wip),
+            makePiece(designer: "B", designName: "D2", status: .finished),
+            makePiece(designer: "C", designName: "D3", status: .wip),
+            makePiece(designer: "D", designName: "D4", status: .atFinishing),
+            makePiece(designer: "E", designName: "D5", status: .kitting),
         ]
-        let grouped = viewModel.projectsByStatus(from: projects)
+        let grouped = viewModel.piecesByStatus(from: pieces)
         #expect(grouped.count == 3)
-        #expect(grouped[0].0 == .wip)
-        #expect(grouped[0].1.count == 2)
-        #expect(grouped[1].0 == .atFinishing)
-        #expect(grouped[1].1.count == 1)
-        #expect(grouped[2].0 == .completed)
+        #expect(grouped[0].0 == .kitting)
+        #expect(grouped[0].1.count == 1)
+        #expect(grouped[1].0 == .wip)
+        #expect(grouped[1].1.count == 2)
+        #expect(grouped[2].0 == .atFinishing)
         #expect(grouped[2].1.count == 1)
     }
 
-    @Test func projectsByStatusOmitsEmptyGroups() {
-        let projects = [
-            makeProject(designer: "A", designName: "D1", status: .wip),
+    @Test func piecesByStatusOmitsEmptyGroups() {
+        let pieces = [
+            makePiece(designer: "A", designName: "D1", status: .wip),
         ]
-        let grouped = viewModel.projectsByStatus(from: projects)
+        let grouped = viewModel.piecesByStatus(from: pieces)
         #expect(grouped.count == 1)
         #expect(grouped[0].0 == .wip)
     }
 
+    @Test func piecesByStatusShowsFinishedGroup() {
+        viewModel.showFinished = true
+        let pieces = [
+            makePiece(designer: "A", designName: "D1", status: .finished),
+            makePiece(designer: "B", designName: "D2", status: .wip),
+        ]
+        let grouped = viewModel.piecesByStatus(from: pieces)
+        #expect(grouped.count == 1)
+        #expect(grouped[0].0 == .finished)
+        #expect(grouped[0].1.count == 1)
+    }
 }

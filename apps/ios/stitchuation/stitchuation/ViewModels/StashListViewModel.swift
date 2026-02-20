@@ -4,22 +4,24 @@ import Foundation
 @Observable
 final class StashListViewModel {
     var searchText = ""
+    var showAllPieces = false
 
-    func filteredCanvases(from canvases: [StashCanvas]) -> [StashCanvas] {
-        guard !searchText.isEmpty else { return canvases }
+    func filteredPieces(from pieces: [StitchPiece]) -> [StitchPiece] {
+        let filtered = showAllPieces ? pieces : pieces.filter { $0.status == .stash }
+        guard !searchText.isEmpty else { return filtered }
         let search = searchText.lowercased()
-        return canvases.filter { canvas in
-            canvas.designer.lowercased().contains(search)
-                || canvas.designName.lowercased().contains(search)
+        return filtered.filter { piece in
+            piece.designer.lowercased().contains(search)
+                || piece.designName.lowercased().contains(search)
         }
     }
 
-    func deleteCanvases(from canvases: [StashCanvas], at offsets: IndexSet) {
+    func deletePieces(from pieces: [StitchPiece], at offsets: IndexSet) {
         let now = Date()
         for index in offsets {
-            let canvas = canvases[index]
-            canvas.deletedAt = now
-            canvas.updatedAt = now
+            let piece = pieces[index]
+            piece.deletedAt = now
+            piece.updatedAt = now
         }
     }
 }
