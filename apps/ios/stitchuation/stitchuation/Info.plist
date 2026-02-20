@@ -12,5 +12,7 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Take photos of your canvases and stitching progress.</string>
 </dict>
 </plist>
