@@ -3,7 +3,7 @@ import app from "../../src/app.js";
 
 describe("Image Routes", () => {
   let accessToken: string;
-  let canvasId: string;
+  let pieceId: string;
 
   beforeAll(async () => {
     // Register user
@@ -19,8 +19,8 @@ describe("Image Routes", () => {
     const authBody = await authRes.json();
     accessToken = authBody.accessToken;
 
-    // Create a canvas to attach images to
-    const canvasRes = await app.request("/canvases", {
+    // Create a piece to attach images to
+    const pieceRes = await app.request("/pieces", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -31,16 +31,16 @@ describe("Image Routes", () => {
         designName: "Image Test Canvas",
       }),
     });
-    const canvasBody = await canvasRes.json();
-    canvasId = canvasBody.id;
+    const pieceBody = await pieceRes.json();
+    pieceId = pieceBody.id;
   });
 
-  it("POST /canvases/:id/image uploads an image", async () => {
+  it("POST /pieces/:id/image uploads an image", async () => {
     const formData = new FormData();
     const blob = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], { type: "image/jpeg" });
     formData.append("image", blob, "test.jpg");
 
-    const res = await app.request(`/canvases/${canvasId}/image`, {
+    const res = await app.request(`/pieces/${pieceId}/image`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData,
@@ -49,7 +49,7 @@ describe("Image Routes", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.imageKey).toBeDefined();
-    expect(body.imageKey).toContain(canvasId);
+    expect(body.imageKey).toContain(pieceId);
   });
 
   it("GET /images/* serves an uploaded image", async () => {
@@ -59,7 +59,7 @@ describe("Image Routes", () => {
     const blob = new Blob([imageData], { type: "image/jpeg" });
     formData.append("image", blob, "serve-test.jpg");
 
-    const uploadRes = await app.request(`/canvases/${canvasId}/image`, {
+    const uploadRes = await app.request(`/pieces/${pieceId}/image`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData,
@@ -82,7 +82,7 @@ describe("Image Routes", () => {
     const blob = new Blob([imageData], { type: "image/jpeg" });
     formData.append("image", blob, "cache-test.jpg");
 
-    const uploadRes = await app.request(`/canvases/${canvasId}/image`, {
+    const uploadRes = await app.request(`/pieces/${pieceId}/image`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData,
@@ -119,12 +119,12 @@ describe("Image Routes", () => {
     expect(res.status).toBe(401);
   });
 
-  it("POST /canvases/:id/image rejects unauthenticated requests", async () => {
+  it("POST /pieces/:id/image rejects unauthenticated requests", async () => {
     const formData = new FormData();
     const blob = new Blob([new Uint8Array([0xff, 0xd8])], { type: "image/jpeg" });
     formData.append("image", blob, "test.jpg");
 
-    const res = await app.request(`/canvases/${canvasId}/image`, {
+    const res = await app.request(`/pieces/${pieceId}/image`, {
       method: "POST",
       body: formData,
     });
@@ -132,12 +132,12 @@ describe("Image Routes", () => {
     expect(res.status).toBe(401);
   });
 
-  it("POST /canvases/:id/image returns 404 for non-existent canvas", async () => {
+  it("POST /pieces/:id/image returns 404 for non-existent piece", async () => {
     const formData = new FormData();
     const blob = new Blob([new Uint8Array([0xff, 0xd8])], { type: "image/jpeg" });
     formData.append("image", blob, "test.jpg");
 
-    const res = await app.request("/canvases/00000000-0000-0000-0000-000000000000/image", {
+    const res = await app.request("/pieces/00000000-0000-0000-0000-000000000000/image", {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData,
@@ -146,13 +146,13 @@ describe("Image Routes", () => {
     expect(res.status).toBe(404);
   });
 
-  it("POST /canvases/:id/image rejects spoofed MIME type with invalid magic bytes", async () => {
+  it("POST /pieces/:id/image rejects spoofed MIME type with invalid magic bytes", async () => {
     const formData = new FormData();
     // Claim image/jpeg but send non-image bytes
     const blob = new Blob([new Uint8Array([0x00, 0x00, 0x00, 0x00])], { type: "image/jpeg" });
     formData.append("image", blob, "fake.jpg");
 
-    const res = await app.request(`/canvases/${canvasId}/image`, {
+    const res = await app.request(`/pieces/${pieceId}/image`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData,
@@ -163,12 +163,12 @@ describe("Image Routes", () => {
     expect(body.error).toBe("File content does not match an allowed image format");
   });
 
-  it("POST /canvases/:id/image rejects disallowed MIME types", async () => {
+  it("POST /pieces/:id/image rejects disallowed MIME types", async () => {
     const formData = new FormData();
     const blob = new Blob([new Uint8Array([0x00, 0x00])], { type: "application/pdf" });
     formData.append("image", blob, "test.pdf");
 
-    const res = await app.request(`/canvases/${canvasId}/image`, {
+    const res = await app.request(`/pieces/${pieceId}/image`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData,
@@ -179,31 +179,31 @@ describe("Image Routes", () => {
     expect(body.error).toBe("Image must be JPEG, PNG, or HEIC");
   });
 
-  it("DELETE /canvases/:id/image removes the image", async () => {
+  it("DELETE /pieces/:id/image removes the image", async () => {
     // Upload first
     const formData = new FormData();
     const blob = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], { type: "image/jpeg" });
     formData.append("image", blob, "delete-test.jpg");
 
-    await app.request(`/canvases/${canvasId}/image`, {
+    await app.request(`/pieces/${pieceId}/image`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData,
     });
 
     // Delete the image
-    const res = await app.request(`/canvases/${canvasId}/image`, {
+    const res = await app.request(`/pieces/${pieceId}/image`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     expect(res.status).toBe(200);
 
-    // Verify canvas imageKey is cleared
-    const canvasRes = await app.request(`/canvases/${canvasId}`, {
+    // Verify piece imageKey is cleared
+    const pieceRes = await app.request(`/pieces/${pieceId}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    const canvas = await canvasRes.json();
-    expect(canvas.imageKey).toBeNull();
+    const piece = await pieceRes.json();
+    expect(piece.imageKey).toBeNull();
   });
 });
