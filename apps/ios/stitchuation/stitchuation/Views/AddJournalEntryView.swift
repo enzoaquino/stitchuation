@@ -12,6 +12,9 @@ struct AddJournalEntryView: View {
     @State private var notes = ""
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var selectedImages: [SelectedImage] = []
+    @State private var showPhotoOptions = false
+    @State private var showCamera = false
+    @State private var showLibraryPicker = false
 
     private var canSave: Bool {
         !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !selectedImages.isEmpty
@@ -62,11 +65,13 @@ struct AddJournalEntryView: View {
                     }
 
                     if selectedImages.count < 4 {
-                        PhotosPicker(
-                            selection: $selectedPhotos,
-                            maxSelectionCount: 4 - selectedImages.count,
-                            matching: .images
-                        ) {
+                        Button {
+                            if CameraView.isCameraAvailable {
+                                showPhotoOptions = true
+                            } else {
+                                showLibraryPicker = true
+                            }
+                        } label: {
                             HStack(spacing: Spacing.sm) {
                                 Image(systemName: "photo.badge.plus")
                                     .foregroundStyle(Color.terracotta)
@@ -75,6 +80,7 @@ struct AddJournalEntryView: View {
                                     .foregroundStyle(Color.walnut)
                             }
                         }
+                        .buttonStyle(.plain)
                     }
                 } header: {
                     Text("Photos")
@@ -111,6 +117,19 @@ struct AddJournalEntryView: View {
                     selectedPhotos = []
                 }
             }
+            .confirmationDialog("Add Photo", isPresented: $showPhotoOptions) {
+                Button("Take Photo") { showCamera = true }
+                Button("Choose from Library") { showLibraryPicker = true }
+                Button("Cancel", role: .cancel) { }
+            }
+            .fullScreenCover(isPresented: $showCamera) {
+                CameraView { image, data in
+                    selectedImages.append(SelectedImage(image: image, data: data))
+                    showCamera = false
+                }
+                .ignoresSafeArea()
+            }
+            .photosPicker(isPresented: $showLibraryPicker, selection: $selectedPhotos, maxSelectionCount: 4 - selectedImages.count, matching: .images)
         }
     }
 
