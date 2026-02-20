@@ -34,7 +34,8 @@ struct ProjectDetailView: View {
                                     Button(button.label) {
                                         advanceStatus()
                                     }
-                                    .font(.sourceSerif(15, weight: .medium))
+                                    .font(.typeStyle(.subheadline))
+                                    .fontWeight(.medium)
                                     .foregroundStyle(Color.terracotta)
                                 }
                             }
@@ -46,7 +47,7 @@ struct ProjectDetailView: View {
                             Divider().background(Color.slate.opacity(0.3))
 
                             Text(project.canvas.designer)
-                                .font(.sourceSerif(19))
+                                .font(.typeStyle(.title3))
                                 .foregroundStyle(Color.walnut)
 
                             if let startedAt = project.startedAt {
@@ -66,12 +67,12 @@ struct ProjectDetailView: View {
                             Divider().background(Color.slate.opacity(0.3))
 
                             Text("Journal")
-                                .font(.playfair(22, weight: .semibold))
+                                .font(.typeStyle(.title2))
                                 .foregroundStyle(Color.espresso)
 
                             if sortedEntries.isEmpty {
                                 Text("No journal entries yet. Tap + to add your first entry.")
-                                    .font(.sourceSerif(15))
+                                    .font(.typeStyle(.subheadline))
                                     .foregroundStyle(Color.clay)
                                     .padding(.vertical, Spacing.md)
                             } else {
@@ -202,12 +203,12 @@ struct JournalEntryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Text(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
-                .font(.sourceSerif(13))
+                .font(.typeStyle(.footnote))
                 .foregroundStyle(Color.clay)
 
             if let notes = entry.notes, !notes.isEmpty {
                 Text(notes)
-                    .font(.sourceSerif(15))
+                    .font(.typeStyle(.subheadline))
                     .foregroundStyle(Color.espresso)
             }
 

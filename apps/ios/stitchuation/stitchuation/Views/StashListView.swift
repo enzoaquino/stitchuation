@@ -30,10 +30,10 @@ struct StashListView: View {
                         .font(.system(size: 48))
                         .foregroundStyle(Color.clay)
                     Text("No canvases yet")
-                        .font(.playfair(22, weight: .semibold))
+                        .font(.typeStyle(.title2))
                         .foregroundStyle(Color.espresso)
                     Text("Tap + to add your first canvas")
-                        .font(.sourceSerif(17))
+                        .font(.typeStyle(.body))
                         .foregroundStyle(Color.walnut)
                 }
                 .padding(Spacing.xxxl)
@@ -82,10 +82,10 @@ struct CanvasRowView: View {
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(canvas.designName)
-                    .font(.sourceSerif(17, weight: .semibold))
+                    .font(.typeStyle(.headline))
                     .foregroundStyle(Color.espresso)
                 Text(canvas.designer)
-                    .font(.sourceSerif(15))
+                    .font(.typeStyle(.subheadline))
                     .foregroundStyle(Color.walnut)
             }
 
@@ -97,7 +97,7 @@ struct CanvasRowView: View {
 
             if let meshCount = canvas.meshCount {
                 Text("\(meshCount)m")
-                    .font(.system(.caption, design: .monospaced))
+                    .font(.typeStyle(.data))
                     .foregroundStyle(Color.clay)
             }
         }

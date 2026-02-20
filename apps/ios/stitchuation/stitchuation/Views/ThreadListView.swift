@@ -44,10 +44,10 @@ struct ThreadListView: View {
                         .font(.system(size: 48))
                         .foregroundStyle(Color.clay)
                     Text("No threads yet")
-                        .font(.playfair(22, weight: .semibold))
+                        .font(.typeStyle(.title2))
                         .foregroundStyle(Color.espresso)
                     Text("Tap + to add your first thread")
-                        .font(.sourceSerif(17))
+                        .font(.typeStyle(.body))
                         .foregroundStyle(Color.walnut)
                 }
                 .padding(Spacing.xxxl)
@@ -96,11 +96,11 @@ struct ThreadRowView: View {
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text("\(thread.brand) \(thread.number)")
-                    .font(.sourceSerif(17, weight: .semibold))
+                    .font(.typeStyle(.headline))
                     .foregroundStyle(Color.espresso)
                 if let name = thread.colorName {
                     Text("\(name) · \(thread.fiberType.rawValue.capitalized)")
-                        .font(.sourceSerif(15))
+                        .font(.typeStyle(.subheadline))
                         .foregroundStyle(Color.walnut)
                 }
             }
@@ -118,7 +118,7 @@ struct ThreadRowView: View {
                 .disabled(thread.quantity <= 0)
 
                 Text("\(thread.quantity)")
-                    .font(.system(.body, design: .monospaced).weight(.medium))
+                    .font(.typeStyle(.data))
                     .foregroundStyle(Color.espresso)
                     .frame(minWidth: 24)
 

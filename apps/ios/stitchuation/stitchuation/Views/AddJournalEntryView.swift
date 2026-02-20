@@ -23,7 +23,7 @@ struct AddJournalEntryView: View {
                 Section {
                     TextField("What did you work on?", text: $notes, axis: .vertical)
                         .lineLimit(3...8)
-                        .font(.sourceSerif(17))
+                        .font(.typeStyle(.body))
                 } header: {
                     Text("Notes")
                         .font(.playfair(15, weight: .semibold))
@@ -70,7 +70,7 @@ struct AddJournalEntryView: View {
                                 Image(systemName: "photo.badge.plus")
                                     .foregroundStyle(Color.terracotta)
                                 Text(selectedImages.isEmpty ? "Add Photos" : "Add More Photos")
-                                    .font(.sourceSerif(15))
+                                    .font(.typeStyle(.subheadline))
                                     .foregroundStyle(Color.walnut)
                             }
                         }
@@ -82,7 +82,7 @@ struct AddJournalEntryView: View {
                         .textCase(nil)
                 }
             }
-            .font(.sourceSerif(17))
+            .font(.typeStyle(.body))
             .scrollContentBackground(.hidden)
             .background(Color.linen)
             .navigationTitle("New Entry")

@@ -29,7 +29,7 @@ struct ContentView: View {
 
             NavigationStack {
                 Text("Settings coming soon")
-                    .font(.sourceSerif(17))
+                    .font(.typeStyle(.body))
                     .foregroundStyle(Color.walnut)
                     .navigationTitle("Settings")
             }

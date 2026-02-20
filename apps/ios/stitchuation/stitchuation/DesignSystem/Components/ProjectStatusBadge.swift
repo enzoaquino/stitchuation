@@ -13,7 +13,8 @@ struct ProjectStatusBadge: View {
 
     var body: some View {
         Text(status.displayName)
-            .font(.sourceSerif(12, weight: .medium))
+            .font(.typeStyle(.footnote))
+            .fontWeight(.medium)
             .foregroundStyle(.white)
             .padding(.horizontal, Spacing.sm)
             .padding(.vertical, Spacing.xxs)

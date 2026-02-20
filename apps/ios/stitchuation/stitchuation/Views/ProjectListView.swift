@@ -30,10 +30,10 @@ struct ProjectListView: View {
                         .font(.system(size: 48))
                         .foregroundStyle(Color.clay)
                     Text("No projects yet")
-                        .font(.playfair(22, weight: .semibold))
+                        .font(.typeStyle(.title2))
                         .foregroundStyle(Color.espresso)
                     Text("Tap + to start a new project")
-                        .font(.sourceSerif(17))
+                        .font(.typeStyle(.body))
                         .foregroundStyle(Color.walnut)
                 }
                 .padding(Spacing.xxxl)
@@ -84,10 +84,10 @@ struct ProjectRowView: View {
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(project.canvas.designName)
-                    .font(.sourceSerif(17, weight: .semibold))
+                    .font(.typeStyle(.headline))
                     .foregroundStyle(Color.espresso)
                 Text(project.canvas.designer)
-                    .font(.sourceSerif(15))
+                    .font(.typeStyle(.subheadline))
                     .foregroundStyle(Color.walnut)
             }
 

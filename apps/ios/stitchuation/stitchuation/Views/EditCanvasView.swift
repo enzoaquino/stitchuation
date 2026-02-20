@@ -68,13 +68,13 @@ struct EditCanvasView: View {
                             .keyboardType(.numberPad)
                         if !meshCount.isEmpty {
                             Text("mesh")
-                                .font(.sourceSerif(15))
+                                .font(.typeStyle(.subheadline))
                                 .foregroundStyle(Color.clay)
                         }
                     }
                     if !isMeshCountValid {
                         Text("Enter a positive number")
-                            .font(.sourceSerif(12))
+                            .font(.typeStyle(.footnote))
                             .foregroundStyle(Color.terracotta)
                     }
 
@@ -87,7 +87,7 @@ struct EditCanvasView: View {
                         .textCase(nil)
                 }
             }
-            .font(.sourceSerif(17))
+            .font(.typeStyle(.body))
             .scrollContentBackground(.hidden)
             .background(Color.linen)
             .navigationTitle("Edit Canvas")

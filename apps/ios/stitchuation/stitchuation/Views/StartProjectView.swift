@@ -29,10 +29,10 @@ struct StartProjectView: View {
                             .font(.system(size: 48))
                             .foregroundStyle(Color.clay)
                         Text("No available canvases")
-                            .font(.playfair(22, weight: .semibold))
+                            .font(.typeStyle(.title2))
                             .foregroundStyle(Color.espresso)
                         Text("All canvases are already linked to projects. Add a new canvas first.")
-                            .font(.sourceSerif(17))
+                            .font(.typeStyle(.body))
                             .foregroundStyle(Color.walnut)
                             .multilineTextAlignment(.center)
                     }
@@ -48,10 +48,10 @@ struct StartProjectView: View {
 
                                     VStack(alignment: .leading, spacing: Spacing.xxs) {
                                         Text(canvas.designName)
-                                            .font(.sourceSerif(17, weight: .semibold))
+                                            .font(.typeStyle(.headline))
                                             .foregroundStyle(Color.espresso)
                                         Text(canvas.designer)
-                                            .font(.sourceSerif(15))
+                                            .font(.typeStyle(.subheadline))
                                             .foregroundStyle(Color.walnut)
                                     }
 

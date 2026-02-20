@@ -31,7 +31,8 @@ struct ImageViewerView: View {
                 HStack {
                     if images.count > 1 {
                         Text("\(currentIndex + 1) of \(images.count)")
-                            .font(.sourceSerif(15, weight: .medium))
+                            .font(.typeStyle(.subheadline))
+                            .fontWeight(.medium)
                             .foregroundStyle(.white.opacity(0.7))
                     }
                     Spacer()

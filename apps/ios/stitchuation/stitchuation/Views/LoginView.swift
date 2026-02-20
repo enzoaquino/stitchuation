@@ -13,11 +13,11 @@ struct LoginView: View {
                 Spacer()
 
                 Text("Stitchuation")
-                    .font(.playfair(34, weight: .bold))
+                    .font(.typeStyle(.largeTitle))
                     .foregroundStyle(Color.espresso)
 
                 Text("Your craft companion")
-                    .font(.sourceSerif(17))
+                    .font(.typeStyle(.body))
                     .foregroundStyle(Color.walnut)
 
                 Spacer().frame(height: Spacing.lg)
@@ -34,7 +34,7 @@ struct LoginView: View {
                 HStack {
                     Rectangle().fill(Color.clay.opacity(0.3)).frame(height: 0.5)
                     Text("or")
-                        .font(.sourceSerif(13))
+                        .font(.typeStyle(.footnote))
                         .foregroundStyle(Color.clay)
                     Rectangle().fill(Color.clay.opacity(0.3)).frame(height: 0.5)
                 }
@@ -52,13 +52,13 @@ struct LoginView: View {
                         .textContentType(authViewModel.isRegistering ? .newPassword : .password)
                 }
                 .textFieldStyle(.roundedBorder)
-                .font(.sourceSerif(17))
+                .font(.typeStyle(.body))
                 .padding(.horizontal, Spacing.xl)
 
                 if let error = authViewModel.errorMessage {
                     Text(error)
                         .foregroundStyle(Color.terracotta)
-                        .font(.sourceSerif(13))
+                        .font(.typeStyle(.footnote))
                 }
 
                 Button {
@@ -71,7 +71,7 @@ struct LoginView: View {
                     }
                 } label: {
                     Text(authViewModel.isRegistering ? "Create Account" : "Log In")
-                        .font(.sourceSerif(17, weight: .semibold))
+                        .font(.typeStyle(.headline))
                         .foregroundStyle(Color.cream)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Spacing.md)
@@ -84,7 +84,7 @@ struct LoginView: View {
                 Button(authViewModel.isRegistering ? "Already have an account? Log in" : "Create an account") {
                     authViewModel.isRegistering.toggle()
                 }
-                .font(.sourceSerif(13))
+                .font(.typeStyle(.footnote))
                 .foregroundStyle(Color.terracotta)
 
                 Spacer()

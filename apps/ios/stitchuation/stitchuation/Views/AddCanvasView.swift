@@ -47,7 +47,7 @@ struct AddCanvasView: View {
                                     .font(.system(size: 32))
                                     .foregroundStyle(Color.terracotta)
                                 Text("Add Photo")
-                                    .font(.sourceSerif(15))
+                                    .font(.typeStyle(.subheadline))
                                     .foregroundStyle(Color.walnut)
                             }
                             .frame(height: 140)
@@ -101,13 +101,13 @@ struct AddCanvasView: View {
                             .keyboardType(.numberPad)
                         if !meshCount.isEmpty {
                             Text("mesh")
-                                .font(.sourceSerif(15))
+                                .font(.typeStyle(.subheadline))
                                 .foregroundStyle(Color.clay)
                         }
                     }
                     if !isMeshCountValid {
                         Text("Enter a positive number")
-                            .font(.sourceSerif(12))
+                            .font(.typeStyle(.footnote))
                             .foregroundStyle(Color.terracotta)
                     }
 
@@ -122,7 +122,7 @@ struct AddCanvasView: View {
 
                 Toggle("Add Another", isOn: $addAnother)
             }
-            .font(.sourceSerif(17))
+            .font(.typeStyle(.body))
             .scrollContentBackground(.hidden)
             .background(Color.linen)
             .navigationTitle("Add Canvas")

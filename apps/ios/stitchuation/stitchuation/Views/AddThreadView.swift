@@ -41,7 +41,7 @@ struct AddThreadView: View {
                     }
                     if !isValidHex {
                         Text("Enter a valid 6-digit hex color")
-                            .font(.sourceSerif(12))
+                            .font(.typeStyle(.footnote))
                             .foregroundStyle(Color.terracotta)
                     }
                     Picker("Fiber Type", selection: $fiberType) {
@@ -79,7 +79,7 @@ struct AddThreadView: View {
 
                 Toggle("Add Another", isOn: $addAnother)
             }
-            .font(.sourceSerif(17))
+            .font(.typeStyle(.body))
             .scrollContentBackground(.hidden)
             .background(Color.linen)
             .navigationTitle("Add Thread")

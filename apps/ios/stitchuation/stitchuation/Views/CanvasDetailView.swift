@@ -30,11 +30,11 @@ struct CanvasDetailView: View {
 
                         VStack(alignment: .leading, spacing: Spacing.md) {
                             Text(canvas.designName)
-                                .font(.playfair(28, weight: .bold))
+                                .font(.typeStyle(.title))
                                 .foregroundStyle(Color.espresso)
 
                             Text(canvas.designer)
-                                .font(.sourceSerif(19))
+                                .font(.typeStyle(.title3))
                                 .foregroundStyle(Color.walnut)
 
                             if canvas.acquiredAt != nil || canvas.size != nil || canvas.meshCount != nil {
@@ -57,7 +57,7 @@ struct CanvasDetailView: View {
                                 Divider().background(Color.slate.opacity(0.3))
 
                                 Text(notes)
-                                    .font(.sourceSerif(17))
+                                    .font(.typeStyle(.body))
                                     .foregroundStyle(Color.walnut)
                             }
 
@@ -67,7 +67,7 @@ struct CanvasDetailView: View {
                                 VStack(alignment: .leading, spacing: Spacing.sm) {
                                     HStack {
                                         Text("Project")
-                                            .font(.playfair(17, weight: .semibold))
+                                            .font(.typeStyle(.headline))
                                             .foregroundStyle(Color.espresso)
                                         Spacer()
                                         ProjectStatusBadge(status: project.status)
@@ -76,7 +76,8 @@ struct CanvasDetailView: View {
                                     NavigationLink(value: ProjectNavID(id: project.id)) {
                                         HStack {
                                             Text("View Journal")
-                                                .font(.sourceSerif(15, weight: .medium))
+                                                .font(.typeStyle(.subheadline))
+                                                .fontWeight(.medium)
                                                 .foregroundStyle(Color.terracotta)
                                             Image(systemName: "chevron.right")
                                                 .font(.system(size: 12, weight: .semibold))
@@ -153,11 +154,12 @@ struct DetailRow: View {
     var body: some View {
         HStack {
             Text(label)
-                .font(.sourceSerif(15))
+                .font(.typeStyle(.subheadline))
                 .foregroundStyle(Color.clay)
                 .frame(width: 80, alignment: .leading)
             Text(value)
-                .font(.sourceSerif(15, weight: .medium))
+                .font(.typeStyle(.subheadline))
+                .fontWeight(.medium)
                 .foregroundStyle(Color.espresso)
         }
     }
