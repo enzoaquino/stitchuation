@@ -141,63 +141,39 @@ final class SyncEngine {
             )
         }
 
-        // Gather unsynced canvases
-        let allCanvasDescriptor = FetchDescriptor<StashCanvas>()
-        let allCanvases = try context.fetch(allCanvasDescriptor)
-        let unsyncedCanvases = allCanvases.filter { canvas in
-            canvas.syncedAt == nil || canvas.updatedAt > (canvas.syncedAt ?? .distantPast)
+        // Gather unsynced pieces
+        let allPieceDescriptor = FetchDescriptor<StitchPiece>()
+        let allPieces = try context.fetch(allPieceDescriptor)
+        let unsyncedPieces = allPieces.filter { piece in
+            piece.syncedAt == nil || piece.updatedAt > (piece.syncedAt ?? .distantPast)
         }
 
-        let canvasChanges: [SyncChange] = unsyncedCanvases.map { canvas in
-            let isDeleted = canvas.deletedAt != nil
+        let pieceChanges: [SyncChange] = unsyncedPieces.map { piece in
+            let isDeleted = piece.deletedAt != nil
             var data: [String: AnyCodable]?
             if !isDeleted {
                 data = [
-                    "designer": AnyCodable(canvas.designer),
-                    "designName": AnyCodable(canvas.designName),
-                    "acquiredAt": AnyCodable(canvas.acquiredAt.map { formatter.string(from: $0) } ?? NSNull()),
-                    "imageKey": AnyCodable(canvas.imageKey ?? NSNull()),
-                    "size": AnyCodable(canvas.size ?? NSNull()),
-                    "meshCount": AnyCodable(canvas.meshCount ?? NSNull()),
-                    "notes": AnyCodable(canvas.notes ?? NSNull()),
+                    "designer": AnyCodable(piece.designer),
+                    "designName": AnyCodable(piece.designName),
+                    "status": AnyCodable(piece.status.rawValue),
+                    "imageKey": AnyCodable(piece.imageKey ?? NSNull()),
+                    "size": AnyCodable(piece.size ?? NSNull()),
+                    "meshCount": AnyCodable(piece.meshCount ?? NSNull()),
+                    "notes": AnyCodable(piece.notes ?? NSNull()),
+                    "acquiredAt": AnyCodable(piece.acquiredAt.map { formatter.string(from: $0) } ?? NSNull()),
+                    "startedAt": AnyCodable(piece.startedAt.map { formatter.string(from: $0) } ?? NSNull()),
+                    "stitchedAt": AnyCodable(piece.stitchedAt.map { formatter.string(from: $0) } ?? NSNull()),
+                    "finishingAt": AnyCodable(piece.finishingAt.map { formatter.string(from: $0) } ?? NSNull()),
+                    "completedAt": AnyCodable(piece.completedAt.map { formatter.string(from: $0) } ?? NSNull()),
                 ]
             }
             return SyncChange(
-                type: "canvas",
+                type: "piece",
                 action: isDeleted ? "delete" : "upsert",
-                id: canvas.id.uuidString,
+                id: piece.id.uuidString,
                 data: data,
-                updatedAt: formatter.string(from: canvas.updatedAt),
-                deletedAt: canvas.deletedAt.map { formatter.string(from: $0) }
-            )
-        }
-
-        // Gather unsynced projects
-        let allProjectDescriptor = FetchDescriptor<StitchProject>()
-        let allProjects = try context.fetch(allProjectDescriptor)
-        let unsyncedProjects = allProjects.filter { project in
-            project.syncedAt == nil || project.updatedAt > (project.syncedAt ?? .distantPast)
-        }
-
-        let projectChanges: [SyncChange] = unsyncedProjects.map { project in
-            let isDeleted = project.deletedAt != nil
-            var data: [String: AnyCodable]?
-            if !isDeleted {
-                data = [
-                    "canvasId": AnyCodable(project.canvas.id.uuidString),
-                    "status": AnyCodable(project.status.rawValue),
-                    "startedAt": AnyCodable(project.startedAt.map { formatter.string(from: $0) } ?? NSNull()),
-                    "finishingAt": AnyCodable(project.finishingAt.map { formatter.string(from: $0) } ?? NSNull()),
-                    "completedAt": AnyCodable(project.completedAt.map { formatter.string(from: $0) } ?? NSNull()),
-                ]
-            }
-            return SyncChange(
-                type: "project",
-                action: isDeleted ? "delete" : "upsert",
-                id: project.id.uuidString,
-                data: data,
-                updatedAt: formatter.string(from: project.updatedAt),
-                deletedAt: project.deletedAt.map { formatter.string(from: $0) }
+                updatedAt: formatter.string(from: piece.updatedAt),
+                deletedAt: piece.deletedAt.map { formatter.string(from: $0) }
             )
         }
 
@@ -213,7 +189,7 @@ final class SyncEngine {
             var data: [String: AnyCodable]?
             if !isDeleted {
                 data = [
-                    "projectId": AnyCodable(entry.project.id.uuidString),
+                    "pieceId": AnyCodable(entry.piece.id.uuidString),
                     "notes": AnyCodable(entry.notes ?? NSNull()),
                 ]
             }
@@ -256,7 +232,7 @@ final class SyncEngine {
             )
         }
 
-        let request = SyncRequest(lastSync: lastSyncTimestamp, changes: threadChanges + canvasChanges + projectChanges + entryChanges + imageChanges)
+        let request = SyncRequest(lastSync: lastSyncTimestamp, changes: threadChanges + pieceChanges + entryChanges + imageChanges)
         let response: SyncResponse = try await networkClient.request(
             method: "POST",
             path: "/sync",
@@ -299,79 +275,39 @@ final class SyncEngine {
                         context.insert(thread)
                     }
                 }
-            } else if change.type == "canvas" {
-                let fetchDescriptor = FetchDescriptor<StashCanvas>(
+            } else if change.type == "piece" {
+                let fetchDescriptor = FetchDescriptor<StitchPiece>(
                     predicate: #Predicate { $0.id == uuid }
                 )
                 let existing = try context.fetch(fetchDescriptor).first
 
                 if change.action == "delete" {
-                    if let canvas = existing {
-                        guard serverUpdatedAt >= canvas.updatedAt else { continue }
-                        canvas.deletedAt = formatter.date(from: change.deletedAt ?? change.updatedAt)
-                        canvas.updatedAt = serverUpdatedAt
-                        canvas.syncedAt = Date()
+                    if let piece = existing {
+                        guard serverUpdatedAt >= piece.updatedAt else { continue }
+                        piece.deletedAt = formatter.date(from: change.deletedAt ?? change.updatedAt)
+                        piece.updatedAt = serverUpdatedAt
+                        piece.syncedAt = Date()
                         // Evict image from cache
-                        if let imageKey = canvas.imageKey {
+                        if let imageKey = piece.imageKey {
                             await ImageCache.shared.evict(forKey: imageKey)
                         }
                     }
                 } else if change.action == "upsert" {
-                    if let canvas = existing {
-                        guard serverUpdatedAt >= canvas.updatedAt else { continue }
-                        applyCanvasData(change.data, to: canvas)
-                        canvas.updatedAt = serverUpdatedAt
-                        canvas.syncedAt = Date()
+                    if let piece = existing {
+                        guard serverUpdatedAt >= piece.updatedAt else { continue }
+                        applyPieceData(change.data, to: piece)
+                        piece.updatedAt = serverUpdatedAt
+                        piece.syncedAt = Date()
                     } else {
-                        let canvas = StashCanvas(
+                        let piece = StitchPiece(
                             id: uuid,
                             designer: stringValue(change.data, key: "designer") ?? "",
                             designName: stringValue(change.data, key: "designName") ?? ""
                         )
-                        applyCanvasData(change.data, to: canvas)
-                        canvas.updatedAt = serverUpdatedAt
-                        canvas.syncedAt = Date()
-                        context.insert(canvas)
-                    }
-                }
-            } else if change.type == "project" {
-                let fetchDescriptor = FetchDescriptor<StitchProject>(
-                    predicate: #Predicate { $0.id == uuid }
-                )
-                let existing = try context.fetch(fetchDescriptor).first
-
-                if change.action == "delete" {
-                    if let project = existing {
-                        guard serverUpdatedAt >= project.updatedAt else { continue }
-                        project.deletedAt = formatter.date(from: change.deletedAt ?? change.updatedAt)
-                        project.updatedAt = serverUpdatedAt
-                        project.syncedAt = Date()
-                    }
-                } else if change.action == "upsert" {
-                    if let project = existing {
-                        guard serverUpdatedAt >= project.updatedAt else { continue }
-                        applyProjectData(change.data, to: project)
-                        project.updatedAt = serverUpdatedAt
-                        project.syncedAt = Date()
-                    } else {
-                        let canvasIdStr = stringValue(change.data, key: "canvasId")
-                        let canvasUUID = UUID(uuidString: canvasIdStr ?? "")
-                        var canvas: StashCanvas?
-                        if let canvasUUID {
-                            let canvasFetch = FetchDescriptor<StashCanvas>(
-                                predicate: #Predicate { $0.id == canvasUUID }
-                            )
-                            canvas = try context.fetch(canvasFetch).first
-                        }
-                        guard let canvas else { continue }
-                        let project = StitchProject(
-                            id: uuid,
-                            canvas: canvas
-                        )
-                        applyProjectData(change.data, to: project)
-                        project.updatedAt = serverUpdatedAt
-                        project.syncedAt = Date()
-                        context.insert(project)
+                        applyPieceData(change.data, to: piece)
+                        piece.updatedAt = serverUpdatedAt
+                        piece.syncedAt = Date()
+                        context.insert(piece)
                     }
                 }
             } else if change.type == "journalEntry" {
@@ -394,19 +330,19 @@ final class SyncEngine {
                         entry.updatedAt = serverUpdatedAt
                         entry.syncedAt = Date()
                     } else {
-                        let projectIdStr = stringValue(change.data, key: "projectId")
-                        let projectUUID = UUID(uuidString: projectIdStr ?? "")
-                        var project: StitchProject?
-                        if let projectUUID {
-                            let projectFetch = FetchDescriptor<StitchProject>(
-                                predicate: #Predicate { $0.id == projectUUID }
+                        let pieceIdStr = stringValue(change.data, key: "pieceId")
+                        let pieceUUID = UUID(uuidString: pieceIdStr ?? "")
+                        var piece: StitchPiece?
+                        if let pieceUUID {
+                            let pieceFetch = FetchDescriptor<StitchPiece>(
+                                predicate: #Predicate { $0.id == pieceUUID }
                             )
-                            project = try context.fetch(projectFetch).first
+                            piece = try context.fetch(pieceFetch).first
                         }
-                        guard let project else { continue }
+                        guard let piece else { continue }
                         let entry = JournalEntry(
                             id: uuid,
-                            project: project
+                            piece: piece
                         )
                         applyJournalEntryData(change.data, to: entry)
                         entry.updatedAt = serverUpdatedAt
@@ -466,11 +402,8 @@ final class SyncEngine {
         for thread in unsynced {
             thread.syncedAt = Date()
         }
-        for canvas in unsyncedCanvases {
-            canvas.syncedAt = Date()
-        }
-        for project in unsyncedProjects {
-            project.syncedAt = Date()
+        for piece in unsyncedPieces {
+            piece.syncedAt = Date()
         }
         for entry in unsyncedEntries {
             entry.syncedAt = Date()
@@ -514,52 +447,49 @@ final class SyncEngine {
         }
     }
 
-    private func applyCanvasData(_ data: [String: AnyCodable]?, to canvas: StashCanvas) {
+    private func applyPieceData(_ data: [String: AnyCodable]?, to piece: StitchPiece) {
         guard let data else { return }
-        if let designer = data["designer"]?.value as? String { canvas.designer = designer }
-        if let designName = data["designName"]?.value as? String { canvas.designName = designName }
-        if let v = data["acquiredAt"] {
-            if v.value is NSNull {
-                canvas.acquiredAt = nil
-            } else if let str = v.value as? String {
-                canvas.acquiredAt = Self.dateFormatter.date(from: str)
-            }
+        if let designer = data["designer"]?.value as? String { piece.designer = designer }
+        if let designName = data["designName"]?.value as? String { piece.designName = designName }
+        if let statusStr = data["status"]?.value as? String,
+           let status = PieceStatus(rawValue: statusStr) {
+            piece.status = status
         }
         if let v = data["imageKey"] {
-            canvas.imageKey = v.value is NSNull ? nil : v.value as? String
+            piece.imageKey = v.value is NSNull ? nil : v.value as? String
         }
         if let v = data["size"] {
-            canvas.size = v.value is NSNull ? nil : v.value as? String
+            piece.size = v.value is NSNull ? nil : v.value as? String
         }
         if let v = data["meshCount"] {
             if v.value is NSNull {
-                canvas.meshCount = nil
+                piece.meshCount = nil
             } else if let num = v.value as? Int {
-                canvas.meshCount = num
+                piece.meshCount = num
             }
         }
         if let v = data["notes"] {
-            canvas.notes = v.value is NSNull ? nil : v.value as? String
+            piece.notes = v.value is NSNull ? nil : v.value as? String
         }
-    }
-
-    private func applyProjectData(_ data: [String: AnyCodable]?, to project: StitchProject) {
-        guard let data else { return }
-        if let statusStr = data["status"]?.value as? String,
-           let status = ProjectStatus(rawValue: statusStr) {
-            project.status = status
+        if let v = data["acquiredAt"] {
+            if v.value is NSNull { piece.acquiredAt = nil }
+            else if let str = v.value as? String { piece.acquiredAt = Self.dateFormatter.date(from: str) }
         }
         if let v = data["startedAt"] {
-            if v.value is NSNull { project.startedAt = nil }
-            else if let str = v.value as? String { project.startedAt = Self.dateFormatter.date(from: str) }
+            if v.value is NSNull { piece.startedAt = nil }
+            else if let str = v.value as? String { piece.startedAt = Self.dateFormatter.date(from: str) }
+        }
+        if let v = data["stitchedAt"] {
+            if v.value is NSNull { piece.stitchedAt = nil }
+            else if let str = v.value as? String { piece.stitchedAt = Self.dateFormatter.date(from: str) }
         }
         if let v = data["finishingAt"] {
-            if v.value is NSNull { project.finishingAt = nil }
-            else if let str = v.value as? String { project.finishingAt = Self.dateFormatter.date(from: str) }
+            if v.value is NSNull { piece.finishingAt = nil }
+            else if let str = v.value as? String { piece.finishingAt = Self.dateFormatter.date(from: str) }
         }
         if let v = data["completedAt"] {
-            if v.value is NSNull { project.completedAt = nil }
-            else if let str = v.value as? String { project.completedAt = Self.dateFormatter.date(from: str) }
+            if v.value is NSNull { piece.completedAt = nil }
+            else if let str = v.value as? String { piece.completedAt = Self.dateFormatter.date(from: str) }
         }
     }
 

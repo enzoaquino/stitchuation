@@ -72,14 +72,14 @@ final class UploadQueue {
     }
 
     private func updateEntity(upload: PendingUpload, imageKey: String, context: ModelContext) {
-        if upload.entityType == "canvas" {
+        if upload.entityType == "piece" {
             let entityId = upload.entityId
-            let descriptor = FetchDescriptor<StashCanvas>(
+            let descriptor = FetchDescriptor<StitchPiece>(
                 predicate: #Predicate { $0.id == entityId }
             )
-            if let canvas = try? context.fetch(descriptor).first {
-                canvas.imageKey = imageKey
-                canvas.updatedAt = Date()
+            if let piece = try? context.fetch(descriptor).first {
+                piece.imageKey = imageKey
+                piece.updatedAt = Date()
             }
         } else if upload.entityType == "journalImage" {
             let entityId = upload.entityId
