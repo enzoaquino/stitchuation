@@ -64,15 +64,7 @@ struct EditCanvasView: View {
 
                     TextField("Size (e.g. 13x18)", text: $size)
 
-                    HStack {
-                        TextField("Mesh Count", text: $meshCount)
-                            .keyboardType(.numberPad)
-                        if !meshCount.isEmpty {
-                            Text("mesh")
-                                .font(.typeStyle(.subheadline))
-                                .foregroundStyle(Color.clay)
-                        }
-                    }
+                    MeshCountPicker(meshCount: $meshCount)
                     if !isMeshCountValid {
                         Text("Enter a positive number")
                             .font(.typeStyle(.footnote))
