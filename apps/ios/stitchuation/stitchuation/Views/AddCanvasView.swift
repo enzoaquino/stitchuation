@@ -20,6 +20,10 @@ struct AddCanvasView: View {
 
     @State private var addAnother = false
 
+    @State private var showPhotoOptions = false
+    @State private var showCamera = false
+    @State private var showLibraryPicker = false
+
     private var meshCountValue: Int? {
         guard !meshCount.isEmpty else { return nil }
         return Int(meshCount)
@@ -33,7 +37,13 @@ struct AddCanvasView: View {
         NavigationStack {
             Form {
                 Section {
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                    Button {
+                        if CameraView.isCameraAvailable {
+                            showPhotoOptions = true
+                        } else {
+                            showLibraryPicker = true
+                        }
+                    } label: {
                         if let selectedImageData, let uiImage = UIImage(data: selectedImageData) {
                             Image(uiImage: uiImage)
                                 .resizable()
@@ -56,13 +66,7 @@ struct AddCanvasView: View {
                             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
                         }
                     }
-                    .onChange(of: selectedPhoto) { _, newItem in
-                        Task {
-                            if let data = try? await newItem?.loadTransferable(type: Data.self) {
-                                selectedImageData = data
-                            }
-                        }
-                    }
+                    .buttonStyle(.plain)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
                     .padding(.horizontal, Spacing.lg)
@@ -129,6 +133,26 @@ struct AddCanvasView: View {
                     Button("Save") { saveCanvas() }
                         .disabled(designer.isEmpty || designName.isEmpty || !isMeshCountValid)
                         .foregroundStyle(Color.terracotta)
+                }
+            }
+            .confirmationDialog("Add Photo", isPresented: $showPhotoOptions) {
+                Button("Take Photo") { showCamera = true }
+                Button("Choose from Library") { showLibraryPicker = true }
+                Button("Cancel", role: .cancel) { }
+            }
+            .fullScreenCover(isPresented: $showCamera) {
+                CameraView { image, data in
+                    selectedImageData = data
+                    showCamera = false
+                }
+                .ignoresSafeArea()
+            }
+            .photosPicker(isPresented: $showLibraryPicker, selection: $selectedPhoto, matching: .images)
+            .onChange(of: selectedPhoto) { _, newItem in
+                Task {
+                    if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                        selectedImageData = data
+                    }
                 }
             }
         }
