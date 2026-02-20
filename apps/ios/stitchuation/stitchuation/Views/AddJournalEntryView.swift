@@ -122,26 +122,32 @@ struct AddJournalEntryView: View {
         )
         modelContext.insert(entry)
 
-        // Create local JournalImage placeholders and upload in background
-        var imagesToUpload: [(JournalImage, Data)] = []
-        for (index, selectedImage) in selectedImages.enumerated() {
-            let journalImage = JournalImage(
-                entry: entry,
-                imageKey: "",
-                sortOrder: index
+        // Create PendingUploads for each selected image — no JournalImage records yet
+        var pendingUploads: [PendingUpload] = []
+        for selectedImage in selectedImages {
+            let imageId = UUID()
+            let compressed = compressImage(selectedImage.data, maxBytes: 10 * 1024 * 1024)
+            let uploadPath = "/projects/\(project.id.uuidString)/entries/\(entry.id.uuidString)/images"
+
+            let pendingUpload = PendingUpload(
+                entityType: "journalImage",
+                entityId: imageId,
+                uploadPath: uploadPath,
+                imageData: compressed
             )
-            modelContext.insert(journalImage)
-            imagesToUpload.append((journalImage, selectedImage.data))
+            modelContext.insert(pendingUpload)
+            pendingUploads.append(pendingUpload)
         }
 
-        if let networkClient, !imagesToUpload.isEmpty {
+        if let networkClient, !pendingUploads.isEmpty {
             let projectIdString = project.id.uuidString
             let canvasIdString = project.canvas.id.uuidString
             let entryIdString = entry.id.uuidString
             let entryNotesForServer = entryNotes.isEmpty ? nil : entryNotes
+
             Task {
                 do {
-                    // Ensure project exists on server before uploading images
+                    // Ensure project exists on server
                     let projectBody: [String: Any] = ["id": projectIdString, "canvasId": canvasIdString]
                     let projectJSON = try JSONSerialization.data(withJSONObject: projectBody)
                     _ = try? await networkClient.postJSON(path: "/projects", body: projectJSON)
@@ -152,24 +158,37 @@ struct AddJournalEntryView: View {
                     let entryJSON = try JSONSerialization.data(withJSONObject: entryBody)
                     _ = try? await networkClient.postJSON(path: "/projects/\(projectIdString)/entries", body: entryJSON)
 
-                    // Now upload images
-                    for (journalImage, imageData) in imagesToUpload {
-                        let compressed = compressImage(imageData, maxBytes: 10 * 1024 * 1024)
+                    // Upload each image
+                    for (index, pendingUpload) in pendingUploads.enumerated() {
                         let responseData = try await networkClient.uploadImage(
-                            path: "/projects/\(projectIdString)/entries/\(entryIdString)/images",
-                            imageData: compressed,
-                            filename: "\(journalImage.id.uuidString).jpg"
+                            path: pendingUpload.uploadPath,
+                            imageData: pendingUpload.imageData,
+                            filename: "\(pendingUpload.entityId.uuidString).jpg"
                         )
                         if let json = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
                            let imageKey = json["imageKey"] as? String {
                             await MainActor.run {
-                                journalImage.imageKey = imageKey
-                                journalImage.updatedAt = Date()
+                                // Now create the JournalImage with a real imageKey
+                                let journalImage = JournalImage(
+                                    id: pendingUpload.entityId,
+                                    entry: entry,
+                                    imageKey: imageKey,
+                                    sortOrder: index
+                                )
+                                modelContext.insert(journalImage)
+                                // Upload succeeded — delete PendingUpload
+                                modelContext.delete(pendingUpload)
                             }
+                            // Cache the image
+                            await ImageCache.shared.store(
+                                UIImage(data: pendingUpload.imageData) ?? UIImage(),
+                                forKey: imageKey
+                            )
+                            await ImageCache.shared.storeToDisk(pendingUpload.imageData, forKey: imageKey)
                         }
                     }
                 } catch {
-                    // Network failed — images saved locally, sync will reconcile
+                    // Network failed — PendingUploads persist for retry
                 }
             }
         }
