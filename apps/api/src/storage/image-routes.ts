@@ -34,7 +34,10 @@ imageRoutes.get("/*", async (c) => {
     "image/jpeg";
 
   return new Response(content, {
-    headers: { "Content-Type": contentType },
+    headers: {
+      "Content-Type": contentType,
+      "Cache-Control": "public, max-age=31536000, immutable",
+    },
   });
 });
 

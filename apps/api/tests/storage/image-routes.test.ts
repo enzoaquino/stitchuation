@@ -74,6 +74,30 @@ describe("Image Routes", () => {
     expect(res.status).toBe(200);
   });
 
+
+  it("GET /images/* returns immutable cache-control headers", async () => {
+    // Upload an image first
+    const formData = new FormData();
+    const imageData = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+    const blob = new Blob([imageData], { type: "image/jpeg" });
+    formData.append("image", blob, "cache-test.jpg");
+
+    const uploadRes = await app.request(`/canvases/${canvasId}/image`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: formData,
+    });
+    const uploadBody = await uploadRes.json();
+
+    // Fetch and check headers
+    const res = await app.request(`/images/${uploadBody.imageKey}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
+  });
+
   it("GET /images/* returns 404 for non-existent key", async () => {
     const res = await app.request("/images/nonexistent/key.jpg", {
       headers: { Authorization: `Bearer ${accessToken}` },
