@@ -159,7 +159,7 @@ struct AddCanvasView: View {
     }
 
     private func saveCanvas() {
-        let canvas = StashCanvas(
+        let piece = StitchPiece(
             designer: designer,
             designName: designName,
             acquiredAt: showDatePicker ? acquiredAt : nil,
@@ -167,46 +167,46 @@ struct AddCanvasView: View {
             meshCount: meshCountValue,
             notes: notes.isEmpty ? nil : notes
         )
-        modelContext.insert(canvas)
+        modelContext.insert(piece)
 
         if let imageData = selectedImageData {
             let compressed = compressImage(imageData, maxBytes: 10 * 1024 * 1024)
-            let uploadPath = "/canvases/\(canvas.id.uuidString)/image"
+            let uploadPath = "/pieces/\(piece.id.uuidString)/image"
 
             // Persist PendingUpload before attempting network
             let pendingUpload = PendingUpload(
-                entityType: "canvas",
-                entityId: canvas.id,
+                entityType: "piece",
+                entityId: piece.id,
                 uploadPath: uploadPath,
                 imageData: compressed
             )
             modelContext.insert(pendingUpload)
 
             if let networkClient {
-                let canvasId = canvas.id
-                let canvasDesigner = canvas.designer
-                let canvasDesignName = canvas.designName
+                let pieceId = piece.id
+                let pieceDesigner = piece.designer
+                let pieceDesignName = piece.designName
                 Task {
                     do {
-                        // Ensure canvas exists on server
+                        // Ensure piece exists on server
                         let body: [String: Any] = [
-                            "id": canvasId.uuidString,
-                            "designer": canvasDesigner,
-                            "designName": canvasDesignName,
+                            "id": pieceId.uuidString,
+                            "designer": pieceDesigner,
+                            "designName": pieceDesignName,
                         ]
                         let jsonData = try JSONSerialization.data(withJSONObject: body)
-                        _ = try await networkClient.postJSON(path: "/canvases", body: jsonData)
+                        _ = try await networkClient.postJSON(path: "/pieces", body: jsonData)
 
                         let responseData = try await networkClient.uploadImage(
                             path: uploadPath,
                             imageData: compressed,
-                            filename: "\(canvasId.uuidString).jpg"
+                            filename: "\(pieceId.uuidString).jpg"
                         )
                         if let json = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
                            let imageKey = json["imageKey"] as? String {
                             await MainActor.run {
-                                canvas.imageKey = imageKey
-                                canvas.updatedAt = Date()
+                                piece.imageKey = imageKey
+                                piece.updatedAt = Date()
                                 // Upload succeeded — delete PendingUpload
                                 modelContext.delete(pendingUpload)
                             }

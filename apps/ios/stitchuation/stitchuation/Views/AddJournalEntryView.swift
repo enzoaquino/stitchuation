@@ -7,7 +7,7 @@ struct AddJournalEntryView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.networkClient) private var networkClient
 
-    let project: StitchProject
+    let piece: StitchPiece
 
     @State private var notes = ""
     @State private var selectedPhotos: [PhotosPickerItem] = []
@@ -136,7 +136,7 @@ struct AddJournalEntryView: View {
     private func saveEntry() {
         let entryNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         let entry = JournalEntry(
-            project: project,
+            piece: piece,
             notes: entryNotes.isEmpty ? nil : entryNotes
         )
         modelContext.insert(entry)
@@ -146,7 +146,7 @@ struct AddJournalEntryView: View {
         for (index, selectedImage) in selectedImages.enumerated() {
             let imageId = UUID()
             let compressed = compressImage(selectedImage.data, maxBytes: 10 * 1024 * 1024)
-            let uploadPath = "/projects/\(project.id.uuidString)/entries/\(entry.id.uuidString)/images"
+            let uploadPath = "/pieces/\(piece.id.uuidString)/entries/\(entry.id.uuidString)/images"
 
             let pendingUpload = PendingUpload(
                 entityType: "journalImage",
@@ -161,23 +161,17 @@ struct AddJournalEntryView: View {
         }
 
         if let networkClient, !pendingUploads.isEmpty {
-            let projectIdString = project.id.uuidString
-            let canvasIdString = project.canvas.id.uuidString
+            let pieceIdString = piece.id.uuidString
             let entryIdString = entry.id.uuidString
             let entryNotesForServer = entryNotes.isEmpty ? nil : entryNotes
 
             Task {
                 do {
-                    // Ensure project exists on server
-                    let projectBody: [String: Any] = ["id": projectIdString, "canvasId": canvasIdString]
-                    let projectJSON = try JSONSerialization.data(withJSONObject: projectBody)
-                    _ = try? await networkClient.postJSON(path: "/projects", body: projectJSON)
-
                     // Ensure entry exists on server
                     var entryBody: [String: Any] = ["id": entryIdString]
                     if let notes = entryNotesForServer { entryBody["notes"] = notes }
                     let entryJSON = try JSONSerialization.data(withJSONObject: entryBody)
-                    _ = try? await networkClient.postJSON(path: "/projects/\(projectIdString)/entries", body: entryJSON)
+                    _ = try? await networkClient.postJSON(path: "/pieces/\(pieceIdString)/entries", body: entryJSON)
 
                     // Upload each image
                     for (index, pendingUpload) in pendingUploads.enumerated() {

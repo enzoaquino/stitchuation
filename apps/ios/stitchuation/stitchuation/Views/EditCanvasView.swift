@@ -3,7 +3,7 @@ import SwiftUI
 struct EditCanvasView: View {
     @Environment(\.dismiss) private var dismiss
 
-    @Bindable var canvas: StashCanvas
+    @Bindable var canvas: StitchPiece
 
     @State private var designer: String
     @State private var designName: String
@@ -13,7 +13,7 @@ struct EditCanvasView: View {
     @State private var meshCount: String
     @State private var notes: String
 
-    init(canvas: StashCanvas) {
+    init(canvas: StitchPiece) {
         self.canvas = canvas
         _designer = State(initialValue: canvas.designer)
         _designName = State(initialValue: canvas.designName)
