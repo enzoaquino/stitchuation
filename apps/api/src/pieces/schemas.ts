@@ -38,3 +38,5 @@ export const uuidSchema = z.string().uuid();
 
 export type CreatePieceInput = z.infer<typeof createPieceSchema>;
 export type UpdatePieceInput = z.infer<typeof updatePieceSchema>;
+export type CreateJournalEntryInput = z.infer<typeof createJournalEntrySchema>;
+export type UpdateJournalEntryInput = z.infer<typeof updateJournalEntrySchema>;

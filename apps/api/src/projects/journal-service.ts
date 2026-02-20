@@ -2,16 +2,16 @@ import { eq, and, isNull, desc, asc } from "drizzle-orm";
 import { db } from "../db/connection.js";
 import { journalEntries, journalImages } from "../db/schema.js";
 import { NotFoundError } from "../errors.js";
-import type { CreateJournalEntryInput, UpdateJournalEntryInput } from "./schemas.js";
+import type { CreateJournalEntryInput, UpdateJournalEntryInput } from "../pieces/schemas.js";
 
 export class JournalService {
-  async createEntry(userId: string, projectId: string, input: CreateJournalEntryInput) {
+  async createEntry(userId: string, pieceId: string, input: CreateJournalEntryInput) {
     const [entry] = await db
       .insert(journalEntries)
       .values({
         ...(input.id ? { id: input.id } : {}),
         userId,
-        projectId,
+        pieceId,
         notes: input.notes ?? null,
       })
       .returning();
@@ -19,13 +19,13 @@ export class JournalService {
     return entry;
   }
 
-  async listEntries(userId: string, projectId: string) {
+  async listEntries(userId: string, pieceId: string) {
     return db
       .select()
       .from(journalEntries)
       .where(
         and(
-          eq(journalEntries.projectId, projectId),
+          eq(journalEntries.pieceId, pieceId),
           eq(journalEntries.userId, userId),
           isNull(journalEntries.deletedAt),
         ),
