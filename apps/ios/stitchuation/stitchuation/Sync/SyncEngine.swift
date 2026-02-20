@@ -85,6 +85,7 @@ final class SyncEngine {
 
     private let networkClient: NetworkClient
     private let modelContainer: ModelContainer
+    private let uploadQueue: UploadQueue
     private static let lastSyncKey = "lastSyncTimestamp"
 
     private(set) var isSyncing = false
@@ -95,6 +96,7 @@ final class SyncEngine {
     init(networkClient: NetworkClient, modelContainer: ModelContainer) {
         self.networkClient = networkClient
         self.modelContainer = modelContainer
+        self.uploadQueue = UploadQueue(modelContainer: modelContainer, networkClient: networkClient)
         self.lastSyncTimestamp = UserDefaults.standard.string(forKey: Self.lastSyncKey)
     }
 
@@ -309,6 +311,10 @@ final class SyncEngine {
                         canvas.deletedAt = formatter.date(from: change.deletedAt ?? change.updatedAt)
                         canvas.updatedAt = serverUpdatedAt
                         canvas.syncedAt = Date()
+                        // Evict image from cache
+                        if let imageKey = canvas.imageKey {
+                            await ImageCache.shared.evict(forKey: imageKey)
+                        }
                     }
                 } else if change.action == "upsert" {
                     if let canvas = existing {
@@ -420,6 +426,10 @@ final class SyncEngine {
                         image.deletedAt = formatter.date(from: change.deletedAt ?? change.updatedAt)
                         image.updatedAt = serverUpdatedAt
                         image.syncedAt = Date()
+                        // Evict image from cache
+                        if !image.imageKey.isEmpty {
+                            await ImageCache.shared.evict(forKey: image.imageKey)
+                        }
                     }
                 } else if change.action == "upsert" {
                     if let image = existing {
@@ -471,6 +481,9 @@ final class SyncEngine {
 
         try context.save()
         lastSyncTimestamp = response.serverTimestamp
+
+        // Process pending uploads after successful sync
+        await uploadQueue.processQueue()
     }
 
     private func applyData(_ data: [String: AnyCodable]?, to thread: NeedleThread) {
