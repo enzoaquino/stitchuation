@@ -1,6 +1,6 @@
 import { and, eq, gt, inArray } from "drizzle-orm";
 import { db } from "../db/connection.js";
-import { threads, canvases, projects, journalEntries, journalImages } from "../db/schema.js";
+import { threads, stitchPieces, journalEntries, journalImages } from "../db/schema.js";
 import type { SyncChange, SyncRequest } from "./schemas.js";
 import { getStorage } from "../storage/index.js";
 
@@ -17,26 +17,23 @@ const ALLOWED_THREAD_FIELDS = new Set([
   "notes",
 ]);
 
-const ALLOWED_CANVAS_FIELDS = new Set([
+const ALLOWED_PIECE_FIELDS = new Set([
   "designer",
   "designName",
-  "acquiredAt",
+  "status",
   "imageKey",
   "size",
   "meshCount",
   "notes",
-]);
-
-const ALLOWED_PROJECT_FIELDS = new Set([
-  "canvasId",
-  "status",
+  "acquiredAt",
   "startedAt",
+  "stitchedAt",
   "finishingAt",
   "completedAt",
 ]);
 
 const ALLOWED_JOURNAL_ENTRY_FIELDS = new Set([
-  "projectId",
+  "pieceId",
   "notes",
 ]);
 
@@ -65,10 +62,8 @@ export class SyncService {
       for (const change of request.changes) {
         if (change.type === "thread") {
           await this.processThreadChange(tx, userId, change);
-        } else if (change.type === "canvas") {
-          await this.processCanvasChange(tx, userId, change);
-        } else if (change.type === "project") {
-          await this.processProjectChange(tx, userId, change);
+        } else if (change.type === "piece") {
+          await this.processPieceChange(tx, userId, change);
         } else if (change.type === "journalEntry") {
           await this.processJournalEntryChange(tx, userId, change);
         } else if (change.type === "journalImage") {
@@ -151,7 +146,7 @@ export class SyncService {
     // else: server is newer or equal, ignore client change
   }
 
-  private async processCanvasChange(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], userId: string, change: SyncChange) {
+  private async processPieceChange(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], userId: string, change: SyncChange) {
     const clientUpdatedAt = new Date(change.updatedAt);
 
     if (change.action === "delete") {
@@ -159,15 +154,15 @@ export class SyncService {
 
       const [existing] = await tx
         .select()
-        .from(canvases)
-        .where(and(eq(canvases.id, change.id), eq(canvases.userId, userId)))
+        .from(stitchPieces)
+        .where(and(eq(stitchPieces.id, change.id), eq(stitchPieces.userId, userId)))
         .limit(1);
 
       if (existing && existing.updatedAt < clientUpdatedAt) {
         await tx
-          .update(canvases)
+          .update(stitchPieces)
           .set({ deletedAt, updatedAt: clientUpdatedAt })
-          .where(and(eq(canvases.id, change.id), eq(canvases.userId, userId)));
+          .where(and(eq(stitchPieces.id, change.id), eq(stitchPieces.userId, userId)));
 
         // Clean up image file
         if (existing.imageKey) {
@@ -184,78 +179,25 @@ export class SyncService {
 
     const [existing] = await tx
       .select()
-      .from(canvases)
-      .where(and(eq(canvases.id, change.id), eq(canvases.userId, userId)))
+      .from(stitchPieces)
+      .where(and(eq(stitchPieces.id, change.id), eq(stitchPieces.userId, userId)))
       .limit(1);
 
     if (!existing) {
-      const allowed = change.data ? pickAllowedFields(change.data, ALLOWED_CANVAS_FIELDS) : {};
-      await tx.insert(canvases).values({
+      const allowed = change.data ? pickAllowedFields(change.data, ALLOWED_PIECE_FIELDS) : {};
+      await tx.insert(stitchPieces).values({
         id: change.id,
         userId,
         designer: (allowed.designer as string) ?? "",
         designName: (allowed.designName as string) ?? "",
-        acquiredAt: allowed.acquiredAt ? new Date(allowed.acquiredAt as string) : undefined,
+        status: (allowed.status as any) ?? "stash",
         imageKey: allowed.imageKey as string | undefined,
         size: allowed.size as string | undefined,
         meshCount: allowed.meshCount as number | undefined,
         notes: allowed.notes as string | undefined,
-        createdAt: clientUpdatedAt,
-        updatedAt: clientUpdatedAt,
-      }).onConflictDoNothing();
-    } else if (existing.updatedAt < clientUpdatedAt) {
-      const updateData: Record<string, unknown> = {
-        updatedAt: clientUpdatedAt,
-      };
-      if (change.data) {
-        const allowed = pickAllowedFields(change.data, ALLOWED_CANVAS_FIELDS);
-        if (allowed.acquiredAt) {
-          allowed.acquiredAt = new Date(allowed.acquiredAt as string);
-        }
-        Object.assign(updateData, allowed);
-      }
-      await tx
-        .update(canvases)
-        .set(updateData)
-        .where(and(eq(canvases.id, change.id), eq(canvases.userId, userId)));
-    }
-  }
-
-  private async processProjectChange(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], userId: string, change: SyncChange) {
-    const clientUpdatedAt = new Date(change.updatedAt);
-
-    if (change.action === "delete") {
-      const deletedAt = change.deletedAt ? new Date(change.deletedAt) : new Date();
-
-      const [existing] = await tx
-        .select()
-        .from(projects)
-        .where(and(eq(projects.id, change.id), eq(projects.userId, userId)))
-        .limit(1);
-
-      if (existing && existing.updatedAt < clientUpdatedAt) {
-        await tx
-          .update(projects)
-          .set({ deletedAt, updatedAt: clientUpdatedAt })
-          .where(and(eq(projects.id, change.id), eq(projects.userId, userId)));
-      }
-      return;
-    }
-
-    const [existing] = await tx
-      .select()
-      .from(projects)
-      .where(and(eq(projects.id, change.id), eq(projects.userId, userId)))
-      .limit(1);
-
-    if (!existing) {
-      const allowed = change.data ? pickAllowedFields(change.data, ALLOWED_PROJECT_FIELDS) : {};
-      await tx.insert(projects).values({
-        id: change.id,
-        userId,
-        canvasId: (allowed.canvasId as string) ?? "",
-        status: (allowed.status as any) ?? "wip",
+        acquiredAt: allowed.acquiredAt ? new Date(allowed.acquiredAt as string) : undefined,
         startedAt: allowed.startedAt ? new Date(allowed.startedAt as string) : undefined,
+        stitchedAt: allowed.stitchedAt ? new Date(allowed.stitchedAt as string) : undefined,
         finishingAt: allowed.finishingAt ? new Date(allowed.finishingAt as string) : undefined,
         completedAt: allowed.completedAt ? new Date(allowed.completedAt as string) : undefined,
         createdAt: clientUpdatedAt,
@@ -266,9 +208,15 @@ export class SyncService {
         updatedAt: clientUpdatedAt,
       };
       if (change.data) {
-        const allowed = pickAllowedFields(change.data, ALLOWED_PROJECT_FIELDS);
+        const allowed = pickAllowedFields(change.data, ALLOWED_PIECE_FIELDS);
+        if (allowed.acquiredAt) {
+          allowed.acquiredAt = new Date(allowed.acquiredAt as string);
+        }
         if (allowed.startedAt) {
           allowed.startedAt = new Date(allowed.startedAt as string);
+        }
+        if (allowed.stitchedAt) {
+          allowed.stitchedAt = new Date(allowed.stitchedAt as string);
         }
         if (allowed.finishingAt) {
           allowed.finishingAt = new Date(allowed.finishingAt as string);
@@ -279,9 +227,9 @@ export class SyncService {
         Object.assign(updateData, allowed);
       }
       await tx
-        .update(projects)
+        .update(stitchPieces)
         .set(updateData)
-        .where(and(eq(projects.id, change.id), eq(projects.userId, userId)));
+        .where(and(eq(stitchPieces.id, change.id), eq(stitchPieces.userId, userId)));
     }
   }
 
@@ -317,7 +265,7 @@ export class SyncService {
       await tx.insert(journalEntries).values({
         id: change.id,
         userId,
-        projectId: (allowed.projectId as string) ?? "",
+        pieceId: (allowed.pieceId as string) ?? "",
         notes: allowed.notes as string | undefined,
         createdAt: clientUpdatedAt,
         updatedAt: clientUpdatedAt,
@@ -440,15 +388,10 @@ export class SyncService {
       .from(threads)
       .where(and(eq(threads.userId, userId), gt(threads.updatedAt, since)));
 
-    const changedCanvases = await db
+    const changedPieces = await db
       .select()
-      .from(canvases)
-      .where(and(eq(canvases.userId, userId), gt(canvases.updatedAt, since)));
-
-    const changedProjects = await db
-      .select()
-      .from(projects)
-      .where(and(eq(projects.userId, userId), gt(projects.updatedAt, since)));
+      .from(stitchPieces)
+      .where(and(eq(stitchPieces.userId, userId), gt(stitchPieces.updatedAt, since)));
 
     const changedJournalEntries = await db
       .select()
@@ -495,35 +438,23 @@ export class SyncService {
       deletedAt: t.deletedAt?.toISOString(),
     }));
 
-    const canvasChanges = changedCanvases.map((c) => ({
-      type: "canvas" as const,
-      action: c.deletedAt ? ("delete" as const) : ("upsert" as const),
-      id: c.id,
-      data: c.deletedAt
-        ? undefined
-        : {
-            designer: c.designer,
-            designName: c.designName,
-            acquiredAt: c.acquiredAt?.toISOString(),
-            imageKey: c.imageKey,
-            size: c.size,
-            meshCount: c.meshCount,
-            notes: c.notes,
-          },
-      updatedAt: c.updatedAt.toISOString(),
-      deletedAt: c.deletedAt?.toISOString(),
-    }));
-
-    const projectChanges = changedProjects.map((p) => ({
-      type: "project" as const,
+    const pieceChanges = changedPieces.map((p) => ({
+      type: "piece" as const,
       action: p.deletedAt ? ("delete" as const) : ("upsert" as const),
       id: p.id,
       data: p.deletedAt
         ? undefined
         : {
-            canvasId: p.canvasId,
+            designer: p.designer,
+            designName: p.designName,
             status: p.status,
+            imageKey: p.imageKey,
+            size: p.size,
+            meshCount: p.meshCount,
+            notes: p.notes,
+            acquiredAt: p.acquiredAt?.toISOString(),
             startedAt: p.startedAt?.toISOString(),
+            stitchedAt: p.stitchedAt?.toISOString(),
             finishingAt: p.finishingAt?.toISOString(),
             completedAt: p.completedAt?.toISOString(),
           },
@@ -538,7 +469,7 @@ export class SyncService {
       data: e.deletedAt
         ? undefined
         : {
-            projectId: e.projectId,
+            pieceId: e.pieceId,
             notes: e.notes,
           },
       updatedAt: e.updatedAt.toISOString(),
@@ -562,8 +493,7 @@ export class SyncService {
 
     return [
       ...threadChanges,
-      ...canvasChanges,
-      ...projectChanges,
+      ...pieceChanges,
       ...journalEntryChanges,
       ...journalImageChanges,
     ];
