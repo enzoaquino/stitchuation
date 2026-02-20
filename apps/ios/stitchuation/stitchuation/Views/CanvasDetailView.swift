@@ -22,7 +22,7 @@ struct CanvasDetailView: View {
             if let canvas {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spacing.xl) {
-                        CanvasThumbnail(imageKey: canvas.imageKey, size: .infinity)
+                        CanvasThumbnail(imageKey: canvas.imageKey, size: .fill)
                             .frame(height: 260)
                             .frame(maxWidth: .infinity)
                             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))

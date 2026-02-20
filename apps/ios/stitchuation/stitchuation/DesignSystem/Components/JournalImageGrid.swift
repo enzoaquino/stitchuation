@@ -75,7 +75,7 @@ struct JournalImageGrid: View {
         Button {
             onTap(index)
         } label: {
-            CanvasThumbnail(imageKey: image.imageKey, size: .infinity)
+            CanvasThumbnail(imageKey: image.imageKey, size: .fill)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
         }

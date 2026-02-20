@@ -1,8 +1,23 @@
 import SwiftUI
 
 struct CanvasThumbnail: View {
+    enum ThumbnailSize {
+        case fixed(CGFloat)
+        case fill
+
+        var isFixed: Bool {
+            if case .fixed = self { return true }
+            return false
+        }
+
+        var fixedValue: CGFloat? {
+            if case .fixed(let v) = self { return v }
+            return nil
+        }
+    }
+
     let imageKey: String?
-    var size: CGFloat = 48
+    var size: ThumbnailSize = .fixed(48)
 
     @Environment(\.networkClient) private var networkClient
     @State private var loadedImage: UIImage?
@@ -19,14 +34,14 @@ struct CanvasThumbnail: View {
                     .overlay {
                         ProgressView()
                             .tint(Color.terracotta)
-                            .scaleEffect(size < 100 ? 0.6 : 1.0)
+                            .scaleEffect(size.isFixed && (size.fixedValue ?? 48) < 100 ? 0.6 : 1.0)
                     }
             } else {
                 placeholderView
             }
         }
-        .frame(width: size == .infinity ? nil : size, height: size == .infinity ? nil : size)
-        .frame(maxWidth: size == .infinity ? .infinity : nil)
+        .frame(width: size.fixedValue, height: size.fixedValue)
+        .frame(maxWidth: size.isFixed ? nil : .infinity)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
         .overlay(
             RoundedRectangle(cornerRadius: CornerRadius.subtle)
@@ -42,7 +57,7 @@ struct CanvasThumbnail: View {
             .fill(Color.parchment)
             .overlay {
                 Image(systemName: "photo")
-                    .font(.system(size: min(size * 0.4, 20)))
+                    .font(.system(size: min((size.fixedValue ?? 48) * 0.4, 20)))
                     .foregroundStyle(Color.clay)
             }
     }

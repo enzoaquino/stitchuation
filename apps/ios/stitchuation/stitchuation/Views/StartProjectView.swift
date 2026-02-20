@@ -44,7 +44,7 @@ struct StartProjectView: View {
                                 startProject(with: canvas)
                             } label: {
                                 HStack(spacing: Spacing.md) {
-                                    CanvasThumbnail(imageKey: canvas.imageKey, size: 48)
+                                    CanvasThumbnail(imageKey: canvas.imageKey, size: .fixed(48))
 
                                     VStack(alignment: .leading, spacing: Spacing.xxs) {
                                         Text(canvas.designName)

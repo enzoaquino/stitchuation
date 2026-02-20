@@ -78,7 +78,7 @@ struct CanvasRowView: View {
 
     var body: some View {
         HStack(spacing: Spacing.md) {
-            CanvasThumbnail(imageKey: canvas.imageKey, size: 48)
+            CanvasThumbnail(imageKey: canvas.imageKey, size: .fixed(48))
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(canvas.designName)

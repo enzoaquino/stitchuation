@@ -19,7 +19,7 @@ struct ProjectDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spacing.xl) {
                         // Canvas image
-                        CanvasThumbnail(imageKey: project.canvas.imageKey, size: .infinity)
+                        CanvasThumbnail(imageKey: project.canvas.imageKey, size: .fill)
                             .frame(height: 250)
                             .frame(maxWidth: .infinity)
                             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
