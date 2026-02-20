@@ -162,10 +162,10 @@ struct AddCanvasView: View {
         let piece = StitchPiece(
             designer: designer,
             designName: designName,
-            acquiredAt: showDatePicker ? acquiredAt : nil,
             size: size.isEmpty ? nil : size,
             meshCount: meshCountValue,
-            notes: notes.isEmpty ? nil : notes
+            notes: notes.isEmpty ? nil : notes,
+            acquiredAt: showDatePicker ? acquiredAt : nil
         )
         modelContext.insert(piece)
 
