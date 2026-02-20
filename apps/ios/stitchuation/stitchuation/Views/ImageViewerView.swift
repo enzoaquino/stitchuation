@@ -21,8 +21,11 @@ struct ImageViewerView: View {
 
             TabView(selection: $currentIndex) {
                 ForEach(Array(images.enumerated()), id: \.element.id) { index, image in
-                    imagePageView(image)
+                    ZoomableImagePage(image: loadedImages[image.id])
                         .tag(index)
+                        .task {
+                            await loadImage(image)
+                        }
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
@@ -42,7 +45,7 @@ struct ImageViewerView: View {
                         Image(systemName: "xmark")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(.white)
-                            .frame(width: 36, height: 36)
+                            .frame(width: 40, height: 40)
                             .background(.white.opacity(0.15))
                             .clipShape(Circle())
                     }
@@ -68,27 +71,6 @@ struct ImageViewerView: View {
         .statusBarHidden(true)
     }
 
-    @ViewBuilder
-    private func imagePageView(_ journalImage: JournalImage) -> some View {
-        Group {
-            if let uiImage = loadedImages[journalImage.id] {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFit()
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
-                    .padding(.horizontal, Spacing.sm)
-            } else {
-                ProgressView()
-                    .tint(Color.terracotta)
-                    .scaleEffect(1.2)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .task {
-            await loadImage(journalImage)
-        }
-    }
-
     private func loadImage(_ journalImage: JournalImage) async {
         guard loadedImages[journalImage.id] == nil,
               let networkClient else { return }
@@ -100,5 +82,78 @@ struct ImageViewerView: View {
         } catch {
             // Failed to load — stays as spinner
         }
+    }
+}
+
+// MARK: - Zoomable Image Page
+
+private struct ZoomableImagePage: View {
+    let image: UIImage?
+
+    @State private var currentZoom: CGFloat = 0
+    @State private var totalZoom: CGFloat = 1
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
+
+    private var effectiveZoom: CGFloat {
+        max(1, totalZoom + currentZoom)
+    }
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .scaleEffect(effectiveZoom)
+                    .offset(offset)
+                    .gesture(
+                        MagnifyGesture()
+                            .onChanged { value in
+                                currentZoom = value.magnification - 1
+                            }
+                            .onEnded { value in
+                                totalZoom = max(1, totalZoom + currentZoom)
+                                currentZoom = 0
+                                if totalZoom <= 1 {
+                                    withAnimation(Motion.gentle) {
+                                        offset = .zero
+                                        lastOffset = .zero
+                                    }
+                                }
+                            }
+                            .simultaneously(with:
+                                DragGesture()
+                                    .onChanged { value in
+                                        if effectiveZoom > 1 {
+                                            offset = CGSize(
+                                                width: lastOffset.width + value.translation.width,
+                                                height: lastOffset.height + value.translation.height
+                                            )
+                                        }
+                                    }
+                                    .onEnded { _ in
+                                        lastOffset = offset
+                                    }
+                            )
+                    )
+                    .onTapGesture(count: 2) {
+                        withAnimation(Motion.gentle) {
+                            if totalZoom > 1 {
+                                totalZoom = 1
+                                offset = .zero
+                                lastOffset = .zero
+                            } else {
+                                totalZoom = 2
+                            }
+                        }
+                    }
+            } else {
+                ProgressView()
+                    .tint(Color.terracotta)
+                    .scaleEffect(1.2)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
