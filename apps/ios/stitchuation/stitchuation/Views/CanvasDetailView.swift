@@ -128,6 +128,16 @@ struct CanvasDetailView: View {
                     let now = Date()
                     canvas.deletedAt = now
                     canvas.updatedAt = now
+
+                    // Clean up pending uploads for this canvas
+                    let canvasId = canvas.id
+                    let uploadDescriptor = FetchDescriptor<PendingUpload>(
+                        predicate: #Predicate { $0.entityType == "canvas" && $0.entityId == canvasId }
+                    )
+                    if let uploads = try? modelContext.fetch(uploadDescriptor) {
+                        for upload in uploads { modelContext.delete(upload) }
+                    }
+
                     dismiss()
                 }
             }

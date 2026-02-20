@@ -135,6 +135,29 @@ struct ProjectDetailView: View {
                     let now = Date()
                     project.deletedAt = now
                     project.updatedAt = now
+
+                    // Clean up pending uploads for canvas image
+                    let canvasId = project.canvas.id
+                    let canvasUploadDescriptor = FetchDescriptor<PendingUpload>(
+                        predicate: #Predicate { $0.entityType == "canvas" && $0.entityId == canvasId }
+                    )
+                    if let uploads = try? modelContext.fetch(canvasUploadDescriptor) {
+                        for upload in uploads { modelContext.delete(upload) }
+                    }
+
+                    // Clean up pending uploads for journal images in this project
+                    for entry in project.entries {
+                        for image in entry.images {
+                            let imageId = image.id
+                            let imageUploadDescriptor = FetchDescriptor<PendingUpload>(
+                                predicate: #Predicate { $0.entityType == "journalImage" && $0.entityId == imageId }
+                            )
+                            if let uploads = try? modelContext.fetch(imageUploadDescriptor) {
+                                for upload in uploads { modelContext.delete(upload) }
+                            }
+                        }
+                    }
+
                     dismiss()
                 }
             }
