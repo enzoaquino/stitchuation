@@ -24,6 +24,9 @@ final class StitchPiece {
     @Relationship(deleteRule: .cascade, inverse: \JournalEntry.piece)
     var entries: [JournalEntry] = []
 
+    @Relationship(deleteRule: .cascade, inverse: \PieceMaterial.piece)
+    var materials: [PieceMaterial] = []
+
     init(
         id: UUID = UUID(),
         designer: String,
