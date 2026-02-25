@@ -1,12 +1,16 @@
 import { Hono } from "hono";
 import { PieceService } from "./piece-service.js";
 import { JournalService } from "./journal-service.js";
+import { MaterialService } from "./material-service.js";
 import {
   createPieceSchema,
   updatePieceSchema,
   setStatusSchema,
   createJournalEntrySchema,
   updateJournalEntrySchema,
+  createMaterialSchema,
+  updateMaterialSchema,
+  batchCreateMaterialsSchema,
   uuidSchema,
 } from "./schemas.js";
 import { authMiddleware } from "../auth/middleware.js";
@@ -17,6 +21,7 @@ import { getStorage } from "../storage/index.js";
 const pieceRoutes = new Hono<AuthEnv>();
 const pieceService = new PieceService();
 const journalService = new JournalService();
+const materialService = new MaterialService();
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/heic"]);
@@ -521,6 +526,162 @@ pieceRoutes.delete("/:id/entries/:entryId/images/:imageId", async (c) => {
 
   try {
     await journalService.softDeleteImage(imageIdResult.data);
+    return c.json({ success: true });
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return c.json({ error: error.message }, 404);
+    }
+    throw error;
+  }
+});
+
+// --- Material Routes ---
+
+pieceRoutes.get("/:id/materials", async (c) => {
+  const userId = c.get("userId");
+  const idResult = uuidSchema.safeParse(c.req.param("id"));
+  if (!idResult.success) {
+    return c.json({ error: "Invalid piece ID" }, 400);
+  }
+
+  const piece = await pieceService.getById(userId, idResult.data);
+  if (!piece) {
+    return c.json({ error: "Piece not found" }, 404);
+  }
+
+  const materials = await materialService.list(userId, idResult.data);
+  return c.json(materials);
+});
+
+pieceRoutes.post("/:id/materials/batch", async (c) => {
+  const userId = c.get("userId");
+  const idResult = uuidSchema.safeParse(c.req.param("id"));
+  if (!idResult.success) {
+    return c.json({ error: "Invalid piece ID" }, 400);
+  }
+
+  const piece = await pieceService.getById(userId, idResult.data);
+  if (!piece) {
+    return c.json({ error: "Piece not found" }, 404);
+  }
+
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  const parsed = batchCreateMaterialsSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.flatten() }, 400);
+  }
+
+  const materials = await materialService.batchCreate(userId, idResult.data, parsed.data);
+  return c.json(materials, 201);
+});
+
+pieceRoutes.post("/:id/materials", async (c) => {
+  const userId = c.get("userId");
+  const idResult = uuidSchema.safeParse(c.req.param("id"));
+  if (!idResult.success) {
+    return c.json({ error: "Invalid piece ID" }, 400);
+  }
+
+  const piece = await pieceService.getById(userId, idResult.data);
+  if (!piece) {
+    return c.json({ error: "Piece not found" }, 404);
+  }
+
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  const parsed = createMaterialSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.flatten() }, 400);
+  }
+
+  const material = await materialService.create(userId, idResult.data, parsed.data);
+  return c.json(material, 201);
+});
+
+pieceRoutes.put("/:id/materials/:materialId", async (c) => {
+  const userId = c.get("userId");
+  const idResult = uuidSchema.safeParse(c.req.param("id"));
+  if (!idResult.success) {
+    return c.json({ error: "Invalid piece ID" }, 400);
+  }
+
+  const materialIdResult = uuidSchema.safeParse(c.req.param("materialId"));
+  if (!materialIdResult.success) {
+    return c.json({ error: "Invalid material ID" }, 400);
+  }
+
+  // Verify piece belongs to user
+  const piece = await pieceService.getById(userId, idResult.data);
+  if (!piece) {
+    return c.json({ error: "Piece not found" }, 404);
+  }
+
+  // Verify material exists AND belongs to this piece
+  const existing = await materialService.getById(userId, materialIdResult.data);
+  if (!existing || existing.pieceId !== idResult.data) {
+    return c.json({ error: "Material not found" }, 404);
+  }
+
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  const parsed = updateMaterialSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.flatten() }, 400);
+  }
+
+  try {
+    const material = await materialService.update(userId, materialIdResult.data, parsed.data);
+    return c.json(material);
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return c.json({ error: error.message }, 404);
+    }
+    throw error;
+  }
+});
+
+pieceRoutes.delete("/:id/materials/:materialId", async (c) => {
+  const userId = c.get("userId");
+  const idResult = uuidSchema.safeParse(c.req.param("id"));
+  if (!idResult.success) {
+    return c.json({ error: "Invalid piece ID" }, 400);
+  }
+
+  const materialIdResult = uuidSchema.safeParse(c.req.param("materialId"));
+  if (!materialIdResult.success) {
+    return c.json({ error: "Invalid material ID" }, 400);
+  }
+
+  // Verify piece belongs to user
+  const piece = await pieceService.getById(userId, idResult.data);
+  if (!piece) {
+    return c.json({ error: "Piece not found" }, 404);
+  }
+
+  // Verify material exists AND belongs to this piece
+  const existing = await materialService.getById(userId, materialIdResult.data);
+  if (!existing || existing.pieceId !== idResult.data) {
+    return c.json({ error: "Material not found" }, 404);
+  }
+
+  try {
+    await materialService.softDelete(userId, materialIdResult.data);
     return c.json({ success: true });
   } catch (error) {
     if (error instanceof NotFoundError) {
