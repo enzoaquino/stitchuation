@@ -15,6 +15,7 @@ struct ProjectDetailView: View {
     @State private var showAddMaterial = false
     @State private var showScanMaterials = false
     @State private var editingMaterial: PieceMaterial? = nil
+    @State private var parsedMaterials: [ParsedMaterial]? = nil
 
     var body: some View {
         ZStack {
@@ -165,6 +166,22 @@ struct ProjectDetailView: View {
                 AddMaterialView(piece: piece, editing: material)
             }
         }
+        .sheet(isPresented: $showScanMaterials) {
+            if let piece {
+                ScanMaterialsView(piece: piece) { parsed in
+                    showScanMaterials = false
+                    parsedMaterials = parsed
+                }
+            }
+        }
+        .sheet(item: Binding(
+            get: { parsedMaterials.map { ParsedMaterialsWrapper(materials: $0) } },
+            set: { parsedMaterials = $0?.materials }
+        ), onDismiss: { loadPiece() }) { wrapper in
+            if let piece {
+                ParsedMaterialsReviewView(piece: piece, materials: wrapper.materials)
+            }
+        }
         .confirmationDialog("Return to Stash", isPresented: $showReturnToStashConfirmation) {
             Button("Return to Stash", role: .destructive) {
                 if let piece {
@@ -283,6 +300,11 @@ struct ProjectDetailView: View {
             predicate: #Predicate { $0.id == id && $0.deletedAt == nil }
         )
         piece = try? modelContext.fetch(descriptor).first
+    }
+
+    private struct ParsedMaterialsWrapper: Identifiable {
+        let id = UUID()
+        let materials: [ParsedMaterial]
     }
 
     private struct StatusButton {
