@@ -12,6 +12,9 @@ struct ProjectDetailView: View {
     @State private var showDeleteConfirmation = false
     @State private var showReturnToStashConfirmation = false
     @State private var showChangeStatus = false
+    @State private var showAddMaterial = false
+    @State private var showScanMaterials = false
+    @State private var editingMaterial: PieceMaterial? = nil
 
     var body: some View {
         ZStack {
@@ -76,6 +79,14 @@ struct ProjectDetailView: View {
                         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
                         .warmShadow(.subtle)
                         .padding(.horizontal, Spacing.lg)
+
+                        // Materials section
+                        MaterialsSection(
+                            piece: piece,
+                            onAddMaterial: { showAddMaterial = true },
+                            onScanGuide: { showScanMaterials = true },
+                            onEditMaterial: { material in editingMaterial = material }
+                        )
 
                         // Journal section
                         VStack(alignment: .leading, spacing: Spacing.md) {
@@ -144,6 +155,16 @@ struct ProjectDetailView: View {
         .sheet(isPresented: $showChangeStatus) {
             changeStatusSheet
         }
+        .sheet(isPresented: $showAddMaterial, onDismiss: { loadPiece() }) {
+            if let piece {
+                AddMaterialView(piece: piece)
+            }
+        }
+        .sheet(item: $editingMaterial, onDismiss: { loadPiece() }) { material in
+            if let piece {
+                AddMaterialView(piece: piece, editing: material)
+            }
+        }
         .confirmationDialog("Return to Stash", isPresented: $showReturnToStashConfirmation) {
             Button("Return to Stash", role: .destructive) {
                 if let piece {
@@ -182,6 +203,12 @@ struct ProjectDetailView: View {
                                 for upload in uploads { modelContext.delete(upload) }
                             }
                         }
+                    }
+
+                    // Soft-delete child materials
+                    for material in piece.materials where material.deletedAt == nil {
+                        material.deletedAt = now
+                        material.updatedAt = now
                     }
 
                     // Clean up pending uploads for piece image

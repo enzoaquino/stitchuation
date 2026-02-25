@@ -144,6 +144,12 @@ struct CanvasDetailView: View {
                         }
                     }
 
+                    // Soft-delete child materials
+                    for material in piece.materials where material.deletedAt == nil {
+                        material.deletedAt = now
+                        material.updatedAt = now
+                    }
+
                     // Clean up pending uploads for piece image
                     let currentPieceId = piece.id
                     let uploadDescriptor = FetchDescriptor<PendingUpload>(

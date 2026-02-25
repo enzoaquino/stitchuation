@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class PieceMaterial {
+final class PieceMaterial: Identifiable {
     @Attribute(.unique) var id: UUID
     var piece: StitchPiece
     var materialType: MaterialType
