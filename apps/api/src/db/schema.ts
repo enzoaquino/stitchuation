@@ -85,3 +85,28 @@ export const journalImages = pgTable("journal_images", {
   index("journal_images_entry_id_idx").on(table.entryId),
   index("journal_images_entry_id_updated_at_idx").on(table.entryId, table.updatedAt),
 ]);
+
+export const materialTypeEnum = pgEnum("material_type", [
+  "thread", "bead", "accessory", "other"
+]);
+
+export const pieceMaterials = pgTable("piece_materials", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  pieceId: uuid("piece_id").notNull().references(() => stitchPieces.id),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  materialType: materialTypeEnum("material_type").notNull().default("other"),
+  brand: text("brand"),
+  name: text("name").notNull(),
+  code: text("code"),
+  quantity: integer("quantity").notNull().default(1),
+  unit: text("unit"),
+  notes: text("notes"),
+  acquired: integer("acquired").notNull().default(0),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+}, (table) => [
+  index("piece_materials_piece_id_idx").on(table.pieceId),
+  index("piece_materials_user_id_updated_at_idx").on(table.userId, table.updatedAt),
+]);
