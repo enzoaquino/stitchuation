@@ -25,11 +25,19 @@ struct StashListView: View {
         ZStack {
             Color.linen.ignoresSafeArea()
             if filteredPieces.isEmpty && viewModel.searchText.isEmpty {
-                EmptyStateView(
-                    icon: "square.stack.3d.up",
-                    title: "No canvases yet",
-                    message: "Tap + to add your first canvas"
-                )
+                if !viewModel.showAllPieces && !pieces.isEmpty {
+                    EmptyStateView(
+                        icon: "square.stack.3d.up",
+                        title: "No stash items",
+                        message: "All your canvases are active projects. Toggle \"All\" to see everything."
+                    )
+                } else {
+                    EmptyStateView(
+                        icon: "square.stack.3d.up",
+                        title: "No canvases yet",
+                        message: "Tap + to add your first canvas"
+                    )
+                }
             } else {
                 List {
                     ForEach(filteredPieces, id: \.id) { piece in

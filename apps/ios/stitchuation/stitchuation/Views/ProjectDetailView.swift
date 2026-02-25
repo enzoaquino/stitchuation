@@ -288,18 +288,12 @@ struct ProjectDetailView: View {
         let now = Date()
         piece.status = status
 
-        // Set lifecycle timestamps based on target status
-        let allCases = PieceStatus.allCases
-        let targetIndex = allCases.firstIndex(of: status)!
-        let kittingIndex = allCases.firstIndex(of: .kitting)!
-        let stitchedIndex = allCases.firstIndex(of: .stitched)!
-        let atFinishingIndex = allCases.firstIndex(of: .atFinishing)!
-        let finishedIndex = allCases.firstIndex(of: .finished)!
-
-        piece.startedAt = targetIndex >= kittingIndex ? (piece.startedAt ?? now) : nil
-        piece.stitchedAt = targetIndex >= stitchedIndex ? (piece.stitchedAt ?? now) : nil
-        piece.finishingAt = targetIndex >= atFinishingIndex ? (piece.finishingAt ?? now) : nil
-        piece.completedAt = targetIndex >= finishedIndex ? (piece.completedAt ?? now) : nil
+        // Set lifecycle timestamps based on target status using ordinal comparison
+        let ordinal = status.ordinal
+        piece.startedAt = ordinal >= PieceStatus.kitting.ordinal ? (piece.startedAt ?? now) : nil
+        piece.stitchedAt = ordinal >= PieceStatus.stitched.ordinal ? (piece.stitchedAt ?? now) : nil
+        piece.finishingAt = ordinal >= PieceStatus.atFinishing.ordinal ? (piece.finishingAt ?? now) : nil
+        piece.completedAt = ordinal >= PieceStatus.finished.ordinal ? (piece.completedAt ?? now) : nil
 
         piece.updatedAt = now
     }

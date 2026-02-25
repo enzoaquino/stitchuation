@@ -49,6 +49,16 @@ struct PieceStatusTests {
         #expect(PieceStatus.finished.isActive == false)
     }
 
+    @Test("ordinals follow lifecycle order")
+    func ordinals() {
+        #expect(PieceStatus.stash.ordinal == 0)
+        #expect(PieceStatus.kitting.ordinal == 1)
+        #expect(PieceStatus.wip.ordinal == 2)
+        #expect(PieceStatus.stitched.ordinal == 3)
+        #expect(PieceStatus.atFinishing.ordinal == 4)
+        #expect(PieceStatus.finished.ordinal == 5)
+    }
+
     @Test("Codable round-trip preserves all cases including at_finishing")
     func codableRoundTrip() throws {
         let encoder = JSONEncoder()

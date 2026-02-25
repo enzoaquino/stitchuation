@@ -217,20 +217,20 @@ export class SyncService {
         if (allowed.status !== undefined && !pieceStatuses.includes(allowed.status as any)) {
           delete allowed.status;
         }
-        if (allowed.acquiredAt) {
-          allowed.acquiredAt = new Date(allowed.acquiredAt as string);
+        if (allowed.acquiredAt !== undefined) {
+          allowed.acquiredAt = allowed.acquiredAt ? new Date(allowed.acquiredAt as string) : null;
         }
-        if (allowed.startedAt) {
-          allowed.startedAt = new Date(allowed.startedAt as string);
+        if (allowed.startedAt !== undefined) {
+          allowed.startedAt = allowed.startedAt ? new Date(allowed.startedAt as string) : null;
         }
-        if (allowed.stitchedAt) {
-          allowed.stitchedAt = new Date(allowed.stitchedAt as string);
+        if (allowed.stitchedAt !== undefined) {
+          allowed.stitchedAt = allowed.stitchedAt ? new Date(allowed.stitchedAt as string) : null;
         }
-        if (allowed.finishingAt) {
-          allowed.finishingAt = new Date(allowed.finishingAt as string);
+        if (allowed.finishingAt !== undefined) {
+          allowed.finishingAt = allowed.finishingAt ? new Date(allowed.finishingAt as string) : null;
         }
-        if (allowed.completedAt) {
-          allowed.completedAt = new Date(allowed.completedAt as string);
+        if (allowed.completedAt !== undefined) {
+          allowed.completedAt = allowed.completedAt ? new Date(allowed.completedAt as string) : null;
         }
         Object.assign(updateData, allowed);
       }
@@ -285,7 +285,10 @@ export class SyncService {
         updatedAt: clientUpdatedAt,
       };
       if (change.data) {
-        Object.assign(updateData, pickAllowedFields(change.data, ALLOWED_JOURNAL_ENTRY_FIELDS));
+        const allowed = pickAllowedFields(change.data, ALLOWED_JOURNAL_ENTRY_FIELDS);
+        // Prevent re-parenting entries via sync
+        delete allowed.pieceId;
+        Object.assign(updateData, allowed);
       }
       await tx
         .update(journalEntries)
@@ -380,7 +383,10 @@ export class SyncService {
           updatedAt: clientUpdatedAt,
         };
         if (change.data) {
-          Object.assign(updateData, pickAllowedFields(change.data, ALLOWED_JOURNAL_IMAGE_FIELDS));
+          const allowed = pickAllowedFields(change.data, ALLOWED_JOURNAL_IMAGE_FIELDS);
+          // Prevent re-parenting images via sync
+          delete allowed.entryId;
+          Object.assign(updateData, allowed);
         }
         await tx
           .update(journalImages)

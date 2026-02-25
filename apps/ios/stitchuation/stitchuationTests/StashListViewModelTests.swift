@@ -71,6 +71,31 @@ struct StashListViewModelTests {
         #expect(result.isEmpty)
     }
 
+    @Test func searchWithShowAllPiecesFiltersAcrossAllStatuses() {
+        let vm = StashListViewModel()
+        vm.showAllPieces = true
+        vm.searchText = "Kirk"
+
+        let p1 = StitchPiece(designer: "Melissa Shirley", designName: "Nutcracker")
+        let p2 = StitchPiece(designer: "Kirk & Bradley", designName: "Gingerbread", status: .wip)
+        let p3 = StitchPiece(designer: "Kirk & Bradley", designName: "Snowflake")
+
+        let result = vm.filteredPieces(from: [p1, p2, p3])
+        #expect(result.count == 2)
+    }
+
+    @Test func searchWithStashOnlyFiltersCombined() {
+        let vm = StashListViewModel()
+        vm.searchText = "Kirk"
+
+        let p1 = StitchPiece(designer: "Kirk & Bradley", designName: "Stash One")
+        let p2 = StitchPiece(designer: "Kirk & Bradley", designName: "Active One", status: .wip)
+
+        let result = vm.filteredPieces(from: [p1, p2])
+        #expect(result.count == 1)
+        #expect(result.first?.designName == "Stash One")
+    }
+
     @Test func deletePiecesSoftDeletes() {
         let vm = StashListViewModel()
 

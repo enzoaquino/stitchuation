@@ -336,7 +336,7 @@ pieceRoutes.get("/:id/entries/:entryId", async (c) => {
   }
 
   const entry = await journalService.getEntry(userId, entryIdResult.data);
-  if (!entry) {
+  if (!entry || entry.pieceId !== idResult.data) {
     return c.json({ error: "Journal entry not found" }, 404);
   }
 
@@ -359,6 +359,12 @@ pieceRoutes.put("/:id/entries/:entryId", async (c) => {
   const piece = await pieceService.getById(userId, idResult.data);
   if (!piece) {
     return c.json({ error: "Piece not found" }, 404);
+  }
+
+  // Verify entry belongs to this piece
+  const existingEntry = await journalService.getEntry(userId, entryIdResult.data);
+  if (!existingEntry || existingEntry.pieceId !== idResult.data) {
+    return c.json({ error: "Journal entry not found" }, 404);
   }
 
   let body;
@@ -400,6 +406,12 @@ pieceRoutes.delete("/:id/entries/:entryId", async (c) => {
   const piece = await pieceService.getById(userId, idResult.data);
   if (!piece) {
     return c.json({ error: "Piece not found" }, 404);
+  }
+
+  // Verify entry belongs to this piece
+  const existingEntry = await journalService.getEntry(userId, entryIdResult.data);
+  if (!existingEntry || existingEntry.pieceId !== idResult.data) {
+    return c.json({ error: "Journal entry not found" }, 404);
   }
 
   try {

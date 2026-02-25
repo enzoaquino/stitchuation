@@ -15,7 +15,7 @@ export const createPieceSchema = z.object({
 });
 
 export const updatePieceSchema = createPieceSchema
-  .omit({ id: true })
+  .omit({ id: true, status: true })
   .partial()
   .refine((obj) => Object.keys(obj).length > 0, {
     message: "At least one field is required",

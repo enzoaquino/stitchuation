@@ -192,6 +192,19 @@ The most distinctive UI element — a small circle showing the thread color.
 - Section indicators: `sage` dot = ready, `dustyRose` dot = partial, `terracotta` dot = needs threads
 - Section text: `headline` weight for name, `callout` for status in semantic color
 
+### Piece Status Badges
+
+Status badges use compact rounded pills with white text on a colored background:
+
+| Status | Color | Token |
+|--------|-------|-------|
+| Stash | `walnut` | `#5C4A3D` |
+| Kitting | `dustyRose` | `#C4919B` |
+| WIP | `terracotta` | `#C4704B` |
+| Stitched | `sage` | `#7A8B6F` |
+| At Finishing | `clay` | `#8B7355` |
+| Finished | `espresso` | `#3B2F2F` |
+
 ### Navigation
 
 **iPhone — Tab Bar:**

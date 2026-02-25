@@ -126,7 +126,25 @@ struct CanvasDetailView: View {
                     piece.deletedAt = now
                     piece.updatedAt = now
 
-                    // Clean up pending uploads for this piece
+                    // Soft-delete child entries and their images
+                    for entry in piece.entries where entry.deletedAt == nil {
+                        entry.deletedAt = now
+                        entry.updatedAt = now
+                        for image in entry.images where image.deletedAt == nil {
+                            image.deletedAt = now
+                            image.updatedAt = now
+
+                            let imageId = image.id
+                            let imageUploadDescriptor = FetchDescriptor<PendingUpload>(
+                                predicate: #Predicate { $0.entityType == "journalImage" && $0.entityId == imageId }
+                            )
+                            if let uploads = try? modelContext.fetch(imageUploadDescriptor) {
+                                for upload in uploads { modelContext.delete(upload) }
+                            }
+                        }
+                    }
+
+                    // Clean up pending uploads for piece image
                     let currentPieceId = piece.id
                     let uploadDescriptor = FetchDescriptor<PendingUpload>(
                         predicate: #Predicate { $0.entityType == "piece" && $0.entityId == currentPieceId }

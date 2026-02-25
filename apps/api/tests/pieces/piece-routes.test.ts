@@ -138,6 +138,33 @@ describe("Piece Routes - CRUD", () => {
     expect(body.notes).toBe("Updated");
   });
 
+  it("PUT /pieces/:id ignores status field in update", async () => {
+    const createRes = await app.request("/pieces", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ designer: "Status Ignore", designName: "Test" }),
+    });
+    const created = await createRes.json();
+    expect(created.status).toBe("stash");
+
+    const res = await app.request(`/pieces/${created.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ notes: "Updated", status: "finished" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.notes).toBe("Updated");
+    expect(body.status).toBe("stash");
+  });
+
   it("PUT /pieces/:id returns 400 for empty body", async () => {
     const createRes = await app.request("/pieces", {
       method: "POST",
@@ -449,6 +476,129 @@ describe("Piece Routes - Status Actions", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.status).toBe("wip");
+  });
+
+  it("PUT /pieces/:id/status/set sets timestamps when advancing to wip", async () => {
+    const createRes = await app.request("/pieces", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ designer: "Timestamps", designName: "Advance" }),
+    });
+    const created = await createRes.json();
+
+    const res = await app.request(`/pieces/${created.id}/status/set`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ status: "wip" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.startedAt).toBeTruthy();
+    expect(body.stitchedAt).toBeNull();
+    expect(body.finishingAt).toBeNull();
+    expect(body.completedAt).toBeNull();
+  });
+
+  it("PUT /pieces/:id/status/set sets all timestamps when jumping to finished", async () => {
+    const createRes = await app.request("/pieces", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ designer: "Timestamps", designName: "Jump" }),
+    });
+    const created = await createRes.json();
+
+    const res = await app.request(`/pieces/${created.id}/status/set`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ status: "finished" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.startedAt).toBeTruthy();
+    expect(body.stitchedAt).toBeTruthy();
+    expect(body.finishingAt).toBeTruthy();
+    expect(body.completedAt).toBeTruthy();
+  });
+
+  it("PUT /pieces/:id/status/set clears timestamps when moving back to stash", async () => {
+    const createRes = await app.request("/pieces", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ designer: "Timestamps", designName: "Back", status: "wip" }),
+    });
+    const created = await createRes.json();
+
+    const res = await app.request(`/pieces/${created.id}/status/set`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ status: "stash" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.startedAt).toBeNull();
+    expect(body.stitchedAt).toBeNull();
+    expect(body.finishingAt).toBeNull();
+    expect(body.completedAt).toBeNull();
+  });
+
+  it("PUT /pieces/:id/status/set preserves existing startedAt when moving forward", async () => {
+    const createRes = await app.request("/pieces", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ designer: "Timestamps", designName: "Preserve" }),
+    });
+    const created = await createRes.json();
+
+    // Set to kitting first to establish startedAt
+    const kittingRes = await app.request(`/pieces/${created.id}/status/set`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ status: "kitting" }),
+    });
+    const kitting = await kittingRes.json();
+    const originalStartedAt = kitting.startedAt;
+
+    // Move to stitched — startedAt should be preserved
+    const res = await app.request(`/pieces/${created.id}/status/set`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ status: "stitched" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.startedAt).toBe(originalStartedAt);
+    expect(body.stitchedAt).toBeTruthy();
   });
 
   it("PUT /pieces/:id/status/set returns 400 for invalid status", async () => {
@@ -877,6 +1027,37 @@ describe("Piece Routes - Journal Entries", () => {
         headers: { Authorization: `Bearer ${accessToken}` },
       },
     );
+
+    expect(res.status).toBe(404);
+  });
+
+  it("GET /pieces/:id/entries/:entryId rejects entry belonging to different piece", async () => {
+    // Create a second piece
+    const piece2Res = await app.request("/pieces", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ designer: "Cross", designName: "Piece Check" }),
+    });
+    const piece2 = await piece2Res.json();
+
+    // Create entry on piece2
+    const entryRes = await app.request(`/pieces/${piece2.id}/entries`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ notes: "Belongs to piece2" }),
+    });
+    const entry = await entryRes.json();
+
+    // Try to access via pieceId (original piece) — should fail
+    const res = await app.request(`/pieces/${pieceId}/entries/${entry.id}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
     expect(res.status).toBe(404);
   });

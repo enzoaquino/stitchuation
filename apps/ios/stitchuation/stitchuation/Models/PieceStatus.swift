@@ -31,4 +31,9 @@ enum PieceStatus: String, Codable, CaseIterable {
               index + 1 < Self.allCases.count else { return nil }
         return Self.allCases[index + 1]
     }
+
+    /// Zero-based position in the lifecycle (stash=0, kitting=1, ...)
+    var ordinal: Int {
+        Self.allCases.firstIndex(of: self) ?? 0
+    }
 }
