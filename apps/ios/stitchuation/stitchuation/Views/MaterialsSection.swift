@@ -67,15 +67,24 @@ struct MaterialsSection: View {
                     message: "Add supplies manually or scan your stitch guide"
                 )
             } else {
-                ForEach(activeMaterials, id: \.id) { material in
-                    MaterialRowView(material: material)
-                        .onTapGesture { onEditMaterial(material) }
-
-                    if material.id != activeMaterials.last?.id {
-                        Divider()
-                            .background(Color.parchment)
+                List {
+                    ForEach(activeMaterials, id: \.id) { material in
+                        MaterialRowView(material: material)
+                            .onTapGesture { onEditMaterial(material) }
+                            .listRowSeparatorTint(Color.parchment)
+                            .listRowBackground(Color.clear)
+                    }
+                    .onDelete { indexSet in
+                        let now = Date()
+                        for index in indexSet {
+                            activeMaterials[index].deletedAt = now
+                            activeMaterials[index].updatedAt = now
+                        }
                     }
                 }
+                .listStyle(.plain)
+                .scrollDisabled(true)
+                .frame(minHeight: CGFloat(activeMaterials.count) * 44)
             }
 
             // Action buttons
