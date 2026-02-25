@@ -232,7 +232,41 @@ final class SyncEngine {
             )
         }
 
-        let request = SyncRequest(lastSync: lastSyncTimestamp, changes: threadChanges + pieceChanges + entryChanges + imageChanges)
+        // Gather unsynced materials
+        let allMaterialDescriptor = FetchDescriptor<PieceMaterial>()
+        let allMaterials = try context.fetch(allMaterialDescriptor)
+        let unsyncedMaterials = allMaterials.filter { material in
+            material.syncedAt == nil || material.updatedAt > (material.syncedAt ?? .distantPast)
+        }
+
+        let materialChanges: [SyncChange] = unsyncedMaterials.map { material in
+            let isDeleted = material.deletedAt != nil
+            var data: [String: AnyCodable]?
+            if !isDeleted {
+                data = [
+                    "pieceId": AnyCodable(material.piece.id.uuidString),
+                    "materialType": AnyCodable(material.materialType.rawValue),
+                    "brand": AnyCodable(material.brand ?? NSNull()),
+                    "name": AnyCodable(material.name),
+                    "code": AnyCodable(material.code ?? NSNull()),
+                    "quantity": AnyCodable(material.quantity),
+                    "unit": AnyCodable(material.unit ?? NSNull()),
+                    "notes": AnyCodable(material.notes ?? NSNull()),
+                    "acquired": AnyCodable(material.acquired),
+                    "sortOrder": AnyCodable(material.sortOrder),
+                ]
+            }
+            return SyncChange(
+                type: "pieceMaterial",
+                action: isDeleted ? "delete" : "upsert",
+                id: material.id.uuidString,
+                data: data,
+                updatedAt: formatter.string(from: material.updatedAt),
+                deletedAt: material.deletedAt.map { formatter.string(from: $0) }
+            )
+        }
+
+        let request = SyncRequest(lastSync: lastSyncTimestamp, changes: threadChanges + pieceChanges + entryChanges + imageChanges + materialChanges)
         let response: SyncResponse = try await networkClient.request(
             method: "POST",
             path: "/sync",
@@ -395,6 +429,47 @@ final class SyncEngine {
                         context.insert(image)
                     }
                 }
+            } else if change.type == "pieceMaterial" {
+                let fetchDescriptor = FetchDescriptor<PieceMaterial>(
+                    predicate: #Predicate { $0.id == uuid }
+                )
+                let existing = try context.fetch(fetchDescriptor).first
+
+                if change.action == "delete" {
+                    if let material = existing {
+                        guard serverUpdatedAt >= material.updatedAt else { continue }
+                        material.deletedAt = formatter.date(from: change.deletedAt ?? change.updatedAt)
+                        material.updatedAt = serverUpdatedAt
+                        material.syncedAt = Date()
+                    }
+                } else if change.action == "upsert" {
+                    if let material = existing {
+                        guard serverUpdatedAt >= material.updatedAt else { continue }
+                        applyMaterialData(change.data, to: material)
+                        material.updatedAt = serverUpdatedAt
+                        material.syncedAt = Date()
+                    } else {
+                        let pieceIdStr = stringValue(change.data, key: "pieceId")
+                        let pieceUUID = UUID(uuidString: pieceIdStr ?? "")
+                        var piece: StitchPiece?
+                        if let pieceUUID {
+                            let pieceFetch = FetchDescriptor<StitchPiece>(
+                                predicate: #Predicate { $0.id == pieceUUID }
+                            )
+                            piece = try context.fetch(pieceFetch).first
+                        }
+                        guard let piece else { continue }
+                        let material = PieceMaterial(
+                            id: uuid,
+                            piece: piece,
+                            name: stringValue(change.data, key: "name") ?? ""
+                        )
+                        applyMaterialData(change.data, to: material)
+                        material.updatedAt = serverUpdatedAt
+                        material.syncedAt = Date()
+                        context.insert(material)
+                    }
+                }
             }
         }
 
@@ -410,6 +485,9 @@ final class SyncEngine {
         }
         for image in unsyncedImages {
             image.syncedAt = Date()
+        }
+        for material in unsyncedMaterials {
+            material.syncedAt = Date()
         }
 
         try context.save()
@@ -505,6 +583,30 @@ final class SyncEngine {
         guard let data else { return }
         if let key = data["imageKey"]?.value as? String { image.imageKey = key }
         if let order = data["sortOrder"]?.value as? Int { image.sortOrder = order }
+    }
+
+    private func applyMaterialData(_ data: [String: AnyCodable]?, to material: PieceMaterial) {
+        guard let data else { return }
+        if let typeStr = data["materialType"]?.value as? String,
+           let type = MaterialType(rawValue: typeStr) {
+            material.materialType = type
+        }
+        if let v = data["brand"] {
+            material.brand = v.value is NSNull ? nil : v.value as? String
+        }
+        if let name = data["name"]?.value as? String { material.name = name }
+        if let v = data["code"] {
+            material.code = v.value is NSNull ? nil : v.value as? String
+        }
+        if let quantity = data["quantity"]?.value as? Int { material.quantity = quantity }
+        if let v = data["unit"] {
+            material.unit = v.value is NSNull ? nil : v.value as? String
+        }
+        if let v = data["notes"] {
+            material.notes = v.value is NSNull ? nil : v.value as? String
+        }
+        if let acquired = data["acquired"]?.value as? Bool { material.acquired = acquired }
+        if let sortOrder = data["sortOrder"]?.value as? Int { material.sortOrder = sortOrder }
     }
 
     private func stringValue(_ data: [String: AnyCodable]?, key: String) -> String? {
