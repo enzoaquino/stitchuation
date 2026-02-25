@@ -1,8 +1,8 @@
 import { and, eq, gt, inArray } from "drizzle-orm";
 import { db } from "../db/connection.js";
-import { threads, stitchPieces, journalEntries, journalImages } from "../db/schema.js";
+import { threads, stitchPieces, journalEntries, journalImages, pieceMaterials } from "../db/schema.js";
 import type { SyncChange, SyncRequest } from "./schemas.js";
-import { pieceStatuses } from "../pieces/schemas.js";
+import { pieceStatuses, materialTypes } from "../pieces/schemas.js";
 import { getStorage } from "../storage/index.js";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -46,6 +46,19 @@ const ALLOWED_JOURNAL_IMAGE_FIELDS = new Set([
   "sortOrder",
 ]);
 
+const ALLOWED_PIECE_MATERIAL_FIELDS = new Set([
+  "pieceId",
+  "materialType",
+  "brand",
+  "name",
+  "code",
+  "quantity",
+  "unit",
+  "notes",
+  "acquired",
+  "sortOrder",
+]);
+
 function pickAllowedFields(data: Record<string, unknown>, allowedFields: Set<string>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
@@ -71,6 +84,8 @@ export class SyncService {
           await this.processJournalEntryChange(tx, userId, change);
         } else if (change.type === "journalImage") {
           await this.processJournalImageChange(tx, userId, change);
+        } else if (change.type === "pieceMaterial") {
+          await this.processPieceMaterialChange(tx, userId, change);
         }
       }
     });
@@ -396,6 +411,84 @@ export class SyncService {
     }
   }
 
+  private async processPieceMaterialChange(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], userId: string, change: SyncChange) {
+    const clientUpdatedAt = new Date(change.updatedAt);
+
+    if (change.action === "delete") {
+      const deletedAt = change.deletedAt ? new Date(change.deletedAt) : new Date();
+
+      const [existing] = await tx
+        .select()
+        .from(pieceMaterials)
+        .where(and(eq(pieceMaterials.id, change.id), eq(pieceMaterials.userId, userId)))
+        .limit(1);
+
+      if (existing && existing.updatedAt < clientUpdatedAt) {
+        await tx
+          .update(pieceMaterials)
+          .set({ deletedAt, updatedAt: clientUpdatedAt })
+          .where(and(eq(pieceMaterials.id, change.id), eq(pieceMaterials.userId, userId)));
+      }
+      return;
+    }
+
+    const [existing] = await tx
+      .select()
+      .from(pieceMaterials)
+      .where(and(eq(pieceMaterials.id, change.id), eq(pieceMaterials.userId, userId)))
+      .limit(1);
+
+    if (!existing) {
+      const allowed = change.data ? pickAllowedFields(change.data, ALLOWED_PIECE_MATERIAL_FIELDS) : {};
+      const targetPieceId = allowed.pieceId as string | undefined;
+      if (!targetPieceId || !UUID_REGEX.test(targetPieceId)) return;
+
+      // Validate materialType enum value
+      const materialType = materialTypes.includes(allowed.materialType as any)
+        ? (allowed.materialType as any)
+        : "other";
+
+      await tx.insert(pieceMaterials).values({
+        id: change.id,
+        userId,
+        pieceId: targetPieceId,
+        materialType,
+        brand: (allowed.brand as string) ?? null,
+        name: (allowed.name as string) ?? "",
+        code: (allowed.code as string) ?? null,
+        quantity: (allowed.quantity as number) ?? 1,
+        unit: (allowed.unit as string) ?? null,
+        notes: (allowed.notes as string) ?? null,
+        acquired: allowed.acquired ? 1 : 0,
+        sortOrder: (allowed.sortOrder as number) ?? 0,
+        createdAt: clientUpdatedAt,
+        updatedAt: clientUpdatedAt,
+      }).onConflictDoNothing();
+    } else if (existing.updatedAt < clientUpdatedAt) {
+      const updateData: Record<string, unknown> = {
+        updatedAt: clientUpdatedAt,
+      };
+      if (change.data) {
+        const allowed = pickAllowedFields(change.data, ALLOWED_PIECE_MATERIAL_FIELDS);
+        // Prevent re-parenting materials via sync
+        delete allowed.pieceId;
+        // Validate materialType enum value
+        if (allowed.materialType !== undefined && !materialTypes.includes(allowed.materialType as any)) {
+          delete allowed.materialType;
+        }
+        // Convert acquired boolean to integer
+        if (allowed.acquired !== undefined) {
+          allowed.acquired = allowed.acquired ? 1 : 0;
+        }
+        Object.assign(updateData, allowed);
+      }
+      await tx
+        .update(pieceMaterials)
+        .set(updateData)
+        .where(and(eq(pieceMaterials.id, change.id), eq(pieceMaterials.userId, userId)));
+    }
+  }
+
   private async getChangesSince(userId: string, lastSync: string | null) {
     const since = lastSync ? new Date(lastSync) : new Date(0);
 
@@ -432,6 +525,11 @@ export class SyncService {
           ),
         );
     }
+
+    const changedMaterials = await db
+      .select()
+      .from(pieceMaterials)
+      .where(and(eq(pieceMaterials.userId, userId), gt(pieceMaterials.updatedAt, since)));
 
     const threadChanges = changedThreads.map((t) => ({
       type: "thread" as const,
@@ -507,11 +605,34 @@ export class SyncService {
       deletedAt: i.deletedAt?.toISOString(),
     }));
 
+    const materialChanges = changedMaterials.map((m) => ({
+      type: "pieceMaterial" as const,
+      action: m.deletedAt ? ("delete" as const) : ("upsert" as const),
+      id: m.id,
+      data: m.deletedAt
+        ? undefined
+        : {
+            pieceId: m.pieceId,
+            materialType: m.materialType,
+            brand: m.brand,
+            name: m.name,
+            code: m.code,
+            quantity: m.quantity,
+            unit: m.unit,
+            notes: m.notes,
+            acquired: m.acquired === 1,
+            sortOrder: m.sortOrder,
+          },
+      updatedAt: m.updatedAt.toISOString(),
+      deletedAt: m.deletedAt?.toISOString(),
+    }));
+
     return [
       ...threadChanges,
       ...pieceChanges,
       ...journalEntryChanges,
       ...journalImageChanges,
+      ...materialChanges,
     ];
   }
 }
