@@ -40,3 +40,38 @@ export type CreatePieceInput = z.infer<typeof createPieceSchema>;
 export type UpdatePieceInput = z.infer<typeof updatePieceSchema>;
 export type CreateJournalEntryInput = z.infer<typeof createJournalEntrySchema>;
 export type UpdateJournalEntryInput = z.infer<typeof updateJournalEntrySchema>;
+
+export const materialTypes = ["thread", "bead", "accessory", "other"] as const;
+export type MaterialType = typeof materialTypes[number];
+
+export const createMaterialSchema = z.object({
+  id: z.string().uuid().optional(),
+  materialType: z.enum(materialTypes).optional(),
+  brand: z.string().max(200).optional(),
+  name: z.string().min(1).max(200),
+  code: z.string().max(50).optional(),
+  quantity: z.number().int().positive().optional(),
+  unit: z.string().max(50).optional(),
+  notes: z.string().max(1000).optional(),
+  acquired: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+});
+
+export const updateMaterialSchema = z.object({
+  materialType: z.enum(materialTypes).optional(),
+  brand: z.string().max(200).nullable().optional(),
+  name: z.string().min(1).max(200).optional(),
+  code: z.string().max(50).nullable().optional(),
+  quantity: z.number().int().positive().optional(),
+  unit: z.string().max(50).nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
+  acquired: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+}).refine((obj) => Object.keys(obj).length > 0, {
+  message: "At least one field is required",
+});
+
+export const batchCreateMaterialsSchema = z.array(createMaterialSchema).min(1).max(50);
+
+export type CreateMaterialInput = z.infer<typeof createMaterialSchema>;
+export type UpdateMaterialInput = z.infer<typeof updateMaterialSchema>;
