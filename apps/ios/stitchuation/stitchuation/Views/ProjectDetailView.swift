@@ -31,7 +31,7 @@ struct ProjectDetailView: View {
                             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
                             .padding(.horizontal, Spacing.lg)
 
-                        // Status section
+                        // Status + Info section (merged card)
                         VStack(alignment: .leading, spacing: Spacing.md) {
                             HStack {
                                 Button {
@@ -49,15 +49,7 @@ struct ProjectDetailView: View {
                                     .foregroundStyle(Color.terracotta)
                                 }
                             }
-                        }
-                        .padding(Spacing.md)
-                        .background(Color.cream)
-                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
-                        .warmShadow(.subtle)
-                        .padding(.horizontal, Spacing.lg)
 
-                        // Info section
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
                             Text(piece.designer)
                                 .font(.typeStyle(.title3))
                                 .foregroundStyle(Color.walnut)
