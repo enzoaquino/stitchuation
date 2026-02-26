@@ -38,7 +38,7 @@ struct MaterialsSection: View {
                 }
             }
 
-            // Progress bar
+            // Progress bar (no percentage text)
             if !activeMaterials.isEmpty {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
@@ -53,13 +53,9 @@ struct MaterialsSection: View {
                     }
                 }
                 .frame(height: 6)
-
-                Text("\(Int(progress * 100))%")
-                    .font(.typeStyle(.footnote))
-                    .foregroundStyle(Color.clay)
             }
 
-            // Material list or empty state
+            // Material rows or empty state
             if activeMaterials.isEmpty {
                 EmptyStateView(
                     icon: "list.clipboard",
@@ -67,24 +63,17 @@ struct MaterialsSection: View {
                     message: "Add supplies manually or scan your stitch guide"
                 )
             } else {
-                List {
-                    ForEach(activeMaterials, id: \.id) { material in
+                VStack(spacing: 0) {
+                    ForEach(Array(activeMaterials.enumerated()), id: \.element.id) { index, material in
                         MaterialRowView(material: material)
                             .onTapGesture { onEditMaterial(material) }
-                            .listRowSeparatorTint(Color.parchment)
-                            .listRowBackground(Color.clear)
-                    }
-                    .onDelete { indexSet in
-                        let now = Date()
-                        for index in indexSet {
-                            activeMaterials[index].deletedAt = now
-                            activeMaterials[index].updatedAt = now
+
+                        if index < activeMaterials.count - 1 {
+                            Divider()
+                                .background(Color.parchment)
                         }
                     }
                 }
-                .listStyle(.plain)
-                .scrollDisabled(true)
-                .frame(minHeight: CGFloat(activeMaterials.count) * 44)
             }
 
             // Action buttons
@@ -109,6 +98,10 @@ struct MaterialsSection: View {
             }
             .padding(.top, Spacing.sm)
         }
+        .padding(Spacing.lg)
+        .background(Color.cream)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+        .warmShadow(.subtle)
         .padding(.horizontal, Spacing.lg)
     }
 }
