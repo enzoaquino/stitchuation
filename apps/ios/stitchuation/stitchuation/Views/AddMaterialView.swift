@@ -67,6 +67,23 @@ struct AddMaterialView: View {
                     sectionHeader("Notes")
                 }
                 .listRowBackground(Color.parchment)
+
+                if isEditing {
+                    Section {
+                        Button(role: .destructive) {
+                            deleteMaterial()
+                        } label: {
+                            HStack {
+                                Spacer()
+                                Text("Delete Material")
+                                    .font(.typeStyle(.body))
+                                    .fontWeight(.medium)
+                                Spacer()
+                            }
+                        }
+                        .listRowBackground(Color.parchment)
+                    }
+                }
             }
             .scrollContentBackground(.hidden)
             .background(Color.linen)
@@ -143,6 +160,14 @@ struct AddMaterialView: View {
             modelContext.insert(material)
         }
 
+        dismiss()
+    }
+
+    private func deleteMaterial() {
+        guard let editing else { return }
+        let now = Date()
+        editing.deletedAt = now
+        editing.updatedAt = now
         dismiss()
     }
 }
