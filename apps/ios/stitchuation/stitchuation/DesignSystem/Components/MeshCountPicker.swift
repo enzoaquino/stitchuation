@@ -70,7 +70,7 @@ struct MeshCountPicker: View {
     }
 
     private var chipRow: some View {
-        HStack(spacing: Spacing.sm) {
+        HStack(spacing: Spacing.xs) {
             ForEach(Self.standardCounts, id: \.self) { count in
                 tileButton(for: count)
             }
@@ -95,7 +95,7 @@ struct MeshCountPicker: View {
                     ? .typeStyle(.subheadline).weight(.medium)
                     : .typeStyle(.subheadline))
                 .foregroundStyle(isSelected ? .white : Color.walnut)
-                .frame(width: 44, height: 44)
+                .frame(width: 40, height: 40)
                 .background(isSelected ? Color.terracotta : Color.linen)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
                 .overlay(
@@ -127,9 +127,10 @@ struct MeshCountPicker: View {
                 .font(isCustomMode
                     ? .typeStyle(.subheadline).weight(.medium)
                     : .typeStyle(.subheadline))
+                .fixedSize()
                 .foregroundStyle(isCustomMode ? .white : Color.walnut)
-                .frame(height: 44)
-                .padding(.horizontal, Spacing.md)
+                .frame(height: 40)
+                .padding(.horizontal, Spacing.sm)
                 .background(isCustomMode ? Color.terracotta : Color.linen)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
                 .overlay(
