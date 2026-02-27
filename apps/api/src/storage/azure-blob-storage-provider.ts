@@ -12,9 +12,11 @@ export class AzureBlobStorageProvider implements StorageProvider {
   private credential: StorageSharedKeyCredential;
   private containerName: string;
   private containerEnsured = false;
+  private publicEndpoint: string | undefined;
 
-  constructor(connectionString: string, containerName: string) {
+  constructor(connectionString: string, containerName: string, publicEndpoint?: string) {
     this.containerName = containerName;
+    this.publicEndpoint = publicEndpoint;
     const blobServiceClient =
       BlobServiceClient.fromConnectionString(connectionString);
     this.containerClient =
@@ -58,7 +60,10 @@ export class AzureBlobStorageProvider implements StorageProvider {
     );
 
     const blobClient = this.containerClient.getBlobClient(blobName);
-    return `${blobClient.url}?${sasParams.toString()}`;
+    const baseUrl = this.publicEndpoint
+      ? `${this.publicEndpoint.replace(/\/$/, "")}/${this.containerName}/${blobName}`
+      : blobClient.url;
+    return `${baseUrl}?${sasParams.toString()}`;
   }
 
   async ensureContainer(): Promise<void> {

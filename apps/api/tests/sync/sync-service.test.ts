@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeAll } from "vitest";
+import { eq } from "drizzle-orm";
 import { SyncService } from "../../src/sync/sync-service.js";
 import { AuthService } from "../../src/auth/auth-service.js";
 import { ThreadService } from "../../src/threads/thread-service.js";
 import { PieceService } from "../../src/pieces/piece-service.js";
 import { JournalService } from "../../src/pieces/journal-service.js";
 import { getStorage } from "../../src/storage/index.js";
+import { db } from "../../src/db/connection.js";
+import { stitchPieces, journalImages } from "../../src/db/schema.js";
 
 describe("SyncService", () => {
   let syncService: SyncService;
@@ -627,7 +630,7 @@ describe("SyncService", () => {
   });
 
   describe("journalImage sync", () => {
-    it("pushes new journal images from client", async () => {
+    it("pushes new journal images from client (imageKey ignored)", async () => {
       const piece = await pieceService.create(userId, {
         designer: "Image Sync Designer",
         designName: "Image Sync Piece",
@@ -660,7 +663,8 @@ describe("SyncService", () => {
       const images = await journalService.listImages(entry.id);
       const found = images.find((i) => i.id === imageId);
       expect(found).not.toBeNull();
-      expect(found?.imageKey).toBe("uploads/progress-photo-1.jpg");
+      // imageKey is managed by upload endpoints, not sync — client-supplied value is ignored
+      expect(found?.imageKey).toBe("");
       expect(found?.sortOrder).toBe(0);
     });
 
@@ -814,8 +818,9 @@ describe("SyncService", () => {
     it("deletes piece image file on soft-delete via sync", async () => {
       const storage = getStorage();
 
-      // Create piece via sync
+      // Create piece via sync (imageKey not settable via sync)
       const pieceId = crypto.randomUUID();
+      const imageKey = `pieces/${userId}/${pieceId}.jpg`;
       await syncService.sync(userId, {
         lastSync: null,
         changes: [{
@@ -825,17 +830,19 @@ describe("SyncService", () => {
           data: {
             designer: "Delete Test",
             designName: "Delete Piece",
-            imageKey: `pieces/${userId}/${pieceId}.jpg`,
           },
           updatedAt: new Date().toISOString(),
         }],
       });
 
+      // Set imageKey directly in DB (simulating upload endpoint)
+      await db.update(stitchPieces).set({ imageKey }).where(eq(stitchPieces.id, pieceId));
+
       // Upload a fake image file
-      await storage.upload(Buffer.from([0xff, 0xd8]), `pieces/${userId}/${pieceId}.jpg`);
+      await storage.upload(Buffer.from([0xff, 0xd8]), imageKey);
 
       // Verify file exists
-      const fileBefore = await storage.getFilePath(`pieces/${userId}/${pieceId}.jpg`);
+      const fileBefore = await storage.getFilePath(imageKey);
       expect(fileBefore).not.toBeNull();
 
       // Delete piece via sync
@@ -852,17 +859,18 @@ describe("SyncService", () => {
       });
 
       // Verify file is deleted
-      const fileAfter = await storage.getFilePath(`pieces/${userId}/${pieceId}.jpg`);
+      const fileAfter = await storage.getFilePath(imageKey);
       expect(fileAfter).toBeNull();
     });
 
     it("deletes journal image file on soft-delete via sync", async () => {
       const storage = getStorage();
 
-      // Create piece, entry, and image via sync
+      // Create piece, entry, and image via sync (imageKey not settable via sync)
       const pieceId = crypto.randomUUID();
       const entryId = crypto.randomUUID();
       const imageId = crypto.randomUUID();
+      const imageKey = `journals/${userId}/${entryId}/${imageId}.jpg`;
       const now = new Date().toISOString();
 
       await syncService.sync(userId, {
@@ -886,15 +894,18 @@ describe("SyncService", () => {
             type: "journalImage",
             action: "upsert",
             id: imageId,
-            data: { entryId, imageKey: `journals/${userId}/${entryId}/${imageId}.jpg`, sortOrder: 0 },
+            data: { entryId, sortOrder: 0 },
             updatedAt: now,
           },
         ],
       });
 
+      // Set imageKey directly in DB (simulating upload endpoint)
+      await db.update(journalImages).set({ imageKey }).where(eq(journalImages.id, imageId));
+
       // Upload a fake image file
-      await storage.upload(Buffer.from([0xff, 0xd8]), `journals/${userId}/${entryId}/${imageId}.jpg`);
-      const fileBefore = await storage.getFilePath(`journals/${userId}/${entryId}/${imageId}.jpg`);
+      await storage.upload(Buffer.from([0xff, 0xd8]), imageKey);
+      const fileBefore = await storage.getFilePath(imageKey);
       expect(fileBefore).not.toBeNull();
 
       // Delete journal image via sync

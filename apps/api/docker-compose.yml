@@ -35,6 +35,7 @@ services:
       STORAGE_PROVIDER: azure
       AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
       AZURE_STORAGE_CONTAINER: images
+      AZURE_STORAGE_PUBLIC_ENDPOINT: "http://127.0.0.1:10000/devstoreaccount1"
     depends_on:
       postgres:
         condition: service_healthy

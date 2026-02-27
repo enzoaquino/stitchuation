@@ -24,7 +24,8 @@ const ALLOWED_PIECE_FIELDS = new Set([
   "designer",
   "designName",
   "status",
-  "imageKey",
+  // imageKey is managed by upload endpoints, not sync — clients send resolved
+  // SAS URLs which would corrupt the plain key stored in the DB
   "size",
   "meshCount",
   "notes",
@@ -42,7 +43,7 @@ const ALLOWED_JOURNAL_ENTRY_FIELDS = new Set([
 
 const ALLOWED_JOURNAL_IMAGE_FIELDS = new Set([
   "entryId",
-  "imageKey",
+  // imageKey is managed by upload endpoints, not sync
   "sortOrder",
 ]);
 

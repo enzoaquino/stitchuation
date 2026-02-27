@@ -18,7 +18,8 @@ export function getStorage(): StorageProvider {
         throw new Error("AZURE_STORAGE_CONNECTION_STRING is required when STORAGE_PROVIDER=azure");
       }
       const container = process.env.AZURE_STORAGE_CONTAINER ?? "images";
-      storageInstance = new AzureBlobStorageProvider(connectionString, container);
+      const publicEndpoint = process.env.AZURE_STORAGE_PUBLIC_ENDPOINT || undefined;
+      storageInstance = new AzureBlobStorageProvider(connectionString, container, publicEndpoint);
     } else {
       throw new Error(`Unknown storage provider: ${provider}`);
     }

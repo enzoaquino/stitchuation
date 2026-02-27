@@ -43,9 +43,18 @@ struct stitchuationApp: App {
             contentView
                 .environment(\.networkClient, networkClient)
                 .task {
+                    // Detect fresh install: empty DB means any persisted state is stale
+                    // (Simulator may clear Keychain but keep UserDefaults across reinstalls)
+                    let context = modelContainer.mainContext
+                    let threadCount = (try? context.fetchCount(FetchDescriptor<NeedleThread>())) ?? 0
+                    let pieceCount = (try? context.fetchCount(FetchDescriptor<StitchPiece>())) ?? 0
+                    if threadCount == 0 && pieceCount == 0 {
+                        await networkClient.clearTokens()
+                        UserDefaults.standard.removeObject(forKey: "lastSyncTimestamp")
+                    }
+
                     let auth = AuthViewModel(networkClient: networkClient)
                     await auth.checkExistingSession()
-                    authViewModel = auth
 
                     let queue = UploadQueue(modelContainer: modelContainer, networkClient: networkClient)
                     uploadQueue = queue
@@ -57,16 +66,21 @@ struct stitchuationApp: App {
                     )
                     syncEngine = engine
 
-                    if auth.isAuthenticated {
-                        try? await engine.sync()
-                    }
+                    // Set authViewModel LAST so syncEngine is ready when ContentView appears
+                    authViewModel = auth
                 }
                 #if canImport(UIKit)
                 .onReceive(NotificationCenter.default.publisher(
                     for: UIApplication.willEnterForegroundNotification
                 )) { _ in
                     guard let syncEngine, authViewModel?.isAuthenticated == true else { return }
-                    // SyncEngine.sync() processes the upload queue after completing
+                    Task { try? await syncEngine.sync() }
+                }
+                .onReceive(NotificationCenter.default.publisher(
+                    for: UIApplication.didEnterBackgroundNotification
+                )) { _ in
+                    guard let syncEngine, authViewModel?.isAuthenticated == true else { return }
+                    // Push pending changes before the app is suspended
                     Task { try? await syncEngine.sync() }
                 }
                 #endif
@@ -79,6 +93,10 @@ struct stitchuationApp: App {
         if let authViewModel {
             if authViewModel.isAuthenticated {
                 ContentView(networkClient: networkClient, authViewModel: authViewModel)
+                    .task {
+                        guard let syncEngine else { return }
+                        try? await syncEngine.sync()
+                    }
             } else {
                 LoginView(networkClient: networkClient, authViewModel: authViewModel)
             }

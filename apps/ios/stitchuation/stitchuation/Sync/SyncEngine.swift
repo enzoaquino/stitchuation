@@ -6,6 +6,17 @@ import SwiftData
 struct SyncRequest: Encodable, Sendable {
     let lastSync: String?
     let changes: [SyncChange]
+
+    enum CodingKeys: String, CodingKey {
+        case lastSync, changes
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        // Always encode lastSync — even when nil — so the server gets null, not undefined
+        try container.encode(lastSync, forKey: .lastSync)
+        try container.encode(changes, forKey: .changes)
+    }
 }
 
 struct SyncChange: Codable, Sendable {
