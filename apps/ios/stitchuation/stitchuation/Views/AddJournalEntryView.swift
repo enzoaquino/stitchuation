@@ -2,6 +2,10 @@ import SwiftUI
 import SwiftData
 import PhotosUI
 
+extension Notification.Name {
+    static let journalImagesDidChange = Notification.Name("journalImagesDidChange")
+}
+
 struct AddJournalEntryView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -160,6 +164,8 @@ struct AddJournalEntryView: View {
             pendingUploads.append(pendingUpload)
         }
 
+        try? modelContext.save()
+
         if let networkClient, !pendingUploads.isEmpty {
             let pieceIdString = piece.id.uuidString
             let entryIdString = entry.id.uuidString
@@ -182,6 +188,12 @@ struct AddJournalEntryView: View {
                         )
                         if let json = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
                            let imageKey = json["imageKey"] as? String {
+                            // Cache the image BEFORE notifying the view
+                            if let cachedImage = UIImage(data: pendingUpload.imageData) {
+                                await ImageCache.shared.store(cachedImage, forKey: imageKey)
+                            }
+                            await ImageCache.shared.storeToDisk(pendingUpload.imageData, forKey: imageKey)
+
                             await MainActor.run {
                                 // Now create the JournalImage with a real imageKey
                                 let journalImage = JournalImage(
@@ -193,12 +205,9 @@ struct AddJournalEntryView: View {
                                 modelContext.insert(journalImage)
                                 // Upload succeeded — delete PendingUpload
                                 modelContext.delete(pendingUpload)
+                                try? modelContext.save()
+                                NotificationCenter.default.post(name: .journalImagesDidChange, object: nil)
                             }
-                            // Cache the image
-                            if let cachedImage = UIImage(data: pendingUpload.imageData) {
-                                await ImageCache.shared.store(cachedImage, forKey: imageKey)
-                            }
-                            await ImageCache.shared.storeToDisk(pendingUpload.imageData, forKey: imageKey)
                         }
                     }
                 } catch {

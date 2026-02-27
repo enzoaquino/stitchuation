@@ -16,6 +16,7 @@ struct ProjectDetailView: View {
     @State private var showScanMaterials = false
     @State private var editingMaterial: PieceMaterial? = nil
     @State private var parsedMaterials: [ParsedMaterial]? = nil
+    @State private var journalRefreshID = UUID()
 
     var body: some View {
         ZStack {
@@ -99,6 +100,7 @@ struct ProjectDetailView: View {
                                 }
                             }
                         }
+                        .id(journalRefreshID)
                         .padding(.horizontal, Spacing.lg)
                         .padding(.bottom, Spacing.xxxl)
                     }
@@ -234,6 +236,10 @@ struct ProjectDetailView: View {
             }
         } message: {
             Text("Are you sure you want to delete this project?")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .journalImagesDidChange)) { _ in
+            loadPiece()
+            journalRefreshID = UUID()
         }
         .task {
             loadPiece()

@@ -63,6 +63,9 @@ final class UploadQueue {
             // Success — delete the pending upload
             context.delete(upload)
             try? context.save()
+            if upload.entityType == "journalImage" {
+                NotificationCenter.default.post(name: .journalImagesDidChange, object: nil)
+            }
         } catch {
             // Failure — increment retry count
             upload.retryCount += 1
