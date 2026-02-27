@@ -16,7 +16,7 @@ import {
 import { authMiddleware } from "../auth/middleware.js";
 import type { AuthEnv } from "../auth/types.js";
 import { NotFoundError, BadRequestError } from "../errors.js";
-import { getStorage } from "../storage/index.js";
+import { getStorage, resolvePieceImageKeys, resolvePieceImageKeysArray, resolveImageKey } from "../storage/index.js";
 
 const pieceRoutes = new Hono<AuthEnv>();
 const pieceService = new PieceService();
@@ -47,7 +47,7 @@ pieceRoutes.use("/*", authMiddleware);
 pieceRoutes.get("/", async (c) => {
   const userId = c.get("userId");
   const pieces = await pieceService.listByUser(userId);
-  return c.json(pieces);
+  return c.json(resolvePieceImageKeysArray(pieces));
 });
 
 pieceRoutes.get("/:id", async (c) => {
@@ -61,7 +61,7 @@ pieceRoutes.get("/:id", async (c) => {
   if (!piece) {
     return c.json({ error: "Piece not found" }, 404);
   }
-  return c.json(piece);
+  return c.json(resolvePieceImageKeys(piece));
 });
 
 pieceRoutes.post("/", async (c) => {
@@ -80,7 +80,7 @@ pieceRoutes.post("/", async (c) => {
   }
 
   const piece = await pieceService.create(userId, parsed.data);
-  return c.json(piece, 201);
+  return c.json(resolvePieceImageKeys(piece), 201);
 });
 
 pieceRoutes.put("/:id", async (c) => {
@@ -104,7 +104,7 @@ pieceRoutes.put("/:id", async (c) => {
 
   try {
     const piece = await pieceService.update(userId, idResult.data, parsed.data);
-    return c.json(piece);
+    return c.json(resolvePieceImageKeys(piece));
   } catch (error) {
     if (error instanceof NotFoundError) {
       return c.json({ error: error.message }, 404);
@@ -142,7 +142,7 @@ pieceRoutes.post("/:id/status", async (c) => {
 
   try {
     const piece = await pieceService.advanceStatus(userId, idResult.data);
-    return c.json(piece);
+    return c.json(resolvePieceImageKeys(piece));
   } catch (error) {
     if (error instanceof NotFoundError) {
       return c.json({ error: error.message }, 404);
@@ -175,7 +175,7 @@ pieceRoutes.put("/:id/status/set", async (c) => {
 
   try {
     const piece = await pieceService.setStatus(userId, idResult.data, parsed.data.status);
-    return c.json(piece);
+    return c.json(resolvePieceImageKeys(piece));
   } catch (error) {
     if (error instanceof NotFoundError) {
       return c.json({ error: error.message }, 404);
@@ -193,7 +193,7 @@ pieceRoutes.put("/:id/shelve", async (c) => {
 
   try {
     const piece = await pieceService.shelve(userId, idResult.data);
-    return c.json(piece);
+    return c.json(resolvePieceImageKeys(piece));
   } catch (error) {
     if (error instanceof NotFoundError) {
       return c.json({ error: error.message }, 404);
@@ -250,10 +250,10 @@ pieceRoutes.post("/:id/image", async (c) => {
     await storage.delete(piece.imageKey);
   }
 
-  const storedKey = await storage.upload(buffer, key);
-  const updated = await pieceService.setImageKey(userId, idResult.data, storedKey);
+  const imageKey = await storage.upload(buffer, key);
+  const updated = await pieceService.setImageKey(userId, idResult.data, imageKey);
 
-  return c.json(updated);
+  return c.json(resolvePieceImageKeys(updated));
 });
 
 pieceRoutes.delete("/:id/image", async (c) => {
@@ -274,7 +274,7 @@ pieceRoutes.delete("/:id/image", async (c) => {
   }
 
   const updated = await pieceService.setImageKey(userId, idResult.data, null);
-  return c.json(updated);
+  return c.json(resolvePieceImageKeys(updated));
 });
 
 // --- Journal Entry Routes ---
@@ -489,10 +489,10 @@ pieceRoutes.post("/:id/entries/:entryId/images", async (c) => {
   const key = `journals/${userId}/${entryIdResult.data}/${imageId}.${ext}`;
 
   const storage = getStorage();
-  const storedKey = await storage.upload(buffer, key);
+  const imageKey = await storage.upload(buffer, key);
 
-  const image = await journalService.addImage(entryIdResult.data, storedKey, sortOrder);
-  return c.json(image, 201);
+  const image = await journalService.addImage(entryIdResult.data, imageKey, sortOrder);
+  return c.json({ ...image, imageKey: resolveImageKey(image.imageKey) }, 201);
 });
 
 pieceRoutes.delete("/:id/entries/:entryId/images/:imageId", async (c) => {

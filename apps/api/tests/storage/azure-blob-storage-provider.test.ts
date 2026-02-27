@@ -23,30 +23,38 @@ describe("AzureBlobStorageProvider", () => {
     await provider.deleteContainer();
   });
 
-  it("upload returns a URL containing the blob key", async () => {
+  it("upload returns the plain blob key", async () => {
     const content = Buffer.from("hello world");
-    const url = await provider.upload(content, "test/file.txt");
+    const key = await provider.upload(content, "test/file.txt");
+
+    expect(key).toBe("test/file.txt");
+  });
+
+  it("resolveUrl returns a SAS URL for a blob key", () => {
+    const url = provider.resolveUrl("test/file.txt");
 
     expect(url).toContain("test/file.txt");
     expect(url).toContain("http");
-    expect(url).toContain("sig="); // SAS token present
+    expect(url).toContain("sig=");
   });
 
   it("upload overwrites existing blob", async () => {
     const key = "test/overwrite.txt";
     await provider.upload(Buffer.from("version 1"), key);
-    const url = await provider.upload(Buffer.from("version 2"), key);
+    await provider.upload(Buffer.from("version 2"), key);
 
-    // Fetch the blob to verify content
+    // Fetch the blob via resolved SAS URL to verify content
+    const url = provider.resolveUrl(key);
     const res = await fetch(url);
     const text = await res.text();
     expect(text).toBe("version 2");
   });
 
-  it("uploaded blob is accessible via returned SAS URL", async () => {
+  it("uploaded blob is accessible via resolved SAS URL", async () => {
     const content = Buffer.from("fetch me");
-    const url = await provider.upload(content, "test/fetch.txt");
+    const key = await provider.upload(content, "test/fetch.txt");
 
+    const url = provider.resolveUrl(key);
     const res = await fetch(url);
     expect(res.status).toBe(200);
     const body = await res.text();
@@ -55,7 +63,8 @@ describe("AzureBlobStorageProvider", () => {
 
   it("delete removes the blob", async () => {
     const content = Buffer.from("delete me");
-    const url = await provider.upload(content, "test/delete.txt");
+    await provider.upload(content, "test/delete.txt");
+    const url = provider.resolveUrl("test/delete.txt");
 
     await provider.delete("test/delete.txt");
 

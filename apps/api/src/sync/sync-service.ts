@@ -3,7 +3,7 @@ import { db } from "../db/connection.js";
 import { threads, stitchPieces, journalEntries, journalImages, pieceMaterials } from "../db/schema.js";
 import type { SyncChange, SyncRequest } from "./schemas.js";
 import { pieceStatuses, materialTypes } from "../pieces/schemas.js";
-import { getStorage } from "../storage/index.js";
+import { getStorage, resolveImageKey } from "../storage/index.js";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -562,7 +562,7 @@ export class SyncService {
             designer: p.designer,
             designName: p.designName,
             status: p.status,
-            imageKey: p.imageKey,
+            imageKey: resolveImageKey(p.imageKey),
             size: p.size,
             meshCount: p.meshCount,
             notes: p.notes,
@@ -598,7 +598,7 @@ export class SyncService {
         ? undefined
         : {
             entryId: i.entryId,
-            imageKey: i.imageKey,
+            imageKey: resolveImageKey(i.imageKey),
             sortOrder: i.sortOrder,
           },
       updatedAt: i.updatedAt.toISOString(),

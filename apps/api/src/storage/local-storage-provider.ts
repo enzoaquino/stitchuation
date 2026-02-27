@@ -34,6 +34,10 @@ export class LocalStorageProvider implements StorageProvider {
     }
   }
 
+  resolveUrl(key: string): string {
+    return key;
+  }
+
   async delete(key: string): Promise<void> {
     const filePath = this.resolveSafe(key);
     try {

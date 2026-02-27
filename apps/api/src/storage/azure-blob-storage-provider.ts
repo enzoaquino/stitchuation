@@ -45,7 +45,7 @@ export class AzureBlobStorageProvider implements StorageProvider {
 
   private generateSasUrl(blobName: string): string {
     const expiresOn = new Date();
-    expiresOn.setFullYear(expiresOn.getFullYear() + 1);
+    expiresOn.setHours(expiresOn.getHours() + 1);
 
     const sasParams = generateBlobSASQueryParameters(
       {
@@ -84,7 +84,7 @@ export class AzureBlobStorageProvider implements StorageProvider {
     await blockBlobClient.upload(content, content.length, {
       blobHTTPHeaders: { blobContentType: this.contentTypeFromKey(key) },
     });
-    return this.generateSasUrl(key);
+    return key;
   }
 
   async getUrl(key: string): Promise<string | null> {
@@ -99,30 +99,12 @@ export class AzureBlobStorageProvider implements StorageProvider {
     return this.getUrl(key);
   }
 
-  /**
-   * Extract the blob name from a key that may be a plain key or a full SAS URL.
-   */
-  private extractBlobName(key: string): string {
-    if (key.startsWith("http")) {
-      const url = new URL(key);
-      // Path is /<container>/<blobName>, strip leading / and container prefix
-      const pathParts = url.pathname.split("/").filter(Boolean);
-      // Remove the account name segment (for Azurite) or container name
-      // URL format: http://host/account/container/blob or http://host/container/blob
-      // containerClient already knows the container, so we need everything after it
-      const containerIdx = pathParts.indexOf(this.containerName);
-      if (containerIdx >= 0) {
-        return pathParts.slice(containerIdx + 1).join("/");
-      }
-      // Fallback: return everything after the first segment
-      return pathParts.slice(1).join("/");
-    }
-    return key;
+  resolveUrl(key: string): string {
+    return this.generateSasUrl(key);
   }
 
   async delete(key: string): Promise<void> {
-    const blobName = this.extractBlobName(key);
-    const blobClient = this.containerClient.getBlobClient(blobName);
+    const blobClient = this.containerClient.getBlobClient(key);
     await blobClient.deleteIfExists();
   }
 }

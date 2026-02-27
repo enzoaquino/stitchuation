@@ -686,7 +686,7 @@ describe("SyncService", () => {
         (c: any) => c.type === "journalImage" && c.id === image.id
       );
       expect(found).toBeDefined();
-      expect(found!.data?.imageKey).toBe("uploads/pull-test.jpg");
+      expect(found!.data?.imageKey).toContain("uploads/pull-test.jpg");
       expect(found!.data?.sortOrder).toBe(1);
       expect(found!.data?.entryId).toBe(entry.id);
     });

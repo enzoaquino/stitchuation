@@ -32,3 +32,4 @@ export function resetStorage(): void {
 }
 
 export type { StorageProvider } from "./storage-provider.js";
+export { resolveImageKey, resolvePieceImageKeys, resolvePieceImageKeysArray } from "./resolve-image-keys.js";
