@@ -1,38 +1,48 @@
 import SwiftUI
 
+enum AppTab: Hashable {
+    case journal
+    case stash
+    case threads
+    case settings
+}
+
 struct ContentView: View {
     let networkClient: NetworkClient
     @Bindable var authViewModel: AuthViewModel
 
+    @State private var selectedTab: AppTab = .journal
+
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             NavigationStack {
-                ThreadListView()
+                ProjectListView()
             }
+            .tag(AppTab.journal)
             .tabItem {
-                Label("Inventory", systemImage: "tray.full")
+                Label("Journal", systemImage: "paintbrush.pointed")
             }
 
             NavigationStack {
                 StashListView()
             }
+            .tag(AppTab.stash)
             .tabItem {
-                Label("Stitch Stash", systemImage: "square.stack.3d.up")
+                Label("Stash", systemImage: "square.stack.3d.up")
             }
 
             NavigationStack {
-                ProjectListView()
+                ThreadListView()
             }
+            .tag(AppTab.threads)
             .tabItem {
-                Label("Projects", systemImage: "paintbrush.pointed")
+                Label("Threads", systemImage: "tray.full")
             }
 
             NavigationStack {
-                Text("Settings coming soon")
-                    .font(.typeStyle(.body))
-                    .foregroundStyle(Color.walnut)
-                    .navigationTitle("Settings")
+                SettingsView(authViewModel: authViewModel)
             }
+            .tag(AppTab.settings)
             .tabItem {
                 Label("Settings", systemImage: "gear")
             }
