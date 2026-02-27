@@ -35,54 +35,92 @@ struct EditCanvasView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    TextField("Designer", text: $designer)
-                    TextField("Design Name", text: $designName)
-                } header: {
-                    Text("Canvas Info")
-                        .font(.playfair(15, weight: .semibold))
-                        .foregroundStyle(Color.walnut)
-                        .textCase(nil)
-                }
-                .listRowBackground(Color.parchment)
+            ScrollView {
+                VStack(spacing: Spacing.xl) {
+                    // Canvas Info card
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        Text("Canvas Info")
+                            .font(.playfair(15, weight: .semibold))
+                            .foregroundStyle(Color.walnut)
 
-                Section {
-                    Toggle("Date Acquired", isOn: $showDatePicker)
-                    if showDatePicker {
-                        DatePicker(
-                            "Acquired",
-                            selection: Binding(
-                                get: { acquiredAt ?? Date() },
-                                set: { acquiredAt = $0 }
-                            ),
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.graphical)
-                        .tint(Color.terracotta)
+                        VStack(spacing: 0) {
+                            TextField("Designer", text: $designer)
+                                .font(.typeStyle(.body))
+                                .padding(.vertical, Spacing.md)
+
+                            Divider().background(Color.parchment)
+
+                            TextField("Design Name", text: $designName)
+                                .font(.typeStyle(.body))
+                                .padding(.vertical, Spacing.md)
+                        }
                     }
+                    .padding(Spacing.lg)
+                    .background(Color.cream)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                    .warmShadow(.subtle)
+                    .padding(.horizontal, Spacing.lg)
 
-                    TextField("Size (e.g. 13x18)", text: $size)
+                    // Details card
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        Text("Details")
+                            .font(.playfair(15, weight: .semibold))
+                            .foregroundStyle(Color.walnut)
 
-                    MeshCountPicker(meshCount: $meshCount)
-                    if !isMeshCountValid {
-                        Text("Enter a positive number")
-                            .font(.typeStyle(.footnote))
-                            .foregroundStyle(Color.terracotta)
+                        VStack(spacing: 0) {
+                            Toggle("Date Acquired", isOn: $showDatePicker)
+                                .font(.typeStyle(.body))
+                                .tint(Color.terracotta)
+                                .padding(.vertical, Spacing.sm)
+
+                            if showDatePicker {
+                                DatePicker(
+                                    "Acquired",
+                                    selection: Binding(
+                                        get: { acquiredAt ?? Date() },
+                                        set: { acquiredAt = $0 }
+                                    ),
+                                    displayedComponents: .date
+                                )
+                                .datePickerStyle(.graphical)
+                                .tint(Color.terracotta)
+                                .padding(.vertical, Spacing.sm)
+                            }
+
+                            Divider().background(Color.parchment)
+
+                            TextField("Size (e.g. 13x18)", text: $size)
+                                .font(.typeStyle(.body))
+                                .padding(.vertical, Spacing.md)
+
+                            Divider().background(Color.parchment)
+
+                            MeshCountPicker(meshCount: $meshCount)
+                                .padding(.vertical, Spacing.md)
+
+                            if !isMeshCountValid {
+                                Text("Enter a positive number")
+                                    .font(.typeStyle(.footnote))
+                                    .foregroundStyle(Color.terracotta)
+                            }
+
+                            Divider().background(Color.parchment)
+
+                            TextField("Notes", text: $notes, axis: .vertical)
+                                .lineLimit(3...6)
+                                .font(.typeStyle(.body))
+                                .padding(.vertical, Spacing.md)
+                        }
                     }
-
-                    TextField("Notes", text: $notes, axis: .vertical)
-                        .lineLimit(3...6)
-                } header: {
-                    Text("Details")
-                        .font(.playfair(15, weight: .semibold))
-                        .foregroundStyle(Color.walnut)
-                        .textCase(nil)
+                    .padding(Spacing.lg)
+                    .background(Color.cream)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                    .warmShadow(.subtle)
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.bottom, Spacing.xxl)
                 }
-                .listRowBackground(Color.parchment)
+                .padding(.vertical, Spacing.lg)
             }
-            .font(.typeStyle(.body))
-            .scrollContentBackground(.hidden)
             .background(Color.linen)
             .navigationTitle("Edit Canvas")
             .toolbar {
