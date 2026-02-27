@@ -19,10 +19,22 @@ struct stitchuationApp: App {
     private let modelContainer: ModelContainer
 
     init() {
+        let schema = Schema([NeedleThread.self, StitchPiece.self, JournalEntry.self, JournalImage.self, PendingUpload.self, PieceMaterial.self])
+        let config = ModelConfiguration(schema: schema)
         do {
-            modelContainer = try ModelContainer(for: NeedleThread.self, StitchPiece.self, JournalEntry.self, JournalImage.self, PendingUpload.self, PieceMaterial.self)
+            modelContainer = try ModelContainer(for: schema, configurations: [config])
         } catch {
-            fatalError("Failed to create ModelContainer: \(error)")
+            // Schema changed (status → statusRaw migration) — destroy and recreate store
+            let storeURL = config.url
+            try? FileManager.default.removeItem(at: storeURL)
+            // Also remove WAL/SHM files
+            try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("wal"))
+            try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("shm"))
+            do {
+                modelContainer = try ModelContainer(for: schema, configurations: [config])
+            } catch {
+                fatalError("Failed to create ModelContainer after reset: \(error)")
+            }
         }
     }
 

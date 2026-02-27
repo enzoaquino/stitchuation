@@ -155,7 +155,7 @@ final class SyncEngine {
                 data = [
                     "designer": AnyCodable(piece.designer),
                     "designName": AnyCodable(piece.designName),
-                    "status": AnyCodable(piece.status.rawValue),
+                    "status": AnyCodable(piece.statusRaw),
                     "imageKey": AnyCodable(piece.imageKey ?? NSNull()),
                     "size": AnyCodable(piece.size ?? NSNull()),
                     "meshCount": AnyCodable(piece.meshCount ?? NSNull()),
@@ -530,8 +530,8 @@ final class SyncEngine {
         if let designer = data["designer"]?.value as? String { piece.designer = designer }
         if let designName = data["designName"]?.value as? String { piece.designName = designName }
         if let statusStr = data["status"]?.value as? String,
-           let status = PieceStatus(rawValue: statusStr) {
-            piece.status = status
+           PieceStatus(rawValue: statusStr) != nil {
+            piece.statusRaw = statusStr
         }
         if let v = data["imageKey"] {
             piece.imageKey = v.value is NSNull ? nil : v.value as? String

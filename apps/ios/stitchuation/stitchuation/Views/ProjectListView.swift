@@ -115,7 +115,7 @@ struct StartProjectSheet: View {
     private var stashPieces: [StitchPiece]
 
     private static let stashPredicate = #Predicate<StitchPiece> {
-        $0.deletedAt == nil && $0.status.rawValue == "stash"
+        $0.deletedAt == nil && $0.statusRaw == "stash"
     }
 
     var body: some View {

@@ -6,7 +6,8 @@ final class StitchPiece {
     @Attribute(.unique) var id: UUID
     var designer: String
     var designName: String
-    var status: PieceStatus
+    /// Stored as raw string to avoid SwiftData enum schema validation issues.
+    var statusRaw: String
     var imageKey: String?
     var size: String?
     var meshCount: Int?
@@ -27,6 +28,11 @@ final class StitchPiece {
     @Relationship(deleteRule: .cascade, inverse: \PieceMaterial.piece)
     var materials: [PieceMaterial] = []
 
+    var status: PieceStatus {
+        get { PieceStatus(rawValue: statusRaw) ?? .stash }
+        set { statusRaw = newValue.rawValue }
+    }
+
     init(
         id: UUID = UUID(),
         designer: String,
@@ -42,7 +48,7 @@ final class StitchPiece {
         self.id = id
         self.designer = designer
         self.designName = designName
-        self.status = status
+        self.statusRaw = status.rawValue
         self.imageKey = imageKey
         self.size = size
         self.meshCount = meshCount
