@@ -250,8 +250,8 @@ pieceRoutes.post("/:id/image", async (c) => {
     await storage.delete(piece.imageKey);
   }
 
-  await storage.upload(buffer, key);
-  const updated = await pieceService.setImageKey(userId, idResult.data, key);
+  const storedKey = await storage.upload(buffer, key);
+  const updated = await pieceService.setImageKey(userId, idResult.data, storedKey);
 
   return c.json(updated);
 });
@@ -489,9 +489,9 @@ pieceRoutes.post("/:id/entries/:entryId/images", async (c) => {
   const key = `journals/${userId}/${entryIdResult.data}/${imageId}.${ext}`;
 
   const storage = getStorage();
-  await storage.upload(buffer, key);
+  const storedKey = await storage.upload(buffer, key);
 
-  const image = await journalService.addImage(entryIdResult.data, key, sortOrder);
+  const image = await journalService.addImage(entryIdResult.data, storedKey, sortOrder);
   return c.json(image, 201);
 });
 

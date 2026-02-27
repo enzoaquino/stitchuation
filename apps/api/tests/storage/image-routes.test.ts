@@ -1,11 +1,16 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { resetStorage } from "../../src/storage/index.js";
 import app from "../../src/app.js";
 
 describe("Image Routes", () => {
   let accessToken: string;
   let pieceId: string;
+  const originalStorageProvider = process.env.STORAGE_PROVIDER;
 
   beforeAll(async () => {
+    // Force local storage for these tests since they test the /images/* proxy
+    process.env.STORAGE_PROVIDER = "local";
+    resetStorage();
     // Register user
     const authRes = await app.request("/auth/register", {
       method: "POST",
@@ -33,6 +38,16 @@ describe("Image Routes", () => {
     });
     const pieceBody = await pieceRes.json();
     pieceId = pieceBody.id;
+  });
+
+  afterAll(() => {
+    // Restore original storage provider
+    if (originalStorageProvider) {
+      process.env.STORAGE_PROVIDER = originalStorageProvider;
+    } else {
+      delete process.env.STORAGE_PROVIDER;
+    }
+    resetStorage();
   });
 
   it("POST /pieces/:id/image uploads an image", async () => {
