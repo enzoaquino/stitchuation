@@ -72,14 +72,15 @@ struct MeshCountPicker: View {
     private var chipRow: some View {
         HStack(spacing: Spacing.sm) {
             ForEach(Self.standardCounts, id: \.self) { count in
-                chipButton(for: count)
+                tileButton(for: count)
             }
-            otherChipButton
+            otherTileButton
         }
     }
 
-    private func chipButton(for count: Int) -> some View {
-        Button {
+    private func tileButton(for count: Int) -> some View {
+        let isSelected = selectedPreset == count
+        return Button {
             selection = .preset(count)
             meshCount = "\(count)"
             withAnimation(Motion.bouncy) {
@@ -90,27 +91,28 @@ struct MeshCountPicker: View {
             }
         } label: {
             Text("\(count)")
-                .font(selectedPreset == count
+                .font(isSelected
                     ? .typeStyle(.subheadline).weight(.medium)
                     : .typeStyle(.subheadline))
-                .foregroundStyle(selectedPreset == count ? Color.cream : Color.walnut)
-                .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, Spacing.xs)
-                .background(selectedPreset == count ? Color.terracotta : Color.linen)
-                .clipShape(Capsule())
+                .foregroundStyle(isSelected ? .white : Color.walnut)
+                .frame(width: 44, height: 44)
+                .background(isSelected ? Color.terracotta : Color.linen)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
                 .overlay(
-                    Capsule()
+                    RoundedRectangle(cornerRadius: CornerRadius.subtle)
                         .stroke(
-                            selectedPreset == count ? Color.clear : Color.clay.opacity(0.3),
-                            lineWidth: 0.5
+                            isSelected ? Color.clear : Color.slate.opacity(0.3),
+                            lineWidth: 1
                         )
                 )
+                .warmShadow(isSelected ? .subtle : .subtle)
+                .opacity(isSelected ? 1.0 : 0.85)
         }
         .buttonStyle(.plain)
         .scaleEffect(chipScale[count] ?? 1.0)
     }
 
-    private var otherChipButton: some View {
+    private var otherTileButton: some View {
         Button {
             selection = .custom
             meshCount = ""
@@ -125,18 +127,20 @@ struct MeshCountPicker: View {
                 .font(isCustomMode
                     ? .typeStyle(.subheadline).weight(.medium)
                     : .typeStyle(.subheadline))
-                .foregroundStyle(isCustomMode ? Color.cream : Color.walnut)
-                .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, Spacing.xs)
+                .foregroundStyle(isCustomMode ? .white : Color.walnut)
+                .frame(height: 44)
+                .padding(.horizontal, Spacing.md)
                 .background(isCustomMode ? Color.terracotta : Color.linen)
-                .clipShape(Capsule())
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
                 .overlay(
-                    Capsule()
+                    RoundedRectangle(cornerRadius: CornerRadius.subtle)
                         .stroke(
-                            isCustomMode ? Color.clear : Color.clay.opacity(0.3),
-                            lineWidth: 0.5
+                            isCustomMode ? Color.clear : Color.slate.opacity(0.3),
+                            lineWidth: 1
                         )
                 )
+                .warmShadow(isCustomMode ? .subtle : .subtle)
+                .opacity(isCustomMode ? 1.0 : 0.85)
         }
         .buttonStyle(.plain)
         .scaleEffect(otherChipScale)
