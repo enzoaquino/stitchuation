@@ -110,7 +110,7 @@ struct AddCanvasView: View {
                             .font(.playfair(15, weight: .semibold))
                             .foregroundStyle(Color.walnut)
 
-                        VStack(spacing: 0) {
+                        VStack(alignment: .leading, spacing: 0) {
                             Toggle("Date Acquired", isOn: $showDatePicker)
                                 .font(.typeStyle(.body))
                                 .tint(Color.terracotta)
