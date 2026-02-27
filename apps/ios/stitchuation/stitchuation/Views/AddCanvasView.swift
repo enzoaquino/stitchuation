@@ -33,95 +33,155 @@ struct AddCanvasView: View {
         meshCount.isEmpty || (meshCountValue != nil && meshCountValue! > 0)
     }
 
+    @ViewBuilder
+    private var photoSection: some View {
+        Button {
+            if CameraView.isCameraAvailable {
+                showPhotoOptions = true
+            } else {
+                showLibraryPicker = true
+            }
+        } label: {
+            if let selectedImageData, let uiImage = UIImage(data: selectedImageData) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(height: 200)
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                    .warmShadow(.subtle)
+            } else {
+                VStack(spacing: Spacing.md) {
+                    Image(systemName: "photo.badge.plus")
+                        .font(.system(size: 40))
+                        .foregroundStyle(Color.terracotta)
+                    Text("Add Photo")
+                        .font(.typeStyle(.subheadline))
+                        .foregroundStyle(Color.walnut)
+                }
+                .frame(height: 180)
+                .frame(maxWidth: .infinity)
+                .overlay(
+                    RoundedRectangle(cornerRadius: CornerRadius.card)
+                        .strokeBorder(
+                            Color.clay.opacity(0.4),
+                            style: StrokeStyle(lineWidth: 1.5, dash: [8, 6])
+                        )
+                )
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, Spacing.lg)
+    }
+
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    Button {
-                        if CameraView.isCameraAvailable {
-                            showPhotoOptions = true
-                        } else {
-                            showLibraryPicker = true
-                        }
-                    } label: {
-                        if let selectedImageData, let uiImage = UIImage(data: selectedImageData) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(height: 200)
-                                .frame(maxWidth: .infinity)
-                                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
-                        } else {
-                            VStack(spacing: Spacing.md) {
-                                Image(systemName: "photo.badge.plus")
-                                    .font(.system(size: 32))
-                                    .foregroundStyle(Color.terracotta)
-                                Text("Add Photo")
-                                    .font(.typeStyle(.subheadline))
-                                    .foregroundStyle(Color.walnut)
-                            }
-                            .frame(height: 140)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.parchment)
-                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+            ScrollView {
+                VStack(spacing: Spacing.xl) {
+                    // Photo zone
+                    photoSection
+
+                    // Canvas Info card
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        Text("Canvas Info")
+                            .font(.playfair(15, weight: .semibold))
+                            .foregroundStyle(Color.walnut)
+
+                        VStack(spacing: 0) {
+                            TextField("Designer (e.g. Melissa Shirley)", text: $designer)
+                                .font(.typeStyle(.body))
+                                .padding(.vertical, Spacing.md)
+
+                            Divider().background(Color.parchment)
+
+                            TextField("Design Name", text: $designName)
+                                .font(.typeStyle(.body))
+                                .padding(.vertical, Spacing.md)
                         }
                     }
-                    .buttonStyle(.plain)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
+                    .padding(Spacing.lg)
+                    .background(Color.cream)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                    .warmShadow(.subtle)
                     .padding(.horizontal, Spacing.lg)
-                    .padding(.vertical, Spacing.sm)
-                }
 
-                Section {
-                    TextField("Designer (e.g. Melissa Shirley)", text: $designer)
-                    TextField("Design Name", text: $designName)
-                } header: {
-                    Text("Canvas Info")
-                        .font(.playfair(15, weight: .semibold))
-                        .foregroundStyle(Color.walnut)
-                        .textCase(nil)
-                }
-                .listRowBackground(Color.parchment)
+                    // Details card
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        Text("Details")
+                            .font(.playfair(15, weight: .semibold))
+                            .foregroundStyle(Color.walnut)
 
-                Section {
-                    Toggle("Date Acquired", isOn: $showDatePicker)
-                    if showDatePicker {
-                        DatePicker(
-                            "Acquired",
-                            selection: Binding(
-                                get: { acquiredAt ?? Date() },
-                                set: { acquiredAt = $0 }
-                            ),
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.graphical)
-                        .tint(Color.terracotta)
+                        VStack(spacing: 0) {
+                            Toggle("Date Acquired", isOn: $showDatePicker)
+                                .font(.typeStyle(.body))
+                                .tint(Color.terracotta)
+                                .padding(.vertical, Spacing.sm)
+
+                            if showDatePicker {
+                                DatePicker(
+                                    "Acquired",
+                                    selection: Binding(
+                                        get: { acquiredAt ?? Date() },
+                                        set: { acquiredAt = $0 }
+                                    ),
+                                    displayedComponents: .date
+                                )
+                                .datePickerStyle(.graphical)
+                                .tint(Color.terracotta)
+                                .padding(.vertical, Spacing.sm)
+                            }
+
+                            Divider().background(Color.parchment)
+
+                            TextField("Size (e.g. 13x18, 10\" round)", text: $size)
+                                .font(.typeStyle(.body))
+                                .padding(.vertical, Spacing.md)
+
+                            Divider().background(Color.parchment)
+
+                            MeshCountPicker(meshCount: $meshCount)
+                                .padding(.vertical, Spacing.md)
+
+                            if !isMeshCountValid {
+                                Text("Enter a positive number")
+                                    .font(.typeStyle(.footnote))
+                                    .foregroundStyle(Color.terracotta)
+                            }
+
+                            Divider().background(Color.parchment)
+
+                            TextField("Notes", text: $notes, axis: .vertical)
+                                .lineLimit(3...6)
+                                .font(.typeStyle(.body))
+                                .padding(.vertical, Spacing.md)
+                        }
                     }
+                    .padding(Spacing.lg)
+                    .background(Color.cream)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                    .warmShadow(.subtle)
+                    .padding(.horizontal, Spacing.lg)
 
-                    TextField("Size (e.g. 13x18, 10\" round)", text: $size)
-
-                    MeshCountPicker(meshCount: $meshCount)
-                    if !isMeshCountValid {
-                        Text("Enter a positive number")
-                            .font(.typeStyle(.footnote))
-                            .foregroundStyle(Color.terracotta)
+                    // Add Another banner
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .foregroundStyle(Color.clay)
+                        Text("Add Another")
+                            .font(.typeStyle(.body))
+                            .foregroundStyle(Color.walnut)
+                        Spacer()
+                        Toggle("", isOn: $addAnother)
+                            .labelsHidden()
+                            .tint(Color.terracotta)
                     }
-
-                    TextField("Notes", text: $notes, axis: .vertical)
-                        .lineLimit(3...6)
-                } header: {
-                    Text("Details")
-                        .font(.playfair(15, weight: .semibold))
-                        .foregroundStyle(Color.walnut)
-                        .textCase(nil)
+                    .padding(Spacing.lg)
+                    .background(Color.terracottaMuted.opacity(0.3))
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.bottom, Spacing.xxl)
                 }
-                .listRowBackground(Color.parchment)
-
-                Toggle("Add Another", isOn: $addAnother)
+                .padding(.vertical, Spacing.lg)
             }
-            .font(.typeStyle(.body))
-            .scrollContentBackground(.hidden)
             .background(Color.linen)
             .navigationTitle("Add Canvas")
             .toolbar {
