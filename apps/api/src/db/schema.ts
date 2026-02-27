@@ -15,6 +15,8 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash"),
   provider: text("provider").notNull().default("email"),
   providerUserId: text("provider_user_id"),
+  bio: text("bio"),
+  experienceLevel: text("experience_level"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
