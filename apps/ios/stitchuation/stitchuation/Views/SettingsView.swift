@@ -3,10 +3,7 @@ import SwiftData
 
 struct SettingsView: View {
     @Bindable var authViewModel: AuthViewModel
-
-    @AppStorage("profileDisplayName") private var displayName = ""
-    @AppStorage("profileBio") private var bio = ""
-    @AppStorage("profileExperienceLevel") private var experienceLevel = "Beginner"
+    @Bindable var profileViewModel: ProfileViewModel
 
     @Query(filter: #Predicate<StitchPiece> { $0.deletedAt == nil })
     private var allPieces: [StitchPiece]
@@ -29,7 +26,7 @@ struct SettingsView: View {
     }
 
     private var initials: String {
-        Self.computeInitials(from: displayName)
+        Self.computeInitials(from: profileViewModel.displayName)
     }
 
     // MARK: - Stats
@@ -76,11 +73,7 @@ struct SettingsView: View {
         .background(Color.linen)
         .navigationTitle("Settings")
         .sheet(isPresented: $showEditProfile) {
-            EditProfileSheet(
-                displayName: $displayName,
-                bio: $bio,
-                experienceLevel: $experienceLevel
-            )
+            EditProfileSheet(profileViewModel: profileViewModel)
         }
     }
 
@@ -95,8 +88,8 @@ struct SettingsView: View {
                 .background(Color.terracotta)
                 .clipShape(Circle())
 
-            if !displayName.isEmpty {
-                Text(displayName)
+            if !profileViewModel.displayName.isEmpty {
+                Text(profileViewModel.displayName)
                     .font(.typeStyle(.title2))
                     .foregroundStyle(Color.espresso)
             } else {
@@ -105,15 +98,15 @@ struct SettingsView: View {
                     .foregroundStyle(Color.clay)
             }
 
-            if !bio.isEmpty {
-                Text(bio)
+            if !profileViewModel.bio.isEmpty {
+                Text(profileViewModel.bio)
                     .font(.typeStyle(.body))
                     .foregroundStyle(Color.walnut)
                     .multilineTextAlignment(.center)
                     .lineLimit(3)
             }
 
-            Text(experienceLevel)
+            Text(profileViewModel.experienceLevel)
                 .font(.typeStyle(.footnote))
                 .fontWeight(.medium)
                 .foregroundStyle(Color.walnut)

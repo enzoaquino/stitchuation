@@ -3,21 +3,18 @@ import SwiftUI
 struct EditProfileSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    @Binding var displayName: String
-    @Binding var bio: String
-    @Binding var experienceLevel: String
+    @Bindable var profileViewModel: ProfileViewModel
 
     @State private var draftName: String = ""
     @State private var draftBio: String = ""
     @State private var draftLevel: String = ""
+    @State private var isSaving = false
 
-    init(displayName: Binding<String>, bio: Binding<String>, experienceLevel: Binding<String>) {
-        _displayName = displayName
-        _bio = bio
-        _experienceLevel = experienceLevel
-        _draftName = State(initialValue: displayName.wrappedValue)
-        _draftBio = State(initialValue: bio.wrappedValue)
-        _draftLevel = State(initialValue: experienceLevel.wrappedValue)
+    init(profileViewModel: ProfileViewModel) {
+        self.profileViewModel = profileViewModel
+        _draftName = State(initialValue: profileViewModel.displayName)
+        _draftBio = State(initialValue: profileViewModel.bio)
+        _draftLevel = State(initialValue: profileViewModel.experienceLevel)
     }
 
     var body: some View {
@@ -98,12 +95,18 @@ struct EditProfileSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        displayName = draftName
-                        bio = draftBio
-                        experienceLevel = draftLevel
-                        dismiss()
+                        isSaving = true
+                        Task {
+                            await profileViewModel.saveProfile(
+                                displayName: draftName,
+                                bio: draftBio,
+                                experienceLevel: draftLevel
+                            )
+                            isSaving = false
+                            dismiss()
+                        }
                     }
-                    .disabled(draftName.isEmpty)
+                    .disabled(draftName.isEmpty || isSaving)
                     .foregroundStyle(Color.terracotta)
                 }
             }

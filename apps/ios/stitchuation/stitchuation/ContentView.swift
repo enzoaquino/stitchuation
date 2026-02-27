@@ -11,6 +11,7 @@ struct ContentView: View {
     let networkClient: NetworkClient
     @Bindable var authViewModel: AuthViewModel
 
+    @State private var profileViewModel: ProfileViewModel?
     @State private var selectedTab: AppTab = .journal
 
     var body: some View {
@@ -40,7 +41,9 @@ struct ContentView: View {
             }
 
             NavigationStack {
-                SettingsView(authViewModel: authViewModel)
+                if let profileViewModel {
+                    SettingsView(authViewModel: authViewModel, profileViewModel: profileViewModel)
+                }
             }
             .tag(AppTab.settings)
             .tabItem {
@@ -48,5 +51,10 @@ struct ContentView: View {
             }
         }
         .tint(Color.terracotta)
+        .task {
+            let vm = ProfileViewModel(networkClient: networkClient)
+            profileViewModel = vm
+            await vm.loadProfile()
+        }
     }
 }
