@@ -15,6 +15,14 @@ services:
       timeout: 5s
       retries: 5
 
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    ports:
+      - "10000:10000"
+    volumes:
+      - azurite_data:/data
+    command: "azurite-blob --blobHost 0.0.0.0 --blobPort 10000 -l /data"
+
   api:
     build: .
     ports:
@@ -24,11 +32,14 @@ services:
       JWT_SECRET: docker-dev-secret # Change in production
       JWT_REFRESH_SECRET: docker-dev-refresh-secret # Change in production
       PORT: "3000"
-    volumes:
-      - uploads:/app/uploads
+      STORAGE_PROVIDER: azure
+      AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+      AZURE_STORAGE_CONTAINER: images
     depends_on:
       postgres:
         condition: service_healthy
+      azurite:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
       interval: 10s
@@ -37,4 +48,4 @@ services:
 
 volumes:
   pgdata:
-  uploads:
+  azurite_data:
