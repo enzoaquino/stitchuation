@@ -44,4 +44,20 @@ struct ImageCacheTests {
         let hash2 = await cache.diskFileName(forKey: "same-key")
         #expect(hash1 == hash2)
     }
+
+    @Test func isDirectURLDetectsHTTP() {
+        #expect(ImageCache.isDirectURL("http://localhost:10000/devstoreaccount1/images/test.jpg") == true)
+    }
+
+    @Test func isDirectURLDetectsHTTPS() {
+        #expect(ImageCache.isDirectURL("https://myaccount.blob.core.windows.net/images/test.jpg") == true)
+    }
+
+    @Test func isDirectURLRejectsRelativePath() {
+        #expect(ImageCache.isDirectURL("pieces/user123/piece456.jpg") == false)
+    }
+
+    @Test func isDirectURLRejectsNil() {
+        #expect(ImageCache.isDirectURL(nil) == false)
+    }
 }

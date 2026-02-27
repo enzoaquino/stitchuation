@@ -14,6 +14,14 @@ actor ImageCache {
         memoryCache.countLimit = 100
     }
 
+    // MARK: - URL Detection
+
+    /// Returns true if the imageKey is a full URL (Azure SAS URL) rather than a relative path.
+    static func isDirectURL(_ imageKey: String?) -> Bool {
+        guard let imageKey else { return false }
+        return imageKey.hasPrefix("http://") || imageKey.hasPrefix("https://")
+    }
+
     // MARK: - Public API
 
     /// Full lookup: memory → disk → network. Returns nil on failure.
@@ -32,16 +40,30 @@ actor ImageCache {
         }
 
         // 3. Network
-        guard let networkClient else { return nil }
-        do {
-            let data = try await networkClient.fetchData(path: "/images/\(imageKey)")
-            guard let image = UIImage(data: data) else { return nil }
-            store(image, forKey: imageKey)
-            storeToDisk(data, forKey: imageKey)
-            return image
-        } catch {
-            return nil
+        let data: Data?
+        if Self.isDirectURL(imageKey) {
+            // Azure SAS URL — fetch directly, no auth needed
+            data = try? await fetchDirectURL(imageKey)
+        } else {
+            // Relative path — fetch via API proxy (backward compat)
+            guard let networkClient else { return nil }
+            data = try? await networkClient.fetchData(path: "/images/\(imageKey)")
         }
+
+        guard let data, let image = UIImage(data: data) else { return nil }
+        store(image, forKey: imageKey)
+        storeToDisk(data, forKey: imageKey)
+        return image
+    }
+
+    // MARK: - Direct URL Fetching
+
+    private func fetchDirectURL(_ urlString: String) async throws -> Data {
+        guard let url = URL(string: urlString) else {
+            throw URLError(.badURL)
+        }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return data
     }
 
     // MARK: - Memory
