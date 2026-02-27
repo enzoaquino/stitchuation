@@ -11,6 +11,7 @@ export class AzureBlobStorageProvider implements StorageProvider {
   private containerClient: ContainerClient;
   private credential: StorageSharedKeyCredential;
   private containerName: string;
+  private containerEnsured = false;
 
   constructor(connectionString: string, containerName: string) {
     this.containerName = containerName;
@@ -61,17 +62,28 @@ export class AzureBlobStorageProvider implements StorageProvider {
   }
 
   async ensureContainer(): Promise<void> {
+    if (this.containerEnsured) return;
     await this.containerClient.createIfNotExists();
+    this.containerEnsured = true;
   }
 
   async deleteContainer(): Promise<void> {
     await this.containerClient.deleteIfExists();
   }
 
+  private contentTypeFromKey(key: string): string {
+    const ext = key.split(".").pop()?.toLowerCase();
+    if (ext === "png") return "image/png";
+    if (ext === "heic") return "image/heic";
+    return "image/jpeg";
+  }
+
   async upload(content: Buffer, key: string): Promise<string> {
     await this.ensureContainer();
     const blockBlobClient = this.containerClient.getBlockBlobClient(key);
-    await blockBlobClient.upload(content, content.length);
+    await blockBlobClient.upload(content, content.length, {
+      blobHTTPHeaders: { blobContentType: this.contentTypeFromKey(key) },
+    });
     return this.generateSasUrl(key);
   }
 
