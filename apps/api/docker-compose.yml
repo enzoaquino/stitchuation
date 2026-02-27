@@ -21,7 +21,7 @@ services:
       - "10000:10000"
     volumes:
       - azurite_data:/data
-    command: "azurite-blob --blobHost 0.0.0.0 --blobPort 10000 -l /data"
+    command: "azurite-blob --blobHost 0.0.0.0 --blobPort 10000 -l /data --skipApiVersionCheck"
 
   api:
     build: .
