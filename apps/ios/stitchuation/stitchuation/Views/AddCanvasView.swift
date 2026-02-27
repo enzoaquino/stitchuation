@@ -51,22 +51,21 @@ struct AddCanvasView: View {
                     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
                     .warmShadow(.subtle)
             } else {
-                VStack(spacing: Spacing.md) {
+                VStack(spacing: Spacing.sm) {
                     Image(systemName: "photo.badge.plus")
-                        .font(.system(size: 40))
-                        .foregroundStyle(Color.terracotta)
+                        .font(.system(size: 36))
+                        .foregroundStyle(Color.terracotta.opacity(0.7))
                     Text("Add Photo")
                         .font(.typeStyle(.subheadline))
-                        .foregroundStyle(Color.walnut)
+                        .foregroundStyle(Color.clay)
                 }
-                .frame(height: 180)
+                .frame(height: 120)
                 .frame(maxWidth: .infinity)
+                .background(Color.parchment)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
                 .overlay(
                     RoundedRectangle(cornerRadius: CornerRadius.card)
-                        .strokeBorder(
-                            Color.clay.opacity(0.4),
-                            style: StrokeStyle(lineWidth: 1.5, dash: [8, 6])
-                        )
+                        .stroke(Color.clay.opacity(0.2), lineWidth: 1)
                 )
             }
         }
