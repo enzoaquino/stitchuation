@@ -85,6 +85,11 @@ struct AddJournalEntryView: View {
                             }
                         }
                         .buttonStyle(.plain)
+                        .confirmationDialog("Add Photo", isPresented: $showPhotoOptions) {
+                            Button("Take Photo") { showCamera = true }
+                            Button("Choose from Library") { showLibraryPicker = true }
+                            Button("Cancel", role: .cancel) { }
+                        }
                     }
                 } header: {
                     Text("Photos")
@@ -120,11 +125,6 @@ struct AddJournalEntryView: View {
                     }
                     selectedPhotos = []
                 }
-            }
-            .confirmationDialog("Add Photo", isPresented: $showPhotoOptions) {
-                Button("Take Photo") { showCamera = true }
-                Button("Choose from Library") { showLibraryPicker = true }
-                Button("Cancel", role: .cancel) { }
             }
             .fullScreenCover(isPresented: $showCamera) {
                 CameraView { image, data in
