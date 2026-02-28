@@ -3,12 +3,17 @@ import { AzureBlobStorageProvider } from "../../src/storage/azure-blob-storage-p
 
 // These tests require Azurite running on localhost:10000.
 // Run: docker compose up azurite -d
+// Skipped in CI where Azurite is not available.
 const AZURITE_CONNECTION_STRING =
   "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;";
 
+const canReachAzurite = await fetch("http://127.0.0.1:10000/", { signal: AbortSignal.timeout(1000) })
+  .then(() => true)
+  .catch(() => false);
+
 const TEST_CONTAINER = `test-${Date.now()}`;
 
-describe("AzureBlobStorageProvider", () => {
+describe.skipIf(!canReachAzurite)("AzureBlobStorageProvider", () => {
   let provider: AzureBlobStorageProvider;
 
   beforeAll(async () => {
