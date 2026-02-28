@@ -140,6 +140,36 @@ export class AuthService {
       };
     }
 
+    // Check for existing user with same email — link Apple ID to their account
+    if (claims.email) {
+      const [emailMatch] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          displayName: users.displayName,
+        })
+        .from(users)
+        .where(eq(users.email, claims.email))
+        .limit(1);
+
+      if (emailMatch) {
+        await db
+          .update(users)
+          .set({ providerUserId: claims.sub })
+          .where(eq(users.id, emailMatch.id));
+
+        const tokenPayload = { userId: emailMatch.id, email: emailMatch.email };
+        const accessToken = signAccessToken(tokenPayload);
+        const refreshToken = signRefreshToken(tokenPayload);
+        return {
+          user: emailMatch,
+          accessToken,
+          refreshToken,
+          isNewUser: false,
+        };
+      }
+    }
+
     // Build display name from Apple's fullName (only sent on first sign-in)
     let displayName: string | null = null;
     if (input.fullName) {

@@ -28,6 +28,12 @@ vi.mock("../../src/auth/apple-token-verifier.js", () => ({
         email: null,
       };
     }
+    if (token === "valid-link-email") {
+      return {
+        sub: `001234.linker.${testSuffix}`,
+        email: `link-${testSuffix}@example.com`,
+      };
+    }
     throw new MockAppleTokenError("Invalid token");
   },
 }));
@@ -95,6 +101,38 @@ describe("POST /auth/provider", () => {
     const body = await res.json();
     expect(body.user.displayName).toBeNull();
     expect(body.isNewUser).toBe(true);
+  });
+
+  it("links Apple ID to existing email user", async () => {
+    const email = `link-${testSuffix}@example.com`;
+
+    // Create an email/password user first
+    const regRes = await app.request("/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        password: "securepassword123",
+        displayName: "Link User",
+      }),
+    });
+    const { user: emailUser } = await regRes.json();
+
+    // Sign in with Apple using the same email
+    const res = await app.request("/auth/provider", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        provider: "apple",
+        identityToken: "valid-link-email",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.isNewUser).toBe(false);
+    expect(body.user.id).toBe(emailUser.id);
+    expect(body.user.displayName).toBe("Link User");
   });
 
   it("returns 401 for an invalid Apple identity token", async () => {
