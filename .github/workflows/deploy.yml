@@ -35,6 +35,7 @@ jobs:
       JWT_SECRET: test-secret
       JWT_REFRESH_SECRET: test-refresh-secret
       STORAGE_PROVIDER: local
+      APPLE_BUNDLE_ID: com.enzoaquino.stitchuation
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

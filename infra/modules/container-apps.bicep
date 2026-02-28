@@ -105,6 +105,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'AZURE_STORAGE_CONNECTION_STRING', secretRef: 'storage-connection-string' }
             { name: 'AZURE_STORAGE_CONTAINER', value: storageContainer }
             { name: 'PORT', value: '3000' }
+            { name: 'APPLE_BUNDLE_ID', value: 'com.enzoaquino.stitchuation' }
           ]
           probes: [
             {
