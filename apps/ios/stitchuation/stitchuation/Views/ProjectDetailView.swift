@@ -4,6 +4,7 @@ import SwiftData
 struct ProjectDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(NavigationCoordinator.self) private var navigationCoordinator
 
     let pieceId: UUID
 
@@ -186,6 +187,11 @@ struct ProjectDetailView: View {
                     piece.completedAt = nil
                     piece.updatedAt = Date()
                 }
+                // Dismiss first (handles both fullScreenCover and nav push),
+                // then switch to stash tab
+                dismiss()
+                navigationCoordinator.presentedProjectId = nil
+                navigationCoordinator.switchToTab = .stash
             }
         } message: {
             Text("This will move the piece back to your stash. Journal entries will be preserved.")

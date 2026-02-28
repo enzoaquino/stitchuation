@@ -67,6 +67,12 @@ struct ContentView: View {
                     }
             }
         }
+        .onChange(of: navigationCoordinator.switchToTab) { _, newValue in
+            if let tab = newValue {
+                selectedTab = tab
+                navigationCoordinator.switchToTab = nil
+            }
+        }
         .task {
             let vm = ProfileViewModel(networkClient: networkClient)
             profileViewModel = vm
