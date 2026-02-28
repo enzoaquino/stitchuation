@@ -13,10 +13,11 @@ struct ContentView: View {
 
     @State private var profileViewModel: ProfileViewModel?
     @State private var selectedTab: AppTab = .journal
+    @State private var navigationCoordinator = NavigationCoordinator()
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            NavigationStack {
+            NavigationStack(path: $navigationCoordinator.journalPath) {
                 ProjectListView()
             }
             .tag(AppTab.journal)
@@ -50,7 +51,17 @@ struct ContentView: View {
                 Label("Settings", systemImage: "gear")
             }
         }
+        .environment(navigationCoordinator)
         .tint(Color.terracotta)
+        .onChange(of: navigationCoordinator.pendingProjectId) { _, newValue in
+            if let pieceId = newValue {
+                selectedTab = .journal
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    navigationCoordinator.journalPath.append(pieceId)
+                    navigationCoordinator.pendingProjectId = nil
+                }
+            }
+        }
         .task {
             let vm = ProfileViewModel(networkClient: networkClient)
             profileViewModel = vm
