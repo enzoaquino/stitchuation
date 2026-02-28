@@ -27,8 +27,12 @@ export async function verifyAppleIdentityToken(
       audience: bundleId,
     });
 
+    if (!payload.sub) {
+      throw new AppleTokenError("Token missing sub claim");
+    }
+
     return {
-      sub: payload.sub!,
+      sub: payload.sub,
       email: typeof payload.email === "string" ? payload.email : null,
     };
   } catch (error) {
