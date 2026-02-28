@@ -107,6 +107,7 @@ struct ProjectRowView: View {
 struct StartProjectSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(NavigationCoordinator.self) private var navigationCoordinator
     @Query(
         filter: StartProjectSheet.stashPredicate,
         sort: \StitchPiece.createdAt,
@@ -171,6 +172,8 @@ struct StartProjectSheet: View {
         piece.status = .kitting
         piece.startedAt = Date()
         piece.updatedAt = Date()
+        let pieceId = piece.id
         dismiss()
+        navigationCoordinator.pendingProjectId = pieceId
     }
 }

@@ -4,6 +4,7 @@ import SwiftData
 struct CanvasDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(NavigationCoordinator.self) private var navigationCoordinator
 
     let pieceId: UUID
 
@@ -72,6 +73,8 @@ struct CanvasDetailView: View {
                                     piece.status = .kitting
                                     piece.startedAt = Date()
                                     piece.updatedAt = Date()
+                                    navigationCoordinator.pendingProjectId = piece.id
+                                    dismiss()
                                 } label: {
                                     Text("Start Project")
                                         .font(.typeStyle(.headline))
