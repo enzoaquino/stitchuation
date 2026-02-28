@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { AuthService, AuthError } from "./auth-service.js";
-import { registerSchema, loginSchema, refreshSchema } from "./schemas.js";
+import { registerSchema, loginSchema, refreshSchema, providerAuthSchema } from "./schemas.js";
 
 const authRoutes = new Hono();
 const authService = new AuthService();
@@ -72,6 +72,34 @@ authRoutes.post("/refresh", async (c) => {
     return c.json(result, 200);
   } catch (error) {
     if (error instanceof AuthError) {
+      return c.json({ error: error.message }, 401);
+    }
+    throw error;
+  }
+});
+
+authRoutes.post("/provider", async (c) => {
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  const parsed = providerAuthSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.flatten() }, 400);
+  }
+
+  try {
+    const result = await authService.providerAuth(parsed.data);
+    const status = result.isNewUser ? 201 : 200;
+    return c.json(result, status);
+  } catch (error) {
+    if (error instanceof AuthError) {
+      if (error.message.includes("Unsupported provider")) {
+        return c.json({ error: error.message }, 400);
+      }
       return c.json({ error: error.message }, 401);
     }
     throw error;

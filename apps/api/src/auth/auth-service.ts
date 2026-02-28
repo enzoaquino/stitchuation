@@ -3,7 +3,19 @@ import { eq } from "drizzle-orm";
 import { db } from "../db/connection.js";
 import { users } from "../db/schema.js";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "./jwt.js";
-import type { RegisterInput, LoginInput } from "./schemas.js";
+import { verifyAppleIdentityToken, AppleTokenError } from "./apple-token-verifier.js";
+import type { RegisterInput, LoginInput, ProviderAuthInput } from "./schemas.js";
+
+function requireEnv(name: string, fallback: string): string {
+  const value = process.env[name];
+  if (value) return value;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(`${name} must be set in production`);
+  }
+  return fallback;
+}
+
+const APPLE_BUNDLE_ID = requireEnv("APPLE_BUNDLE_ID", "com.enzoaquino.stitchuation");
 
 export class AuthError extends Error {
   constructor(message: string) {
@@ -87,6 +99,81 @@ export class AuthService {
       user: { id: user.id, email: user.email, displayName: user.displayName },
       accessToken,
       refreshToken,
+    };
+  }
+
+  async providerAuth(input: ProviderAuthInput) {
+    if (input.provider !== "apple") {
+      throw new AuthError(`Unsupported provider: ${input.provider}`);
+    }
+
+    let claims;
+    try {
+      claims = await verifyAppleIdentityToken(input.identityToken, APPLE_BUNDLE_ID);
+    } catch (error) {
+      if (error instanceof AppleTokenError) {
+        throw new AuthError(`Invalid Apple identity token: ${error.message}`);
+      }
+      throw error;
+    }
+
+    // Check for existing user with this Apple ID
+    const [existing] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        displayName: users.displayName,
+      })
+      .from(users)
+      .where(eq(users.providerUserId, claims.sub))
+      .limit(1);
+
+    if (existing) {
+      const tokenPayload = { userId: existing.id, email: existing.email };
+      const accessToken = signAccessToken(tokenPayload);
+      const refreshToken = signRefreshToken(tokenPayload);
+      return {
+        user: existing,
+        accessToken,
+        refreshToken,
+        isNewUser: false,
+      };
+    }
+
+    // Build display name from Apple's fullName (only sent on first sign-in)
+    let displayName: string | null = null;
+    if (input.fullName) {
+      const parts = [input.fullName.givenName, input.fullName.familyName].filter(Boolean);
+      if (parts.length > 0) {
+        displayName = parts.join(" ");
+      }
+    }
+
+    // Create new user
+    const email = claims.email ?? `${claims.sub}@privaterelay.appleid.com`;
+    const [user] = await db
+      .insert(users)
+      .values({
+        email,
+        displayName,
+        provider: "apple",
+        providerUserId: claims.sub,
+      })
+      .returning({
+        id: users.id,
+        email: users.email,
+        displayName: users.displayName,
+      });
+
+    const tokenPayload = { userId: user.id, email: user.email };
+    const accessToken = signAccessToken(tokenPayload);
+    const refreshToken = signRefreshToken(tokenPayload);
+
+    return {
+      user,
+      accessToken,
+      refreshToken,
+      isNewUser: true,
     };
   }
 }

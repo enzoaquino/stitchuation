@@ -15,6 +15,16 @@ export const refreshSchema = z.object({
   refreshToken: z.string().min(1),
 });
 
+export const providerAuthSchema = z.object({
+  provider: z.enum(["apple"]),
+  identityToken: z.string().min(1),
+  fullName: z.object({
+    givenName: z.string().optional(),
+    familyName: z.string().optional(),
+  }).optional(),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshInput = z.infer<typeof refreshSchema>;
+export type ProviderAuthInput = z.infer<typeof providerAuthSchema>;
