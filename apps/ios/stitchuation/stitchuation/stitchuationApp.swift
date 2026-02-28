@@ -6,7 +6,7 @@ import UIKit
 
 @main
 struct stitchuationApp: App {
-    #if DEBUG
+    #if targetEnvironment(simulator)
     private static let apiBaseURL = URL(string: "http://localhost:3000")!
     #else
     private static let apiBaseURL = URL(string: "https://api.dev.stitchuation.app")!
