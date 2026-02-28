@@ -2,10 +2,8 @@ name: Deploy API
 
 on:
   push:
-    branches: [main]
-    paths:
-      - 'apps/api/**'
-      - '.github/workflows/deploy.yml'
+    tags:
+      - 'api/dev/v*'
 
 env:
   RESOURCE_GROUP: rg-stitchuation-dev
@@ -60,14 +58,16 @@ jobs:
 
       - name: Build and push to ACR
         run: |
+          TAG=${GITHUB_REF#refs/tags/api/dev/}
           az acr login --name ${{ env.ACR_NAME }}
-          docker build -t ${{ env.ACR_NAME }}.azurecr.io/api:${{ github.sha }} -t ${{ env.ACR_NAME }}.azurecr.io/api:latest apps/api
-          docker push ${{ env.ACR_NAME }}.azurecr.io/api:${{ github.sha }}
+          docker build --platform linux/amd64 -t ${{ env.ACR_NAME }}.azurecr.io/api:${TAG} -t ${{ env.ACR_NAME }}.azurecr.io/api:latest apps/api
+          docker push ${{ env.ACR_NAME }}.azurecr.io/api:${TAG}
           docker push ${{ env.ACR_NAME }}.azurecr.io/api:latest
 
       - name: Deploy to Container App
-        uses: azure/container-apps-deploy-action@v1
-        with:
-          resourceGroup: ${{ env.RESOURCE_GROUP }}
-          containerAppName: ${{ env.CONTAINER_APP_NAME }}
-          imageToDeploy: ${{ env.ACR_NAME }}.azurecr.io/api:${{ github.sha }}
+        run: |
+          TAG=${GITHUB_REF#refs/tags/api/dev/}
+          az containerapp update \
+            --name ${{ env.CONTAINER_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.ACR_NAME }}.azurecr.io/api:${TAG}
