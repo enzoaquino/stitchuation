@@ -2,6 +2,9 @@ import SwiftUI
 
 @Observable
 final class NavigationCoordinator {
-    var pendingProjectId: UUID?
-    var journalPath = NavigationPath()
+    var presentedProjectId: PieceIdentifier?
+}
+
+struct PieceIdentifier: Identifiable {
+    let id: UUID
 }

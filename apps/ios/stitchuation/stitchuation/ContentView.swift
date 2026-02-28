@@ -17,7 +17,7 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            NavigationStack(path: $navigationCoordinator.journalPath) {
+            NavigationStack {
                 ProjectListView()
             }
             .tag(AppTab.journal)
@@ -53,13 +53,18 @@ struct ContentView: View {
         }
         .environment(navigationCoordinator)
         .tint(Color.terracotta)
-        .onChange(of: navigationCoordinator.pendingProjectId) { _, newValue in
-            if let pieceId = newValue {
-                selectedTab = .journal
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    navigationCoordinator.journalPath.append(pieceId)
-                    navigationCoordinator.pendingProjectId = nil
-                }
+        .fullScreenCover(item: $navigationCoordinator.presentedProjectId) { identifier in
+            NavigationStack {
+                ProjectDetailView(pieceId: identifier.id)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") {
+                                navigationCoordinator.presentedProjectId = nil
+                                selectedTab = .journal
+                            }
+                            .foregroundStyle(Color.terracotta)
+                        }
+                    }
             }
         }
         .task {

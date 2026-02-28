@@ -73,7 +73,7 @@ struct CanvasDetailView: View {
                                     piece.status = .kitting
                                     piece.startedAt = Date()
                                     piece.updatedAt = Date()
-                                    navigationCoordinator.pendingProjectId = piece.id
+                                    navigationCoordinator.presentedProjectId = PieceIdentifier(id: piece.id)
                                     dismiss()
                                 } label: {
                                     Text("Start Project")

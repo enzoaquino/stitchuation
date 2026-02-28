@@ -174,6 +174,6 @@ struct StartProjectSheet: View {
         piece.updatedAt = Date()
         let pieceId = piece.id
         dismiss()
-        navigationCoordinator.pendingProjectId = pieceId
+        navigationCoordinator.presentedProjectId = PieceIdentifier(id: pieceId)
     }
 }
