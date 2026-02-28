@@ -9,7 +9,7 @@ struct stitchuationApp: App {
     #if DEBUG
     private static let apiBaseURL = URL(string: "http://localhost:3000")!
     #else
-    private static let apiBaseURL = URL(string: "https://api.stitchuation.com")!
+    private static let apiBaseURL = URL(string: "https://api.dev.stitchuation.app")!
     #endif
 
     private let networkClient = NetworkClient(baseURL: apiBaseURL)
