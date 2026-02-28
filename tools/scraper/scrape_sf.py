@@ -1,8 +1,7 @@
-"""Scrape Nashville Needleworks thread collection to CSV."""
+"""Scrape Stitching Fox fiber collection to CSV."""
 
 import csv
 import json
-import re
 import time
 from datetime import date
 from urllib.error import HTTPError
@@ -10,27 +9,24 @@ from urllib.request import urlopen, Request
 
 DELAY_BETWEEN_PAGES = 2  # seconds between requests to avoid rate limiting
 
-
-def strip_html(text):
-    """Remove HTML tags from a string."""
-    if not text:
-        return ""
-    return re.sub(r"<[^>]+>", "", text)
+from scrape import strip_html
 
 
 CSV_COLUMNS = [
     "id", "title", "handle", "body_html", "vendor",
     "product_type", "tags", "published_at", "created_at",
-    "updated_at", "sku",
+    "updated_at", "variant_title", "sku", "price",
+    "compare_at_price", "available",
 ]
 
 
-def extract_product(product):
-    """Extract a flat dict of CSV fields from a Shopify product dict."""
+def extract_variants(product):
+    """Expand a Shopify product into a list of per-variant row dicts."""
     variants = product.get("variants", [])
-    sku = variants[0].get("sku", "") if variants else ""
+    if not variants:
+        return []
     tags = product.get("tags", [])
-    return {
+    base = {
         "id": product["id"],
         "title": product["title"],
         "handle": product["handle"],
@@ -41,11 +37,20 @@ def extract_product(product):
         "published_at": product.get("published_at", ""),
         "created_at": product.get("created_at", ""),
         "updated_at": product.get("updated_at", ""),
-        "sku": sku,
     }
+    rows = []
+    for v in variants:
+        row = dict(base)
+        row["variant_title"] = v.get("title", "")
+        row["sku"] = v.get("sku", "")
+        row["price"] = v.get("price", "")
+        row["compare_at_price"] = v.get("compare_at_price") or ""
+        row["available"] = v.get("available", False)
+        rows.append(row)
+    return rows
 
 
-BASE_URL = "https://www.nashvilleneedleworks.com/collections/thread/products.json"
+BASE_URL = "https://www.stitchingfox.com/collections/fiber/products.json"
 PAGE_SIZE = 250
 MAX_RETRIES = 3
 
@@ -87,30 +92,31 @@ def fetch_page(page_num):
 
 
 def scrape_all(output_path=None):
-    """Fetch all products and write to CSV. Returns total product count."""
+    """Fetch all products and write variant rows to CSV. Returns total row count."""
     if output_path is None:
-        output_path = f"threads_{date.today().isoformat()}.csv"
+        output_path = f"sf_threads_{date.today().isoformat()}.csv"
 
-    all_products = []
+    all_rows = []
     page = 1
     while True:
         print(f"Fetching page {page}...")
         products = fetch_page(page)
         if not products:
             break
-        all_products.extend(products)
-        print(f"  Got {len(products)} products (total: {len(all_products)})")
+        for product in products:
+            all_rows.extend(extract_variants(product))
+        print(f"  Got {len(products)} products (total rows: {len(all_rows)})")
         page += 1
         time.sleep(DELAY_BETWEEN_PAGES)
 
     with open(output_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
         writer.writeheader()
-        for product in all_products:
-            writer.writerow(extract_product(product))
+        for row in all_rows:
+            writer.writerow(row)
 
-    print(f"Wrote {len(all_products)} products to {output_path}")
-    return len(all_products)
+    print(f"Wrote {len(all_rows)} rows to {output_path}")
+    return len(all_rows)
 
 
 if __name__ == "__main__":

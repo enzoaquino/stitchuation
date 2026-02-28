@@ -1,6 +1,7 @@
 # Output files
 threads_*.csv
 kc_threads_*.csv
+sf_threads_*.csv
 
 # Python
 __pycache__/

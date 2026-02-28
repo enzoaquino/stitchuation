@@ -4,7 +4,10 @@ import csv
 import json
 import time
 from datetime import date
+from urllib.error import HTTPError
 from urllib.request import urlopen, Request
+
+DELAY_BETWEEN_PAGES = 2  # seconds between requests to avoid rate limiting
 
 from scrape import strip_html
 
@@ -53,18 +56,35 @@ MAX_RETRIES = 3
 
 
 def fetch_page(page_num):
-    """Fetch a single page of products. Retries on failure with backoff."""
+    """Fetch a single page of products. Retries on failure with backoff.
+    429 (rate limit) responses are retried indefinitely using Retry-After."""
     url = f"{BASE_URL}?page={page_num}&limit={PAGE_SIZE}"
     req = Request(url, headers={"User-Agent": "NeedlepointScraper/1.0"})
-    for attempt in range(MAX_RETRIES):
+    attempts = 0
+    while True:
         try:
             with urlopen(req) as resp:
                 data = json.loads(resp.read())
             return data.get("products", [])
+        except HTTPError as e:
+            if e.code == 429:
+                wait = int(e.headers.get("Retry-After", 30))
+                print(f"  Rate limited on page {page_num}, waiting {wait}s...")
+                time.sleep(wait)
+                continue
+            attempts += 1
+            if attempts < MAX_RETRIES:
+                wait = 2 ** attempts
+                print(f"  Retry {attempts}/{MAX_RETRIES} after {wait}s: {e}")
+                time.sleep(wait)
+            else:
+                print(f"  FAILED page {page_num} after {MAX_RETRIES} attempts: {e}")
+                return []
         except Exception as e:
-            if attempt < MAX_RETRIES - 1:
-                wait = 2 ** attempt
-                print(f"  Retry {attempt + 1}/{MAX_RETRIES - 1} after {wait}s: {e}")
+            attempts += 1
+            if attempts < MAX_RETRIES:
+                wait = 2 ** attempts
+                print(f"  Retry {attempts}/{MAX_RETRIES} after {wait}s: {e}")
                 time.sleep(wait)
             else:
                 print(f"  FAILED page {page_num} after {MAX_RETRIES} attempts: {e}")
@@ -87,6 +107,7 @@ def scrape_all(output_path=None):
             all_rows.extend(extract_variants(product))
         print(f"  Got {len(products)} products (total rows: {len(all_rows)})")
         page += 1
+        time.sleep(DELAY_BETWEEN_PAGES)
 
     with open(output_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
