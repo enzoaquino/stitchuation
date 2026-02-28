@@ -36,8 +36,10 @@ struct LoginView: View {
                 VStack(spacing: Spacing.xl) {
                     SignInWithAppleButton(.signIn) { request in
                         request.requestedScopes = [.email, .fullName]
-                    } onCompletion: { _ in
-                        // TODO: Wire up Apple sign-in with backend
+                    } onCompletion: { result in
+                        Task {
+                            await authViewModel.handleAppleSignIn(result: result)
+                        }
                     }
                     .signInWithAppleButtonStyle(.whiteOutline)
                     .frame(height: 50)
@@ -117,6 +119,41 @@ struct LoginView: View {
             withAnimation(Motion.gentle.delay(Motion.staggerDelay(index: 3))) {
                 showForm = true
             }
+        }
+        .sheet(isPresented: Binding(
+            get: { authViewModel.needsDisplayName },
+            set: { authViewModel.needsDisplayName = $0 }
+        )) {
+            VStack(spacing: Spacing.xl) {
+                Text("What should we call you?")
+                    .font(.typeStyle(.title2))
+                    .foregroundStyle(Color.espresso)
+
+                TextField("Display Name", text: $authViewModel.displayName)
+                    .textFieldStyle(.plain)
+                    .font(.typeStyle(.body))
+                    .padding(Spacing.md)
+                    .background(Color.parchment)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+
+                Button {
+                    Task { await authViewModel.updateDisplayName() }
+                } label: {
+                    Text("Continue")
+                        .font(.typeStyle(.headline))
+                        .foregroundStyle(Color.cream)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Spacing.md)
+                        .background(Color.terracotta)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                        .warmShadow(.elevated)
+                }
+                .disabled(authViewModel.displayName.isEmpty || authViewModel.isLoading)
+            }
+            .padding(Spacing.xl)
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+            .interactiveDismissDisabled()
         }
     }
 }
