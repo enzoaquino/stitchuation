@@ -58,7 +58,7 @@ module containerApps 'modules/container-apps.bicep' = {
     containerImage: containerImage
     acrLoginServer: containerRegistry.outputs.loginServer
     acrUsername: containerRegistry.outputs.name
-    acrPassword: listCredentials(resourceId('Microsoft.ContainerRegistry/registries', containerRegistry.outputs.name), '2023-07-01').passwords[0].value
+    acrPassword: containerRegistry.outputs.adminPassword
     databaseUrl: postgresql.outputs.connectionString
     jwtSecret: jwtSecret
     jwtRefreshSecret: jwtRefreshSecret
