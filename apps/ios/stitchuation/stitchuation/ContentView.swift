@@ -66,6 +66,7 @@ struct ContentView: View {
                         }
                     }
             }
+            .environment(navigationCoordinator)
         }
         .onChange(of: navigationCoordinator.switchToTab) { _, newValue in
             if let tab = newValue {

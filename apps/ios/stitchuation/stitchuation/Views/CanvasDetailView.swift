@@ -74,7 +74,6 @@ struct CanvasDetailView: View {
                                     piece.startedAt = Date()
                                     piece.updatedAt = Date()
                                     navigationCoordinator.presentedProjectId = PieceIdentifier(id: piece.id)
-                                    dismiss()
                                 } label: {
                                     Text("Start Project")
                                         .font(.typeStyle(.headline))
