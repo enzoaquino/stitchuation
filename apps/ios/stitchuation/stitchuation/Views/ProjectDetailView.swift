@@ -89,14 +89,14 @@ struct ProjectDetailView: View {
                                 .font(.typeStyle(.title2))
                                 .foregroundStyle(Color.espresso)
 
-                            if sortedEntries.isEmpty {
+                            if cachedEntries.isEmpty {
                                 EmptyStateView(
                                     icon: "book",
                                     title: "No entries yet",
                                     message: "Tap + to add your first journal entry"
                                 )
                             } else {
-                                ForEach(sortedEntries, id: \.id) { entry in
+                                ForEach(cachedEntries, id: \.id) { entry in
                                     JournalEntryCard(entry: entry)
                                 }
                             }
@@ -187,11 +187,13 @@ struct ProjectDetailView: View {
                     piece.completedAt = nil
                     piece.updatedAt = Date()
                 }
-                // Dismiss first (handles both fullScreenCover and nav push),
-                // then switch to stash tab
-                dismiss()
-                navigationCoordinator.presentedProjectId = nil
-                navigationCoordinator.switchToTab = .stash
+                // Let the confirmation dialog dismiss first, then navigate
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(300))
+                    dismiss()
+                    navigationCoordinator.presentedProjectId = nil
+                    navigationCoordinator.switchToTab = .stash
+                }
             }
         } message: {
             Text("This will move the piece back to your stash. Journal entries will be preserved.")
@@ -291,12 +293,7 @@ struct ProjectDetailView: View {
         .presentationDetents([.medium])
     }
 
-    private var sortedEntries: [JournalEntry] {
-        guard let piece else { return [] }
-        return piece.entries
-            .filter { $0.deletedAt == nil }
-            .sorted { $0.createdAt > $1.createdAt }
-    }
+    @State private var cachedEntries: [JournalEntry] = []
 
     private func loadPiece() {
         let id = pieceId
@@ -304,6 +301,9 @@ struct ProjectDetailView: View {
             predicate: #Predicate { $0.id == id && $0.deletedAt == nil }
         )
         piece = try? modelContext.fetch(descriptor).first
+        cachedEntries = (piece?.entries ?? [])
+            .filter { $0.deletedAt == nil }
+            .sorted { $0.createdAt > $1.createdAt }
     }
 
     private struct ParsedMaterialsWrapper: Identifiable {
@@ -357,12 +357,7 @@ struct JournalEntryCard: View {
 
     @State private var selectedImageIndex = 0
     @State private var showImageViewer = false
-
-    private var sortedImages: [JournalImage] {
-        entry.images
-            .filter { $0.deletedAt == nil && !$0.imageKey.isEmpty }
-            .sorted { $0.sortOrder < $1.sortOrder }
-    }
+    @State private var images: [JournalImage] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -376,11 +371,11 @@ struct JournalEntryCard: View {
                     .foregroundStyle(Color.espresso)
             }
 
-            if !sortedImages.isEmpty {
+            if !images.isEmpty {
                 if entry.notes != nil && !entry.notes!.isEmpty {
                     Divider().background(Color.slate.opacity(0.2))
                 }
-                JournalImageGrid(images: sortedImages) { index in
+                JournalImageGrid(images: images) { index in
                     selectedImageIndex = index
                     showImageViewer = true
                 }
@@ -392,7 +387,12 @@ struct JournalEntryCard: View {
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
         .warmShadow(.subtle)
         .fullScreenCover(isPresented: $showImageViewer) {
-            ImageViewerView(images: sortedImages, initialIndex: selectedImageIndex)
+            ImageViewerView(images: images, initialIndex: selectedImageIndex)
+        }
+        .task {
+            images = entry.images
+                .filter { $0.deletedAt == nil && !$0.imageKey.isEmpty }
+                .sorted { $0.sortOrder < $1.sortOrder }
         }
     }
 }

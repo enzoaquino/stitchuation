@@ -4,14 +4,8 @@ struct JournalImageGrid: View {
     let images: [JournalImage]
     let onTap: (Int) -> Void
 
-    private var sortedImages: [JournalImage] {
-        images
-            .filter { $0.deletedAt == nil && !$0.imageKey.isEmpty }
-            .sorted { $0.sortOrder < $1.sortOrder }
-    }
-
     var body: some View {
-        let count = sortedImages.count
+        let count = images.count
         if count == 0 { EmptyView() }
         else if count == 1 { singleLayout }
         else if count == 2 { doubleLayout }
@@ -71,7 +65,7 @@ struct JournalImageGrid: View {
 
     @ViewBuilder
     private func gridCell(index: Int) -> some View {
-        let image = sortedImages[index]
+        let image = images[index]
         Button {
             onTap(index)
         } label: {
