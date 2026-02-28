@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { AuthService, AuthError } from "./auth-service.js";
-import { registerSchema, loginSchema } from "./schemas.js";
+import { registerSchema, loginSchema, refreshSchema } from "./schemas.js";
 
 const authRoutes = new Hono();
 const authService = new AuthService();
@@ -45,6 +45,30 @@ authRoutes.post("/login", async (c) => {
 
   try {
     const result = await authService.login(parsed.data);
+    return c.json(result, 200);
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return c.json({ error: error.message }, 401);
+    }
+    throw error;
+  }
+});
+
+authRoutes.post("/refresh", async (c) => {
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  const parsed = refreshSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.flatten() }, 400);
+  }
+
+  try {
+    const result = await authService.refresh(parsed.data.refreshToken);
     return c.json(result, 200);
   } catch (error) {
     if (error instanceof AuthError) {

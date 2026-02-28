@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "../db/connection.js";
 import { users } from "../db/schema.js";
-import { signAccessToken, signRefreshToken } from "./jwt.js";
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from "./jwt.js";
 import type { RegisterInput, LoginInput } from "./schemas.js";
 
 export class AuthError extends Error {
@@ -35,6 +35,32 @@ export class AuthService {
     const refreshToken = signRefreshToken(tokenPayload);
 
     return { user, accessToken, refreshToken };
+  }
+
+  async refresh(refreshToken: string) {
+    let payload;
+    try {
+      payload = verifyRefreshToken(refreshToken);
+    } catch {
+      throw new AuthError("Invalid refresh token");
+    }
+
+    // Verify user still exists
+    const [user] = await db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(eq(users.id, payload.userId))
+      .limit(1);
+
+    if (!user) {
+      throw new AuthError("User not found");
+    }
+
+    const tokenPayload = { userId: user.id, email: user.email };
+    const accessToken = signAccessToken(tokenPayload);
+    const newRefreshToken = signRefreshToken(tokenPayload);
+
+    return { accessToken, refreshToken: newRefreshToken };
   }
 
   async login(input: LoginInput) {
