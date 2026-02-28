@@ -32,5 +32,6 @@ resource container 'Microsoft.Storage/storageAccounts/blobServices/containers@20
   name: containerName
 }
 
+@secure()
 output connectionString string = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
 output containerName string = containerName
