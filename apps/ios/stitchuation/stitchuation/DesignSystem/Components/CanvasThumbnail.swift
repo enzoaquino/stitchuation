@@ -63,12 +63,14 @@ struct CanvasThumbnail: View {
     }
 
     private func loadImage() async {
-        loadedImage = nil
-        guard let imageKey, !imageKey.isEmpty else { return }
-        isLoading = true
-        defer { isLoading = false }
-
+        guard let imageKey, !imageKey.isEmpty else {
+            loadedImage = nil
+            return
+        }
+        // Keep showing old image while loading new one (no flash)
+        isLoading = loadedImage == nil
         let image = await ImageCache.shared.image(for: imageKey, networkClient: networkClient)
         loadedImage = image
+        isLoading = false
     }
 }

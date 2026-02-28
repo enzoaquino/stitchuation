@@ -97,11 +97,10 @@ struct ProjectDetailView: View {
                                 )
                             } else {
                                 ForEach(cachedEntries, id: \.id) { entry in
-                                    JournalEntryCard(entry: entry)
+                                    JournalEntryCard(entry: entry, refreshID: journalRefreshID)
                                 }
                             }
                         }
-                        .id(journalRefreshID)
                         .padding(.horizontal, Spacing.lg)
                         .padding(.bottom, Spacing.xxxl)
                     }
@@ -354,6 +353,7 @@ struct ProjectDetailView: View {
 
 struct JournalEntryCard: View {
     let entry: JournalEntry
+    var refreshID: UUID = UUID()
 
     @State private var selectedImageIndex = 0
     @State private var showImageViewer = false
@@ -389,7 +389,7 @@ struct JournalEntryCard: View {
         .fullScreenCover(isPresented: $showImageViewer) {
             ImageViewerView(images: images, initialIndex: selectedImageIndex)
         }
-        .task {
+        .task(id: refreshID) {
             images = entry.images
                 .filter { $0.deletedAt == nil && !$0.imageKey.isEmpty }
                 .sorted { $0.sortOrder < $1.sortOrder }
