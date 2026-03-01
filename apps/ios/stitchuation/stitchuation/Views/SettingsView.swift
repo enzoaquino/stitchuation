@@ -1,9 +1,12 @@
 import SwiftUI
 import SwiftData
+import StoreKit
 
 struct SettingsView: View {
     @Bindable var authViewModel: AuthViewModel
     @Bindable var profileViewModel: ProfileViewModel
+
+    @Environment(SubscriptionManager.self) private var subscriptionManager
 
     @Query(filter: #Predicate<StitchPiece> { $0.deletedAt == nil })
     private var allPieces: [StitchPiece]
@@ -12,6 +15,7 @@ struct SettingsView: View {
     private var allThreads: [NeedleThread]
 
     @State private var showEditProfile = false
+    @State private var showManageSubscription = false
 
     static let experienceLevels = ["Beginner", "Intermediate", "Advanced", "Expert"]
 
@@ -66,6 +70,7 @@ struct SettingsView: View {
             VStack(spacing: Spacing.xl) {
                 profileCard
                 statsSection
+                subscriptionSection
                 accountSection
             }
             .padding(.vertical, Spacing.lg)
@@ -162,6 +167,56 @@ struct SettingsView: View {
                 }
             }
             .padding(.horizontal, Spacing.lg)
+        }
+    }
+
+    // MARK: - Subscription Section
+
+    private var subscriptionSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text("Subscription")
+                .font(.playfair(15, weight: .semibold))
+                .foregroundStyle(Color.walnut)
+                .padding(.horizontal, Spacing.lg)
+
+            Button {
+                showManageSubscription = true
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
+                        Text(subscriptionPlanName)
+                            .font(.typeStyle(.headline))
+                            .foregroundStyle(Color.espresso)
+                        if let date = subscriptionManager.expirationDate {
+                            Text("Renews \(date.formatted(.dateTime.month(.abbreviated).day().year()))")
+                                .font(.typeStyle(.footnote))
+                                .foregroundStyle(Color.clay)
+                        }
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.clay)
+                }
+                .padding(Spacing.lg)
+                .background(Color.cream)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                .warmShadow(.subtle)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, Spacing.lg)
+        }
+        .manageSubscriptionsSheet(isPresented: $showManageSubscription)
+    }
+
+    private var subscriptionPlanName: String {
+        switch subscriptionManager.currentProductId {
+        case SubscriptionManager.monthlyProductId:
+            return "Monthly Plan"
+        case SubscriptionManager.yearlyProductId:
+            return "Yearly Plan"
+        default:
+            return "Premium"
         }
     }
 
