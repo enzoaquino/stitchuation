@@ -87,10 +87,77 @@ struct ShoppingListView: View {
         .scrollContentBackground(.hidden)
     }
 
-    // MARK: - By Material (placeholder — implemented in Task 3)
+    // MARK: - By Material
 
     private var materialGroupedList: some View {
-        EmptyView()
+        let groups = viewModel.groupedByMaterial(from: items)
+        return List {
+            ForEach(groups) { group in
+                DisclosureGroup {
+                    ForEach(group.items) { item in
+                        HStack(spacing: Spacing.md) {
+                            Button {
+                                withAnimation(Motion.gentle) {
+                                    item.material.acquired = true
+                                    item.material.updatedAt = Date()
+                                }
+                            } label: {
+                                Image(systemName: "circle")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(Color.slate)
+                            }
+                            .buttonStyle(.plain)
+
+                            Text(item.piece.designName)
+                                .font(.typeStyle(.subheadline))
+                                .foregroundStyle(Color.walnut)
+
+                            Spacer()
+
+                            if item.material.quantity > 0 {
+                                Text("qty \(item.material.quantity)")
+                                    .font(.typeStyle(.data))
+                                    .foregroundStyle(Color.clay)
+                            }
+                        }
+                        .padding(.vertical, Spacing.xs)
+                        .listRowBackground(Color.cream)
+                    }
+                } label: {
+                    materialGroupLabel(group)
+                }
+                .listRowBackground(Color.cream)
+            }
+        }
+        .scrollContentBackground(.hidden)
+    }
+
+    private func materialGroupLabel(_ group: MaterialGroup) -> some View {
+        HStack(spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                HStack(spacing: Spacing.xs) {
+                    if let brand = group.brand {
+                        Text(brand)
+                            .font(.typeStyle(.subheadline))
+                            .foregroundStyle(Color.clay)
+                    }
+                    Text(group.displayName)
+                        .font(.typeStyle(.headline))
+                        .foregroundStyle(Color.espresso)
+                }
+                let projectCount = group.items.count
+                let suffix = projectCount == 1 ? "project" : "projects"
+                Text("\(projectCount) \(suffix) \u{00B7} \(group.materialType.displayName)")
+                    .font(.typeStyle(.footnote))
+                    .foregroundStyle(Color.clay)
+            }
+
+            Spacer()
+
+            Text("qty \(group.totalQuantity)")
+                .font(.typeStyle(.data))
+                .foregroundStyle(Color.walnut)
+        }
     }
 }
 
