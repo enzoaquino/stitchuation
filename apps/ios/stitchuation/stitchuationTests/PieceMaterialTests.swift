@@ -42,7 +42,7 @@ struct PieceMaterialTests {
         let material = PieceMaterial(piece: piece, name: "Dark Green")
 
         #expect(material.name == "Dark Green")
-        #expect(material.materialType == .other)
+        #expect(material.materialType == .thread)
         #expect(material.quantity == 1)
         #expect(material.acquired == false)
         #expect(material.sortOrder == 0)

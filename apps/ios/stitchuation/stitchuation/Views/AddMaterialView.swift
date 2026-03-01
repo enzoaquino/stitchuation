@@ -8,7 +8,7 @@ struct AddMaterialView: View {
     let piece: StitchPiece
     var editing: PieceMaterial? = nil
 
-    @State private var materialType: MaterialType = .other
+    @State private var materialType: MaterialType = .thread
     @State private var brand = ""
     @State private var name = ""
     @State private var code = ""

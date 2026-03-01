@@ -22,7 +22,7 @@ final class PieceMaterial: Identifiable {
     init(
         id: UUID = UUID(),
         piece: StitchPiece,
-        materialType: MaterialType = .other,
+        materialType: MaterialType = .thread,
         brand: String? = nil,
         name: String,
         code: String? = nil,
