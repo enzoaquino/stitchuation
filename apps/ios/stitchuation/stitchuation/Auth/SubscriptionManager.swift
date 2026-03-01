@@ -13,6 +13,11 @@ final class SubscriptionManager {
     static let allProductIds: Set<String> = [monthlyProductId, yearlyProductId]
     static let savingsBadge = "2 months free"
 
+    /// TestFlight builds bypass the paywall entirely
+    static var isTestFlight: Bool {
+        Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+    }
+
     // MARK: - State
 
     var isSubscribed = false
@@ -61,6 +66,11 @@ final class SubscriptionManager {
     // MARK: - Check Entitlement
 
     func checkSubscriptionStatus() async {
+        if Self.isTestFlight {
+            isSubscribed = true
+            return
+        }
+
         for await result in Transaction.currentEntitlements {
             if case .verified(let transaction) = result,
                Self.allProductIds.contains(transaction.productID) {
