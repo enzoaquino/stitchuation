@@ -35,7 +35,6 @@ struct ImageViewerView: View {
                     if images.count > 1 {
                         Text("\(currentIndex + 1) of \(images.count)")
                             .font(.typeStyle(.subheadline))
-                            .fontWeight(.medium)
                             .foregroundStyle(.white.opacity(0.7))
                     }
                     Spacer()
@@ -61,7 +60,7 @@ struct ImageViewerView: View {
                             Circle()
                                 .fill(index == currentIndex ? Color.terracotta : .white.opacity(0.35))
                                 .frame(width: 7, height: 7)
-                                .animation(.easeInOut(duration: 0.2), value: currentIndex)
+                                .animation(Motion.quick, value: currentIndex)
                         }
                     }
                     .padding(.bottom, Spacing.xl)

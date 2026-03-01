@@ -111,7 +111,7 @@ struct MaterialsSection: View {
                 RoundedRectangle(cornerRadius: CornerRadius.subtle)
                     .fill(Color.sage)
                     .frame(width: geo.size.width * progress, height: 6)
-                    .animation(.easeInOut(duration: 0.3), value: progress)
+                    .animation(Motion.gentle, value: progress)
             }
         }
         .frame(height: 6)
