@@ -8,10 +8,10 @@ struct CameraViewTests {
     func coordinatorCreation() {
         var capturedImage: UIImage?
         var capturedData: Data?
-        let view = CameraView { image, data in
+        let view = CameraView(onCapture: { image, data in
             capturedImage = image
             capturedData = data
-        }
+        }, onDismiss: {})
         let coordinator = view.makeCoordinator()
         #expect(coordinator.parent != nil)
     }
