@@ -3,6 +3,7 @@ import SwiftUI
 enum AppTab: Hashable {
     case journal
     case stash
+    case shopping
     case threads
     case settings
 }
@@ -31,6 +32,14 @@ struct ContentView: View {
             .tag(AppTab.stash)
             .tabItem {
                 Label("Stash", systemImage: "square.stack.3d.up")
+            }
+
+            NavigationStack {
+                ShoppingListView()
+            }
+            .tag(AppTab.shopping)
+            .tabItem {
+                Label("Shopping", systemImage: "cart")
             }
 
             NavigationStack {
