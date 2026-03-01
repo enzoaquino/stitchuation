@@ -202,6 +202,7 @@ struct AddCanvasView: View {
             .fullScreenCover(isPresented: $showCamera) {
                 CameraView { image, data in
                     selectedImageData = data
+                } onDismiss: {
                     showCamera = false
                 }
                 .ignoresSafeArea()

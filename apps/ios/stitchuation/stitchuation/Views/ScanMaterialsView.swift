@@ -95,10 +95,11 @@ struct ScanMaterialsView: View {
             }
             .fullScreenCover(isPresented: $showCamera) {
                 CameraView { image, _ in
-                    showCamera = false
                     Task {
                         await processImage(image)
                     }
+                } onDismiss: {
+                    showCamera = false
                 }
                 .ignoresSafeArea()
             }

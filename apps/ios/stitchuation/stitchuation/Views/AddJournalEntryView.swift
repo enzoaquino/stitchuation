@@ -129,6 +129,7 @@ struct AddJournalEntryView: View {
             .fullScreenCover(isPresented: $showCamera) {
                 CameraView { image, data in
                     selectedImages.append(SelectedImage(image: image, data: data))
+                } onDismiss: {
                     showCamera = false
                 }
                 .ignoresSafeArea()

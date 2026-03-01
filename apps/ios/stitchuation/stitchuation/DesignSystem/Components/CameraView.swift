@@ -3,6 +3,7 @@ import UIKit
 
 struct CameraView: UIViewControllerRepresentable {
     let onCapture: (UIImage, Data) -> Void
+    let onDismiss: () -> Void
 
     static var isCameraAvailable: Bool {
         UIImagePickerController.isSourceTypeAvailable(.camera)
@@ -33,11 +34,11 @@ struct CameraView: UIViewControllerRepresentable {
                let data = image.jpegData(compressionQuality: 0.8) {
                 parent?.onCapture(image, data)
             }
-            picker.dismiss(animated: true)
+            parent?.onDismiss()
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            picker.dismiss(animated: true)
+            parent?.onDismiss()
         }
     }
 }
