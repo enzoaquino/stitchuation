@@ -16,6 +16,7 @@ struct stitchuationApp: App {
     @State private var authViewModel: AuthViewModel?
     @State private var syncEngine: SyncEngine?
     @State private var uploadQueue: UploadQueue?
+    @State private var subscriptionManager = SubscriptionManager()
     private let modelContainer: ModelContainer
 
     init() {
@@ -68,6 +69,8 @@ struct stitchuationApp: App {
 
                     // Set authViewModel LAST so syncEngine is ready when ContentView appears
                     authViewModel = auth
+
+                    await subscriptionManager.checkSubscriptionStatus()
                 }
                 #if canImport(UIKit)
                 .onReceive(NotificationCenter.default.publisher(
@@ -75,6 +78,7 @@ struct stitchuationApp: App {
                 )) { _ in
                     guard let syncEngine, authViewModel?.isAuthenticated == true else { return }
                     Task { try? await syncEngine.sync() }
+                    Task { await subscriptionManager.checkSubscriptionStatus() }
                 }
                 .onReceive(NotificationCenter.default.publisher(
                     for: UIApplication.didEnterBackgroundNotification
@@ -92,11 +96,17 @@ struct stitchuationApp: App {
     private var contentView: some View {
         if let authViewModel {
             if authViewModel.isAuthenticated {
-                ContentView(networkClient: networkClient, authViewModel: authViewModel)
-                    .task {
-                        guard let syncEngine else { return }
-                        try? await syncEngine.sync()
-                    }
+                if subscriptionManager.isSubscribed {
+                    ContentView(networkClient: networkClient, authViewModel: authViewModel)
+                        .environment(subscriptionManager)
+                        .task {
+                            guard let syncEngine else { return }
+                            try? await syncEngine.sync()
+                        }
+                } else {
+                    PaywallView()
+                        .environment(subscriptionManager)
+                }
             } else {
                 LoginView(networkClient: networkClient, authViewModel: authViewModel)
             }
