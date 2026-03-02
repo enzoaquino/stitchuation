@@ -88,11 +88,18 @@ struct ScanMaterialsView: View {
                         .padding(.horizontal, Spacing.xxxl)
 
                         if let errorMessage {
-                            Text(errorMessage)
-                                .font(.typeStyle(.footnote))
-                                .foregroundStyle(Color.dustyRose)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, Spacing.lg)
+                            HStack(spacing: Spacing.sm) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                Text(errorMessage)
+                            }
+                            .font(.typeStyle(.subheadline))
+                            .foregroundStyle(Color.dustyRose)
+                            .multilineTextAlignment(.center)
+                            .padding(Spacing.md)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.dustyRose.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
+                            .padding(.horizontal, Spacing.xxxl)
                         }
                     }
                 }
@@ -132,6 +139,9 @@ struct ScanMaterialsView: View {
     }
 
     private func processPhotoItem(_ item: PhotosPickerItem) async {
+        // Reset so the same photo can be re-selected after an error
+        selectedPhoto = nil
+
         guard let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data) else {
             errorMessage = "Could not load image"
