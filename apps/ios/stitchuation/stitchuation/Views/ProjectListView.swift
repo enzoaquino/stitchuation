@@ -115,6 +115,8 @@ struct StartProjectSheet: View {
     )
     private var stashPieces: [StitchPiece]
 
+    @State private var showAddCanvas = false
+
     private static let stashPredicate = #Predicate<StitchPiece> {
         $0.deletedAt == nil && $0.statusRaw == "stash"
     }
@@ -124,34 +126,77 @@ struct StartProjectSheet: View {
             ZStack {
                 Color.linen.ignoresSafeArea()
                 if stashPieces.isEmpty {
-                    EmptyStateView(
-                        icon: "square.stack.3d.up.slash",
-                        title: "No available canvases",
-                        message: "All canvases are already projects. Add a new canvas first."
-                    )
+                    VStack(spacing: Spacing.xl) {
+                        EmptyStateView(
+                            icon: "square.stack.3d.up.slash",
+                            title: "No canvases in your stash",
+                            message: "Create a new canvas to get started"
+                        )
+
+                        Button {
+                            showAddCanvas = true
+                        } label: {
+                            Label("Add New Canvas", systemImage: "plus")
+                                .font(.typeStyle(.headline))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, Spacing.md)
+                                .background(Color.terracotta)
+                                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                                .warmShadow(.elevated)
+                        }
+                        .padding(.horizontal, Spacing.xxxl)
+                    }
                 } else {
                     List {
-                        ForEach(stashPieces, id: \.id) { piece in
+                        Section {
                             Button {
-                                startProject(piece)
+                                showAddCanvas = true
                             } label: {
                                 HStack(spacing: Spacing.md) {
-                                    CanvasThumbnail(imageKey: piece.imageKey, size: .fixed(48))
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 24))
+                                        .foregroundStyle(Color.terracotta)
 
-                                    VStack(alignment: .leading, spacing: Spacing.xxs) {
-                                        Text(piece.designName)
-                                            .font(.typeStyle(.headline))
-                                            .foregroundStyle(Color.espresso)
-                                        Text(piece.designer)
-                                            .font(.typeStyle(.subheadline))
-                                            .foregroundStyle(Color.walnut)
-                                    }
+                                    Text("Add New Canvas")
+                                        .font(.typeStyle(.headline))
+                                        .foregroundStyle(Color.terracotta)
 
                                     Spacer()
                                 }
                                 .padding(.vertical, Spacing.sm)
                             }
                             .listRowBackground(Color.cream)
+                        }
+
+                        Section {
+                            ForEach(stashPieces, id: \.id) { piece in
+                                Button {
+                                    startProject(piece)
+                                } label: {
+                                    HStack(spacing: Spacing.md) {
+                                        CanvasThumbnail(imageKey: piece.imageKey, size: .fixed(48))
+
+                                        VStack(alignment: .leading, spacing: Spacing.xxs) {
+                                            Text(piece.designName)
+                                                .font(.typeStyle(.headline))
+                                                .foregroundStyle(Color.espresso)
+                                            Text(piece.designer)
+                                                .font(.typeStyle(.subheadline))
+                                                .foregroundStyle(Color.walnut)
+                                        }
+
+                                        Spacer()
+                                    }
+                                    .padding(.vertical, Spacing.sm)
+                                }
+                                .listRowBackground(Color.cream)
+                            }
+                        } header: {
+                            Text("From Stash")
+                                .font(.playfair(15, weight: .semibold))
+                                .foregroundStyle(Color.walnut)
+                                .textCase(nil)
                         }
                     }
                     .scrollContentBackground(.hidden)
@@ -164,6 +209,13 @@ struct StartProjectSheet: View {
                     Button("Cancel") { dismiss() }
                         .foregroundStyle(Color.terracotta)
                 }
+            }
+            .sheet(isPresented: $showAddCanvas) {
+                AddCanvasView(onProjectStarted: { piece in
+                    let pieceId = piece.id
+                    dismiss()
+                    navigationCoordinator.presentedProjectId = PieceIdentifier(id: pieceId)
+                })
             }
         }
     }
