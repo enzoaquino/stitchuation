@@ -90,15 +90,11 @@ struct AddCanvasView: View {
                             .foregroundStyle(Color.walnut)
 
                         VStack(spacing: 0) {
-                            TextField("Designer (e.g. Melissa Shirley)", text: $designer)
-                                .font(.typeStyle(.body))
-                                .padding(.vertical, Spacing.md)
+                            ValidatedTextField("Designer (e.g. Melissa Shirley)", text: $designer)
 
                             Divider().background(Color.parchment)
 
-                            TextField("Design Name", text: $designName)
-                                .font(.typeStyle(.body))
-                                .padding(.vertical, Spacing.md)
+                            ValidatedTextField("Design Name", text: $designName)
                         }
                     }
                     .padding(Spacing.lg)
