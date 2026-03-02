@@ -27,6 +27,18 @@ If the image does not appear to contain a stitch guide or materials list, return
 const USER_PROMPT =
   "Extract all materials from this stitch guide image. Return JSON only.";
 
+function extractJson(text: string): string {
+  // Try to extract JSON from markdown code fences
+  const fenceMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+  if (fenceMatch) return fenceMatch[1].trim();
+
+  // Try to find a JSON object in the text
+  const braceMatch = text.match(/\{[\s\S]*\}/);
+  if (braceMatch) return braceMatch[0];
+
+  return text;
+}
+
 export class StitchGuideService {
   private client: Anthropic;
 
@@ -71,10 +83,12 @@ export class StitchGuideService {
       throw new Error("No text response from Claude");
     }
 
+    const jsonText = extractJson(textBlock.text);
     let parsed: unknown;
     try {
-      parsed = JSON.parse(textBlock.text);
+      parsed = JSON.parse(jsonText);
     } catch {
+      console.error("Claude response was not valid JSON:", textBlock.text);
       throw new Error("Claude returned invalid JSON");
     }
 

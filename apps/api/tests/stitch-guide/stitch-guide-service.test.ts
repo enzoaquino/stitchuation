@@ -82,6 +82,34 @@ describe("StitchGuideService", () => {
     expect(result).toEqual([]);
   });
 
+  it("extracts JSON from markdown code fences", async () => {
+    const materials = [
+      { materialType: "thread", brand: "DMC", name: "Black", code: "310", quantity: 1, unit: "Skeins" },
+    ];
+    const wrapped = "Here are the materials:\n```json\n" + JSON.stringify({ materials }) + "\n```";
+
+    mockCreate.mockResolvedValue({
+      content: [{ type: "text", text: wrapped }],
+    });
+
+    const result = await service.parseImage("base64data", "image/jpeg");
+    expect(result).toEqual(materials);
+  });
+
+  it("extracts JSON object from surrounding text", async () => {
+    const materials = [
+      { materialType: "bead", brand: "Sundance", name: "Gold", code: null, quantity: 1, unit: "Tubes" },
+    ];
+    const wrapped = "I found the following materials:\n" + JSON.stringify({ materials }) + "\nLet me know if you need anything else.";
+
+    mockCreate.mockResolvedValue({
+      content: [{ type: "text", text: wrapped }],
+    });
+
+    const result = await service.parseImage("base64data", "image/jpeg");
+    expect(result).toEqual(materials);
+  });
+
   it("throws on malformed Claude response (not JSON)", async () => {
     mockCreate.mockResolvedValue({
       content: [{ type: "text", text: "I cannot parse this image" }],
