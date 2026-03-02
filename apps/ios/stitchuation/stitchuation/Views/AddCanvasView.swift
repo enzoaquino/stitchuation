@@ -7,6 +7,9 @@ struct AddCanvasView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.networkClient) private var networkClient
 
+    /// When provided, the saved canvas is set to kitting and this callback fires instead of dismissing.
+    var onProjectStarted: ((StitchPiece) -> Void)? = nil
+
     @State private var designer = ""
     @State private var designName = ""
     @State private var acquiredAt: Date?
@@ -161,6 +164,7 @@ struct AddCanvasView: View {
                     .warmShadow(.subtle)
                     .padding(.horizontal, Spacing.lg)
 
+                    if onProjectStarted == nil {
                     // Add Another banner
                     HStack {
                         Image(systemName: "arrow.triangle.2.circlepath")
@@ -178,11 +182,12 @@ struct AddCanvasView: View {
                     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
                     .padding(.horizontal, Spacing.lg)
                     .padding(.bottom, Spacing.xxl)
+                    }
                 }
                 .padding(.vertical, Spacing.lg)
             }
             .background(Color.linen)
-            .navigationTitle("Add Canvas")
+            .navigationTitle(onProjectStarted != nil ? "New Project" : "Add Canvas")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -283,7 +288,13 @@ struct AddCanvasView: View {
             }
         }
 
-        if addAnother {
+        if let onProjectStarted {
+            piece.status = .kitting
+            piece.startedAt = Date()
+            piece.updatedAt = Date()
+            dismiss()
+            onProjectStarted(piece)
+        } else if addAnother {
             // Intentionally keep designer — users often add multiple canvases from the same designer
             designName = ""
             acquiredAt = nil
