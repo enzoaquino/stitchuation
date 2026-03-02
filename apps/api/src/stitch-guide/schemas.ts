@@ -33,17 +33,23 @@ const materialTypeSchema = z
     return "other" as const;
   });
 
-export const parsedMaterialSchema = z.object({
-  materialType: materialTypeSchema,
-  brand: z.string().nullish(),
-  name: z.string().min(1),
-  code: z.union([z.string(), z.number().transform(String)]).nullish(),
-  quantity: z
-    .union([z.number(), z.string().transform(Number)])
-    .pipe(z.number().int().positive())
-    .default(1),
-  unit: z.string().nullish(),
-});
+export const parsedMaterialSchema = z
+  .object({
+    materialType: materialTypeSchema,
+    brand: z.string().nullish(),
+    name: z.string().nullish(),
+    code: z.union([z.string(), z.number().transform(String)]).nullish(),
+    quantity: z
+      .union([z.number(), z.string().transform(Number)])
+      .pipe(z.number().int().positive())
+      .default(1),
+    unit: z.string().nullish(),
+  })
+  .transform((m) => ({
+    ...m,
+    // Fall back to code or brand when Claude omits the name
+    name: m.name || m.code || m.brand || "Unknown",
+  }));
 
 export type ParsedMaterial = z.infer<typeof parsedMaterialSchema>;
 

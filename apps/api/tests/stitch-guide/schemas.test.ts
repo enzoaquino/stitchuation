@@ -118,6 +118,34 @@ describe("parsedMaterialSchema", () => {
     }
   });
 
+  it("falls back name to code when name is null", () => {
+    const result = parsedMaterialSchema.safeParse({
+      materialType: "thread",
+      brand: "Silk Lame Braid",
+      name: null,
+      code: "LB94",
+      quantity: 1,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.name).toBe("LB94");
+    }
+  });
+
+  it("falls back name to brand when both name and code are null", () => {
+    const result = parsedMaterialSchema.safeParse({
+      materialType: "thread",
+      brand: "Silk Lame Braid",
+      name: null,
+      code: null,
+      quantity: 1,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.name).toBe("Silk Lame Braid");
+    }
+  });
+
   it("coerces string quantity to number", () => {
     const result = parsedMaterialSchema.safeParse({
       materialType: "thread",
