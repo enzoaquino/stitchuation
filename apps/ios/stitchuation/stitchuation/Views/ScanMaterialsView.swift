@@ -132,19 +132,40 @@ struct ScanMaterialsView: View {
     }
 
     private func processPhotoItem(_ item: PhotosPickerItem) async {
-        guard let data = try? await item.loadTransferable(type: Data.self) else {
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let image = UIImage(data: data) else {
             errorMessage = "Could not load image"
+            return
+        }
+        await processImage(image)
+    }
+
+    private func processImage(_ image: UIImage) async {
+        guard let data = Self.compressForUpload(image) else {
+            errorMessage = "Could not process image"
             return
         }
         await sendToAPI(fileData: data, mediaType: "image/jpeg")
     }
 
-    private func processImage(_ image: UIImage) async {
-        guard let data = image.jpegData(compressionQuality: 0.8) else {
-            errorMessage = "Could not process image"
-            return
+    private static let maxDimension: CGFloat = 2048
+
+    private static func compressForUpload(_ image: UIImage) -> Data? {
+        let size = image.size
+        let scale: CGFloat
+        if max(size.width, size.height) > maxDimension {
+            scale = maxDimension / max(size.width, size.height)
+        } else {
+            scale = 1.0
         }
-        await sendToAPI(fileData: data, mediaType: "image/jpeg")
+
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let resized = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+
+        return resized.jpegData(compressionQuality: 0.7)
     }
 
     private func processDocument(_ url: URL) async {
