@@ -40,8 +40,7 @@ struct AddMaterialView: View {
                 Section {
                     TextField("Brand (e.g. Splendor, DMC)", text: $brand)
                         .font(.typeStyle(.body))
-                    TextField("Name (e.g. Dark Green)", text: $name)
-                        .font(.typeStyle(.body))
+                    ValidatedTextField("Name (e.g. Dark Green)", text: $name)
                     TextField("Code (e.g. S832, #424)", text: $code)
                         .font(.typeStyle(.body))
                 } header: {
