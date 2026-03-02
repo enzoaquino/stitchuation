@@ -22,12 +22,26 @@ export type ParseStitchGuideRequest = z.infer<typeof parseStitchGuideRequestSche
 
 export const materialTypes = ["thread", "bead", "accessory", "other"] as const;
 
+// Coerce Claude's materialType to our enum, defaulting unknown values to "other"
+const materialTypeSchema = z
+  .string()
+  .transform((val) => {
+    const lower = val.toLowerCase();
+    if (materialTypes.includes(lower as (typeof materialTypes)[number])) {
+      return lower as (typeof materialTypes)[number];
+    }
+    return "other" as const;
+  });
+
 export const parsedMaterialSchema = z.object({
-  materialType: z.enum(materialTypes),
+  materialType: materialTypeSchema,
   brand: z.string().nullish(),
   name: z.string().min(1),
-  code: z.string().nullish(),
-  quantity: z.number().int().positive().default(1),
+  code: z.union([z.string(), z.number().transform(String)]).nullish(),
+  quantity: z
+    .union([z.number(), z.string().transform(Number)])
+    .pipe(z.number().int().positive())
+    .default(1),
   unit: z.string().nullish(),
 });
 

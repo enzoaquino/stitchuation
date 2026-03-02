@@ -94,6 +94,8 @@ export class StitchGuideService {
 
     const result = parseStitchGuideResponseSchema.safeParse(parsed);
     if (!result.success) {
+      console.error("Schema validation failed:", JSON.stringify(result.error.issues, null, 2));
+      console.error("Parsed JSON was:", JSON.stringify(parsed, null, 2));
       throw new Error("Claude response does not match expected schema");
     }
 

@@ -93,6 +93,42 @@ describe("parsedMaterialSchema", () => {
       expect(result.data.quantity).toBe(1);
     }
   });
+
+  it("coerces unknown materialType to 'other'", () => {
+    const result = parsedMaterialSchema.safeParse({
+      materialType: "fiber",
+      name: "Silk ribbon",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.materialType).toBe("other");
+    }
+  });
+
+  it("coerces numeric code to string", () => {
+    const result = parsedMaterialSchema.safeParse({
+      materialType: "thread",
+      name: "Black",
+      code: 310,
+      quantity: 1,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.code).toBe("310");
+    }
+  });
+
+  it("coerces string quantity to number", () => {
+    const result = parsedMaterialSchema.safeParse({
+      materialType: "thread",
+      name: "Black",
+      quantity: "3",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.quantity).toBe(3);
+    }
+  });
 });
 
 describe("parseStitchGuideResponseSchema", () => {
