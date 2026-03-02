@@ -220,6 +220,46 @@ actor NetworkClient {
         }
     }
 
+    // MARK: - Stitch Guide Parsing
+
+    struct StitchGuideRequest: Encodable {
+        let file: String
+        let mediaType: String
+    }
+
+    struct StitchGuideResponse: Decodable {
+        let materials: [StitchGuideMaterial]
+    }
+
+    struct StitchGuideMaterial: Decodable {
+        let materialType: String
+        let brand: String?
+        let name: String
+        let code: String?
+        let quantity: Int?
+        let unit: String?
+    }
+
+    func parseStitchGuide(fileData: Data, mediaType: String) async throws -> [ParsedMaterial] {
+        let base64 = fileData.base64EncodedString()
+        let response: StitchGuideResponse = try await request(
+            method: "POST",
+            path: "/stitch-guide/parse",
+            body: StitchGuideRequest(file: base64, mediaType: mediaType)
+        )
+
+        return response.materials.map { m in
+            ParsedMaterial(
+                materialType: MaterialType(rawValue: m.materialType) ?? .other,
+                brand: m.brand,
+                name: m.name,
+                code: m.code,
+                quantity: m.quantity ?? 1,
+                unit: m.unit
+            )
+        }
+    }
+
     private func attemptTokenRefresh() async throws -> Bool {
         guard !isRefreshing, let refresh = refreshToken else {
             clearTokens()

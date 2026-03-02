@@ -1,18 +1,20 @@
 import SwiftUI
 import PhotosUI
-import Vision
+import UniformTypeIdentifiers
 #if canImport(UIKit)
 import UIKit
 #endif
 
 struct ScanMaterialsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.networkClient) private var networkClient
 
     let piece: StitchPiece
     let onMaterialsParsed: ([ParsedMaterial]) -> Void
 
     @State private var selectedPhoto: PhotosPickerItem? = nil
     @State private var showCamera = false
+    @State private var showDocumentPicker = false
     @State private var isProcessing = false
     @State private var errorMessage: String? = nil
 
@@ -27,7 +29,7 @@ struct ScanMaterialsView: View {
                             ProgressView()
                                 .tint(Color.terracotta)
                                 .scaleEffect(1.5)
-                            Text("Reading stitch guide...")
+                            Text("Analyzing stitch guide...")
                                 .font(.typeStyle(.body))
                                 .foregroundStyle(Color.walnut)
                         }
@@ -35,7 +37,7 @@ struct ScanMaterialsView: View {
                         EmptyStateView(
                             icon: "camera.viewfinder",
                             title: "Scan Stitch Guide",
-                            message: "Take a photo or choose from your library to import the fibers list"
+                            message: "Take a photo, choose from your library, or select a document to import the fibers list"
                         )
 
                         VStack(spacing: Spacing.md) {
@@ -55,6 +57,22 @@ struct ScanMaterialsView: View {
 
                             PhotosPicker(selection: $selectedPhoto, matching: .images) {
                                 Label("Choose from Library", systemImage: "photo")
+                                    .font(.typeStyle(.headline))
+                                    .foregroundStyle(Color.terracotta)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, Spacing.md)
+                                    .background(Color.cream)
+                                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: CornerRadius.subtle)
+                                            .stroke(Color.terracotta, lineWidth: 1)
+                                    )
+                            }
+
+                            Button {
+                                showDocumentPicker = true
+                            } label: {
+                                Label("Select Document", systemImage: "doc")
                                     .font(.typeStyle(.headline))
                                     .foregroundStyle(Color.terracotta)
                                     .frame(maxWidth: .infinity)
@@ -103,60 +121,85 @@ struct ScanMaterialsView: View {
                 }
                 .ignoresSafeArea()
             }
+            .sheet(isPresented: $showDocumentPicker) {
+                DocumentPickerView { url in
+                    Task {
+                        await processDocument(url)
+                    }
+                }
+            }
         }
     }
 
     private func processPhotoItem(_ item: PhotosPickerItem) async {
-        guard let data = try? await item.loadTransferable(type: Data.self),
-              let image = UIImage(data: data) else {
+        guard let data = try? await item.loadTransferable(type: Data.self) else {
             errorMessage = "Could not load image"
             return
         }
-        await processImage(image)
+        await sendToAPI(fileData: data, mediaType: "image/jpeg")
     }
 
     private func processImage(_ image: UIImage) async {
-        isProcessing = true
-        errorMessage = nil
-
-        guard let cgImage = image.cgImage else {
-            isProcessing = false
+        guard let data = image.jpegData(compressionQuality: 0.8) else {
             errorMessage = "Could not process image"
             return
         }
+        await sendToAPI(fileData: data, mediaType: "image/jpeg")
+    }
 
-        let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
+    private func processDocument(_ url: URL) async {
+        guard url.startAccessingSecurityScopedResource() else {
+            errorMessage = "Could not access document"
+            return
+        }
+        defer { url.stopAccessingSecurityScopedResource() }
 
-        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        guard let data = try? Data(contentsOf: url) else {
+            errorMessage = "Could not read document"
+            return
+        }
+
+        let mediaType = Self.mediaType(for: url)
+        await sendToAPI(fileData: data, mediaType: mediaType)
+    }
+
+    private func sendToAPI(fileData: Data, mediaType: String) async {
+        isProcessing = true
+        errorMessage = nil
 
         do {
-            try handler.perform([request])
-            let observations = request.results ?? []
-
-            // Sort by Y position (top to bottom) — in Vision coordinates,
-            // higher Y means higher on screen, so sort descending
-            let sortedLines = observations
-                .sorted { $0.boundingBox.origin.y > $1.boundingBox.origin.y }
-                .compactMap { $0.topCandidates(1).first?.string }
-
-            let parser = StitchGuideParser()
-            let parsed = parser.parseLines(sortedLines)
+            guard let networkClient else {
+                throw APIError.network("Not connected")
+            }
+            let materials = try await networkClient.parseStitchGuide(
+                fileData: fileData,
+                mediaType: mediaType
+            )
 
             await MainActor.run {
                 isProcessing = false
-                if parsed.isEmpty {
-                    errorMessage = "No materials found in image. Try a clearer photo of the fibers section."
+                if materials.isEmpty {
+                    errorMessage = "No materials found. Try a clearer photo or different document."
                 } else {
-                    onMaterialsParsed(parsed)
+                    onMaterialsParsed(materials)
                 }
             }
         } catch {
             await MainActor.run {
                 isProcessing = false
-                errorMessage = "OCR failed: \(error.localizedDescription)"
+                errorMessage = "Failed to analyze stitch guide. Please try again."
             }
+        }
+    }
+
+    static func mediaType(for url: URL) -> String {
+        switch url.pathExtension.lowercased() {
+        case "pdf": return "application/pdf"
+        case "docx": return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        case "xlsx": return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        case "png": return "image/png"
+        case "webp": return "image/webp"
+        default: return "image/jpeg"
         }
     }
 }
