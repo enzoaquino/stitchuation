@@ -28,9 +28,7 @@ struct EditProfileSheet: View {
                             .foregroundStyle(Color.walnut)
 
                         VStack(spacing: 0) {
-                            TextField("Display Name", text: $draftName)
-                                .font(.typeStyle(.body))
-                                .padding(.vertical, Spacing.md)
+                            ValidatedTextField("Display Name", text: $draftName)
 
                             Divider().background(Color.parchment)
 
