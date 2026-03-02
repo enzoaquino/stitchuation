@@ -36,6 +36,10 @@ param storageConnectionString string
 @description('Azure Storage container name')
 param storageContainer string = 'images'
 
+@secure()
+@description('Anthropic API key for stitch guide parsing')
+param anthropicApiKey string
+
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: 'log-${baseName}'
   location: location
@@ -85,6 +89,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
         { name: 'jwt-secret', value: jwtSecret }
         { name: 'jwt-refresh-secret', value: jwtRefreshSecret }
         { name: 'storage-connection-string', value: storageConnectionString }
+        { name: 'anthropic-api-key', value: anthropicApiKey }
       ]
 
     }
@@ -106,6 +111,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'AZURE_STORAGE_CONTAINER', value: storageContainer }
             { name: 'PORT', value: '3000' }
             { name: 'APPLE_BUNDLE_ID', value: 'com.enzoaquino.stitchuation' }
+            { name: 'ANTHROPIC_API_KEY', secretRef: 'anthropic-api-key' }
           ]
           probes: [
             {

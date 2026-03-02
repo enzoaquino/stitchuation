@@ -24,6 +24,10 @@ param jwtSecret string
 @description('JWT refresh secret')
 param jwtRefreshSecret string
 
+@secure()
+@description('Anthropic API key for stitch guide parsing')
+param anthropicApiKey string
+
 module storage 'modules/storage.bicep' = {
   name: 'storage'
   params: {
@@ -64,6 +68,7 @@ module containerApps 'modules/container-apps.bicep' = {
     jwtRefreshSecret: jwtRefreshSecret
     storageConnectionString: storage.outputs.connectionString
     storageContainer: storage.outputs.containerName
+    anthropicApiKey: anthropicApiKey
   }
 }
 
