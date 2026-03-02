@@ -17,6 +17,7 @@ struct ProjectDetailView: View {
     @State private var showScanMaterials = false
     @State private var editingMaterial: PieceMaterial? = nil
     @State private var parsedMaterials: [ParsedMaterial]? = nil
+    @State private var pendingParsedMaterials: [ParsedMaterial]? = nil
     @State private var journalRefreshID = UUID()
 
     var body: some View {
@@ -160,20 +161,25 @@ struct ProjectDetailView: View {
                 AddMaterialView(piece: piece, editing: material)
             }
         }
-        .sheet(isPresented: $showScanMaterials) {
+        .sheet(isPresented: $showScanMaterials, onDismiss: {
+            if let pending = pendingParsedMaterials {
+                pendingParsedMaterials = nil
+                parsedMaterials = pending
+            }
+        }) {
             if let piece {
                 ScanMaterialsView(piece: piece) { parsed in
+                    pendingParsedMaterials = parsed
                     showScanMaterials = false
-                    parsedMaterials = parsed
                 }
             }
         }
-        .sheet(item: Binding(
-            get: { parsedMaterials.map { ParsedMaterialsWrapper(materials: $0) } },
-            set: { parsedMaterials = $0?.materials }
-        ), onDismiss: { loadPiece() }) { wrapper in
-            if let piece {
-                ParsedMaterialsReviewView(piece: piece, materials: wrapper.materials)
+        .sheet(isPresented: Binding(
+            get: { parsedMaterials != nil },
+            set: { if !$0 { parsedMaterials = nil } }
+        ), onDismiss: { loadPiece() }) {
+            if let piece, let materials = parsedMaterials {
+                ParsedMaterialsReviewView(piece: piece, materials: materials)
             }
         }
         .confirmationDialog("Return to Stash", isPresented: $showReturnToStashConfirmation) {
@@ -303,11 +309,6 @@ struct ProjectDetailView: View {
         cachedEntries = (piece?.entries ?? [])
             .filter { $0.deletedAt == nil }
             .sorted { $0.createdAt > $1.createdAt }
-    }
-
-    private struct ParsedMaterialsWrapper: Identifiable {
-        let id = UUID()
-        let materials: [ParsedMaterial]
     }
 
     private struct StatusButton {
