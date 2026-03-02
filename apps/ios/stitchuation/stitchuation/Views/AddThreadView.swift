@@ -24,8 +24,8 @@ struct AddThreadView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Brand (e.g. DMC)", text: $brand)
-                    TextField("Number (e.g. 310)", text: $number)
+                    ValidatedTextField("Brand (e.g. DMC)", text: $brand)
+                    ValidatedTextField("Number (e.g. 310)", text: $number)
                     TextField("Color Name", text: $colorName)
                     HStack {
                         TextField("Color Hex (#000000)", text: $colorHex)
