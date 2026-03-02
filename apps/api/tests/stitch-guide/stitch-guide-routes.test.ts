@@ -1,12 +1,18 @@
 import { describe, it, expect, vi, beforeAll } from "vitest";
 
-// Mock the StitchGuideService — vi.hoisted ensures the fn is available when vi.mock is hoisted
-const { mockParseImage } = vi.hoisted(() => ({
-  mockParseImage: vi.fn(),
+// Mock the StitchGuideService and DocumentConverter — vi.hoisted ensures the fns are available when vi.mock is hoisted
+const { mockParseImages, mockToImages } = vi.hoisted(() => ({
+  mockParseImages: vi.fn(),
+  mockToImages: vi.fn(),
 }));
 vi.mock("../../src/stitch-guide/stitch-guide-service.js", () => ({
   StitchGuideService: class {
-    parseImage = mockParseImage;
+    parseImages = mockParseImages;
+  },
+}));
+vi.mock("../../src/stitch-guide/document-converter.js", () => ({
+  DocumentConverter: class {
+    toImages = mockToImages;
   },
 }));
 
@@ -91,7 +97,10 @@ describe("Stitch Guide Routes", () => {
         unit: "Skeins",
       },
     ];
-    mockParseImage.mockResolvedValue(materials);
+    mockToImages.mockResolvedValue([
+      { data: "aGVsbG8=", mediaType: "image/jpeg" },
+    ]);
+    mockParseImages.mockResolvedValue(materials);
 
     const res = await app.request("/stitch-guide/parse", {
       method: "POST",
@@ -110,7 +119,10 @@ describe("Stitch Guide Routes", () => {
   // --- Empty results ---
 
   it("returns 422 when no materials found", async () => {
-    mockParseImage.mockResolvedValue([]);
+    mockToImages.mockResolvedValue([
+      { data: "aGVsbG8=", mediaType: "image/jpeg" },
+    ]);
+    mockParseImages.mockResolvedValue([]);
 
     const res = await app.request("/stitch-guide/parse", {
       method: "POST",
@@ -129,7 +141,10 @@ describe("Stitch Guide Routes", () => {
   // --- Claude failure ---
 
   it("returns 500 when Claude API fails", async () => {
-    mockParseImage.mockRejectedValue(new Error("API rate limited"));
+    mockToImages.mockResolvedValue([
+      { data: "aGVsbG8=", mediaType: "image/jpeg" },
+    ]);
+    mockParseImages.mockRejectedValue(new Error("API rate limited"));
 
     const res = await app.request("/stitch-guide/parse", {
       method: "POST",

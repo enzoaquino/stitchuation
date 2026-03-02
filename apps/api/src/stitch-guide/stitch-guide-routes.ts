@@ -2,10 +2,8 @@ import { Hono } from "hono";
 import { authMiddleware } from "../auth/middleware.js";
 import type { AuthEnv } from "../auth/types.js";
 import { StitchGuideService } from "./stitch-guide-service.js";
-import {
-  parseStitchGuideRequestSchema,
-  imageMediaTypes,
-} from "./schemas.js";
+import { DocumentConverter } from "./document-converter.js";
+import { parseStitchGuideRequestSchema } from "./schemas.js";
 
 const stitchGuideRoutes = new Hono<AuthEnv>();
 const service = new StitchGuideService();
@@ -23,19 +21,9 @@ stitchGuideRoutes.post("/parse", async (c) => {
   const { file, mediaType } = parsed.data;
 
   try {
-    let materials;
-
-    if ((imageMediaTypes as readonly string[]).includes(mediaType)) {
-      // Direct image — send to Claude as-is
-      materials = await service.parseImage(
-        file,
-        mediaType as "image/jpeg" | "image/png" | "image/webp"
-      );
-    } else {
-      // Document (PDF/Office) — convert to images first
-      // TODO: Task 5 will implement document conversion
-      return c.json({ error: "Document conversion not yet implemented" }, 501);
-    }
+    const converter = new DocumentConverter();
+    const images = await converter.toImages(file, mediaType);
+    const materials = await service.parseImages(images);
 
     if (materials.length === 0) {
       return c.json(
