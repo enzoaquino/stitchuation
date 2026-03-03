@@ -71,9 +71,17 @@ struct LoginView: View {
                     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
 
                     if let error = authViewModel.errorMessage {
-                        Text(error)
-                            .foregroundStyle(Color.terracotta)
-                            .font(.typeStyle(.footnote))
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                            Text(error)
+                        }
+                        .font(.typeStyle(.subheadline))
+                        .foregroundStyle(Color.dustyRose)
+                        .multilineTextAlignment(.center)
+                        .padding(Spacing.md)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.dustyRose.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
                     }
 
                     Button {
