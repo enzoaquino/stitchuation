@@ -30,7 +30,7 @@ describe("POST /auth/register", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 400 for password shorter than 8 characters", async () => {
+  it("returns 400 with message for password shorter than 8 characters", async () => {
     const res = await app.request("/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -42,9 +42,11 @@ describe("POST /auth/register", () => {
     });
 
     expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Password must be 8-72 characters");
   });
 
-  it("returns 400 for password longer than 72 characters", async () => {
+  it("returns 400 with message for password longer than 72 characters", async () => {
     const res = await app.request("/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -56,9 +58,11 @@ describe("POST /auth/register", () => {
     });
 
     expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Password must be 8-72 characters");
   });
 
-  it("returns 400 for missing displayName", async () => {
+  it("returns 400 with message for missing displayName", async () => {
     const res = await app.request("/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -69,6 +73,8 @@ describe("POST /auth/register", () => {
     });
 
     expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Display name is required");
   });
 
   it("returns 400 for malformed JSON body", async () => {

@@ -15,7 +15,13 @@ authRoutes.post("/register", async (c) => {
 
   const parsed = registerSchema.safeParse(body);
   if (!parsed.success) {
-    return c.json({ error: parsed.error.flatten() }, 400);
+    const fieldErrors = parsed.error.flatten().fieldErrors;
+    const messages: string[] = [];
+    if (fieldErrors.email) messages.push("Please enter a valid email address");
+    if (fieldErrors.password) messages.push("Password must be 8-72 characters");
+    if (fieldErrors.displayName) messages.push("Display name is required");
+    const message = messages.length > 0 ? messages.join(". ") : "Invalid input";
+    return c.json({ error: message }, 400);
   }
 
   try {

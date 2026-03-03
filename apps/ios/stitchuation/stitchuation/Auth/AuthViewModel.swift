@@ -105,16 +105,26 @@ final class AuthViewModel {
             isAuthenticated = true
         } catch let error as APIError {
             switch error {
-            case .badRequest(let message) where message.contains("duplicate") || message.contains("already"):
-                errorMessage = "Email already registered"
-            case .badRequest:
-                errorMessage = "Please check your input and try again"
+            case .badRequest(let message) where message.contains("already"):
+                errorMessage = "An account with this email already exists"
+            case .badRequest(let message):
+                errorMessage = Self.parseAPIError(message) ?? "Please check your input and try again"
             default:
                 errorMessage = "Something went wrong. Please try again."
             }
         } catch {
             errorMessage = "Network error. Please check your connection."
         }
+    }
+
+    /// Parse a JSON error body like `{"error":"message"}` and return the message string.
+    private static func parseAPIError(_ body: String) -> String? {
+        guard let data = body.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let message = json["error"] as? String else {
+            return nil
+        }
+        return message
     }
 
     func handleAppleSignIn(result: Result<ASAuthorization, any Error>) async {
