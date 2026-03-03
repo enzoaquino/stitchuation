@@ -94,6 +94,19 @@ describe("parsedMaterialSchema", () => {
     }
   });
 
+  it("accepts ribbon materialType", () => {
+    const result = parsedMaterialSchema.safeParse({
+      materialType: "ribbon",
+      brand: "Treenway Silk",
+      name: "Peach Phlox",
+      quantity: 1,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.materialType).toBe("ribbon");
+    }
+  });
+
   it("coerces unknown materialType to 'other'", () => {
     const result = parsedMaterialSchema.safeParse({
       materialType: "fiber",

@@ -20,7 +20,7 @@ export const parseStitchGuideRequestSchema = z.object({
 
 export type ParseStitchGuideRequest = z.infer<typeof parseStitchGuideRequestSchema>;
 
-export const materialTypes = ["thread", "bead", "accessory", "other"] as const;
+export const materialTypes = ["thread", "bead", "accessory", "ribbon", "other"] as const;
 
 // Coerce Claude's materialType to our enum, defaulting unknown values to "other"
 const materialTypeSchema = z

@@ -5,7 +5,7 @@ import type { ParsedMaterial } from "./schemas.js";
 const SYSTEM_PROMPT = `You are a needlepoint stitch guide parser. Given an image of a stitch guide or materials list, extract every material/fiber/supply listed.
 
 For each item, return:
-- materialType: "thread", "bead", "accessory", or "other"
+- materialType: "thread", "bead", "accessory", "ribbon", or "other"
 - brand: the brand name (e.g., "Splendor", "DMC", "Kreinik"), or null if unknown
 - name: the color/material name (e.g., "Dark Olive Green", "Black")
 - code: the product code (e.g., "S832", "310", "#4"), or null if not present
@@ -13,7 +13,8 @@ For each item, return:
 - unit: the unit (e.g., "Cards", "Skeins", "Spools", "Tubes", "Strands", "Hanks"), or null if not specified
 
 Classify items as:
-- "thread" for any fiber, floss, braid, ribbon, silk, wool, or similar stitching material
+- "thread" for any fiber, floss, braid, silk, wool, or similar stitching material
+- "ribbon" for silk ribbon, satin ribbon, or any ribbon-type material (e.g. "Treenway Silk 3.5mm Ribbon", "YLI Silk Ribbon")
 - "bead" for beads of any kind
 - "accessory" for needles, stretcher bars, frames, scissors, laying tools, etc.
 - "other" for anything that doesn't fit the above categories
