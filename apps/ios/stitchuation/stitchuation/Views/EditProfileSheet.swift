@@ -92,7 +92,7 @@ struct EditProfileSheet: View {
                         .foregroundStyle(Color.terracotta)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button {
                         isSaving = true
                         Task {
                             await profileViewModel.saveProfile(
@@ -102,6 +102,13 @@ struct EditProfileSheet: View {
                             )
                             isSaving = false
                             dismiss()
+                        }
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                                .tint(Color.terracotta)
+                        } else {
+                            Text("Save")
                         }
                     }
                     .disabled(draftName.isEmpty || isSaving)

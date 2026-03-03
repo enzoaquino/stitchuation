@@ -66,10 +66,13 @@ struct StashListView: View {
                 .tint(Color.terracotta)
             }
             ToolbarItem(placement: .topBarLeading) {
-                Toggle(viewModel.showAllPieces ? "All" : "Stash", isOn: $viewModel.showAllPieces)
-                    .toggleStyle(.button)
-                    .font(.typeStyle(.subheadline))
-                    .tint(Color.terracotta)
+                Button(viewModel.showAllPieces ? "All" : "Stash") {
+                    viewModel.showAllPieces.toggle()
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .font(.typeStyle(.subheadline))
+                .tint(viewModel.showAllPieces ? Color.terracotta : Color.clay)
             }
         }
         .sheet(isPresented: $showAddCanvas) {
@@ -113,3 +116,4 @@ struct CanvasRowView: View {
         .padding(.vertical, Spacing.sm)
     }
 }
+

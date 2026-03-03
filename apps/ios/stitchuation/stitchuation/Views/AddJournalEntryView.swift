@@ -19,6 +19,7 @@ struct AddJournalEntryView: View {
     @State private var showPhotoOptions = false
     @State private var showCamera = false
     @State private var showLibraryPicker = false
+    @State private var isSaving = false
 
     private var canSave: Bool {
         !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !selectedImages.isEmpty
@@ -110,9 +111,19 @@ struct AddJournalEntryView: View {
                         .foregroundStyle(Color.terracotta)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { saveEntry() }
-                        .disabled(!canSave)
-                        .foregroundStyle(Color.terracotta)
+                    Button {
+                        isSaving = true
+                        saveEntry()
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                                .tint(Color.terracotta)
+                        } else {
+                            Text("Save")
+                        }
+                    }
+                    .disabled(!canSave || isSaving)
+                    .foregroundStyle(Color.terracotta)
                 }
             }
             .onChange(of: selectedPhotos) { _, newItems in

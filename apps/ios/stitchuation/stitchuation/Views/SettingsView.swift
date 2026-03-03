@@ -16,6 +16,7 @@ struct SettingsView: View {
 
     @State private var showEditProfile = false
     @State private var showManageSubscription = false
+    @State private var isLoggingOut = false
 
     static let experienceLevels = ["Beginner", "Intermediate", "Advanced", "Expert"]
 
@@ -225,16 +226,26 @@ struct SettingsView: View {
     private var accountSection: some View {
         VStack(spacing: Spacing.md) {
             Button(role: .destructive) {
-                Task { await authViewModel.logout() }
+                isLoggingOut = true
+                Task {
+                    await authViewModel.logout()
+                    isLoggingOut = false
+                }
             } label: {
                 HStack {
                     Spacer()
-                    Text("Log Out")
-                        .font(.typeStyle(.body))
-                        .fontWeight(.medium)
+                    if isLoggingOut {
+                        ProgressView()
+                            .tint(Color.dustyRose)
+                    } else {
+                        Text("Log Out")
+                            .font(.typeStyle(.body))
+                            .fontWeight(.medium)
+                    }
                     Spacer()
                 }
             }
+            .disabled(isLoggingOut)
             .padding(Spacing.lg)
             .background(Color.cream)
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))

@@ -22,6 +22,7 @@ struct AddCanvasView: View {
     @State private var selectedImageData: Data?
 
     @State private var addAnother = false
+    @State private var isSaving = false
 
     @State private var showPhotoOptions = false
     @State private var showCamera = false
@@ -190,9 +191,19 @@ struct AddCanvasView: View {
                         .foregroundStyle(Color.terracotta)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { saveCanvas() }
-                        .disabled(designer.isEmpty || designName.isEmpty || !isMeshCountValid)
-                        .foregroundStyle(Color.terracotta)
+                    Button {
+                        isSaving = true
+                        saveCanvas()
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                                .tint(Color.terracotta)
+                        } else {
+                            Text("Save")
+                        }
+                    }
+                    .disabled(designer.isEmpty || designName.isEmpty || !isMeshCountValid || isSaving)
+                    .foregroundStyle(Color.terracotta)
                 }
             }
             .confirmationDialog("Add Photo", isPresented: $showPhotoOptions) {

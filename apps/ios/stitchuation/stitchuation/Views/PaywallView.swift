@@ -200,12 +200,17 @@ struct PaywallView: View {
             }
         } label: {
             VStack(spacing: Spacing.xxs) {
-                Text("Start 14-Day Free Trial")
-                    .font(.typeStyle(.headline))
-                    .foregroundStyle(.white)
-                Text(selectedPlan == .yearly ? "then $39.99/year" : "then $3.99/month")
-                    .font(.typeStyle(.footnote))
-                    .foregroundStyle(.white.opacity(0.8))
+                if subscriptionManager.isLoading {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Text("Start 14-Day Free Trial")
+                        .font(.typeStyle(.headline))
+                        .foregroundStyle(.white)
+                    Text(selectedPlan == .yearly ? "then $39.99/year" : "then $3.99/month")
+                        .font(.typeStyle(.footnote))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.lg)
