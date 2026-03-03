@@ -93,7 +93,13 @@ struct LoginView: View {
                             }
                         }
                     } label: {
-                        Text(authViewModel.isRegistering ? "Create Account" : "Sign In")
+                        HStack(spacing: Spacing.sm) {
+                            if authViewModel.isLoading {
+                                ProgressView()
+                                    .tint(Color.cream)
+                            }
+                            Text(authViewModel.isRegistering ? "Create Account" : "Sign In")
+                        }
                             .font(.typeStyle(.headline))
                             .foregroundStyle(Color.cream)
                             .frame(maxWidth: .infinity)
