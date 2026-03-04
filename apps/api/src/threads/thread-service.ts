@@ -19,6 +19,7 @@ export class ThreadService {
         quantity: input.quantity ?? 0,
         barcode: input.barcode,
         weightOrLength: input.weightOrLength,
+        lotNumber: input.lotNumber,
         notes: input.notes,
       })
       .returning();

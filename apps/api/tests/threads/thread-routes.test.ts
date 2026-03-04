@@ -38,6 +38,51 @@ describe("Thread Routes", () => {
     expect(body.brand).toBe("DMC");
   });
 
+  it("POST /threads creates a thread with lotNumber", async () => {
+    const res = await app.request("/threads", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        brand: "DMC",
+        number: "415",
+        lotNumber: "LOT-2024-B",
+        quantity: 2,
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.lotNumber).toBe("LOT-2024-B");
+  });
+
+  it("PUT /threads/:id updates lotNumber", async () => {
+    const createRes = await app.request("/threads", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ brand: "Silk", number: "200", quantity: 1 }),
+    });
+    const created = await createRes.json();
+
+    const res = await app.request(`/threads/${created.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ lotNumber: "LOT-42" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.lotNumber).toBe("LOT-42");
+  });
+
   it("GET /threads lists user threads", async () => {
     const res = await app.request("/threads", {
       headers: { Authorization: `Bearer ${accessToken}` },

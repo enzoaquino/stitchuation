@@ -17,6 +17,7 @@ const ALLOWED_THREAD_FIELDS = new Set([
   "quantity",
   "barcode",
   "weightOrLength",
+  "lotNumber",
   "notes",
 ]);
 
@@ -145,6 +146,7 @@ export class SyncService {
         quantity: (allowed.quantity as number) ?? 0,
         barcode: allowed.barcode as string | undefined,
         weightOrLength: allowed.weightOrLength as string | undefined,
+        lotNumber: allowed.lotNumber as string | undefined,
         notes: allowed.notes as string | undefined,
         createdAt: clientUpdatedAt,
         updatedAt: clientUpdatedAt,
@@ -547,6 +549,7 @@ export class SyncService {
             quantity: t.quantity,
             barcode: t.barcode,
             weightOrLength: t.weightOrLength,
+            lotNumber: t.lotNumber,
             notes: t.notes,
           },
       updatedAt: t.updatedAt.toISOString(),

@@ -136,6 +136,36 @@ describe("ThreadService", () => {
     }
   });
 
+  it("creates a thread with a lot number", async () => {
+    const thread = await threadService.create(userId, {
+      brand: "DMC",
+      number: "666",
+      lotNumber: "LOT-2024-A",
+      quantity: 1,
+    });
+
+    expect(thread.lotNumber).toBe("LOT-2024-A");
+
+    const fetched = await threadService.getById(userId, thread.id);
+    expect(fetched?.lotNumber).toBe("LOT-2024-A");
+  });
+
+  it("updates a thread lot number", async () => {
+    const thread = await threadService.create(userId, {
+      brand: "Appleton",
+      number: "501",
+      quantity: 1,
+    });
+
+    expect(thread.lotNumber).toBeNull();
+
+    const updated = await threadService.update(userId, thread.id, {
+      lotNumber: "LOT-99",
+    });
+
+    expect(updated.lotNumber).toBe("LOT-99");
+  });
+
   it("creates a thread with a client-provided UUID", async () => {
     const clientId = crypto.randomUUID();
     const thread = await threadService.create(userId, {

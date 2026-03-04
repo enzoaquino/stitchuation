@@ -32,6 +32,7 @@ export const threads = pgTable("threads", {
   quantity: integer("quantity").notNull().default(0),
   barcode: text("barcode"),
   weightOrLength: text("weight_or_length"),
+  lotNumber: text("lot_number"),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

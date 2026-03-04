@@ -139,6 +139,7 @@ final class SyncEngine {
                     "quantity": AnyCodable(thread.quantity),
                     "barcode": AnyCodable(thread.barcode ?? NSNull()),
                     "weightOrLength": AnyCodable(thread.weightOrLength ?? NSNull()),
+                    "lotNumber": AnyCodable(thread.lotNumber ?? NSNull()),
                     "notes": AnyCodable(thread.notes ?? NSNull()),
                 ]
             }
@@ -530,6 +531,9 @@ final class SyncEngine {
         }
         if let v = data["weightOrLength"] {
             thread.weightOrLength = v.value is NSNull ? nil : v.value as? String
+        }
+        if let v = data["lotNumber"] {
+            thread.lotNumber = v.value is NSNull ? nil : v.value as? String
         }
         if let v = data["notes"] {
             thread.notes = v.value is NSNull ? nil : v.value as? String

@@ -12,6 +12,7 @@ final class NeedleThread {
     var quantity: Int
     var barcode: String?
     var weightOrLength: String?
+    var lotNumber: String?
     var notes: String?
     var createdAt: Date
     var updatedAt: Date
@@ -28,6 +29,7 @@ final class NeedleThread {
         quantity: Int = 0,
         barcode: String? = nil,
         weightOrLength: String? = nil,
+        lotNumber: String? = nil,
         notes: String? = nil
     ) {
         self.id = id
@@ -39,6 +41,7 @@ final class NeedleThread {
         self.quantity = quantity
         self.barcode = barcode
         self.weightOrLength = weightOrLength
+        self.lotNumber = lotNumber
         self.notes = notes
         self.createdAt = Date()
         self.updatedAt = Date()

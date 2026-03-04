@@ -12,6 +12,7 @@ export const createThreadSchema = z.object({
   quantity: z.number().int().min(0).default(0),
   barcode: z.string().max(50).optional(),
   weightOrLength: z.string().max(100).optional(),
+  lotNumber: z.string().max(50).optional(),
   notes: z.string().max(1000).optional(),
 });
 

@@ -13,6 +13,7 @@ struct AddThreadView: View {
     @State private var quantity = 1
     @State private var barcode = ""
     @State private var weightOrLength = ""
+    @State private var lotNumber = ""
     @State private var notes = ""
     @State private var addAnother = false
 
@@ -70,6 +71,7 @@ struct AddThreadView: View {
                 Section {
                     TextField("Barcode / UPC", text: $barcode)
                     TextField("Weight or Length", text: $weightOrLength)
+                    TextField("Lot #", text: $lotNumber)
                     TextField("Notes", text: $notes, axis: .vertical)
                         .lineLimit(3...6)
                 } header: {
@@ -115,6 +117,7 @@ struct AddThreadView: View {
             quantity: quantity,
             barcode: barcode.isEmpty ? nil : barcode,
             weightOrLength: weightOrLength.isEmpty ? nil : weightOrLength,
+            lotNumber: lotNumber.isEmpty ? nil : lotNumber,
             notes: notes.isEmpty ? nil : notes
         )
         modelContext.insert(thread)
@@ -126,6 +129,7 @@ struct AddThreadView: View {
             quantity = 1
             barcode = ""
             weightOrLength = ""
+            lotNumber = ""
             notes = ""
         } else {
             dismiss()
