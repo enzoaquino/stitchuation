@@ -136,6 +136,7 @@ final class SyncEngine {
                     "colorName": AnyCodable(thread.colorName ?? NSNull()),
                     "colorHex": AnyCodable(thread.colorHex ?? NSNull()),
                     "fiberType": AnyCodable(thread.fiberType.rawValue),
+                    "format": AnyCodable(thread.format?.rawValue ?? NSNull()),
                     "quantity": AnyCodable(thread.quantity),
                     "barcode": AnyCodable(thread.barcode ?? NSNull()),
                     "weightOrLength": AnyCodable(thread.weightOrLength ?? NSNull()),
@@ -524,6 +525,10 @@ final class SyncEngine {
         }
         if let fiberType = data["fiberType"]?.value as? String {
             thread.fiberType = FiberType(rawValue: fiberType) ?? .wool
+        }
+        if let v = data["format"] {
+            if v.value is NSNull { thread.format = nil }
+            else if let str = v.value as? String { thread.format = ThreadFormat(rawValue: str) }
         }
         if let quantity = data["quantity"]?.value as? Int { thread.quantity = quantity }
         if let v = data["barcode"] {
