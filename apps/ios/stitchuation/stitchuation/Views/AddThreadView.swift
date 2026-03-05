@@ -18,6 +18,7 @@ struct AddThreadView: View {
     @State private var lotNumber = ""
     @State private var notes = ""
     @State private var addAnother = false
+    @State private var showColorSampler = false
 
     private var isValidHex: Bool {
         colorHex.isEmpty || colorHex.range(of: "^#?[0-9A-Fa-f]{6}$", options: .regularExpression) != nil
@@ -47,6 +48,13 @@ struct AddThreadView: View {
                             .onChange(of: pickerColor) { _, newColor in
                                 colorHex = newColor.hexString
                             }
+                        Button {
+                            showColorSampler = true
+                        } label: {
+                            Image(systemName: "eyedropper")
+                                .foregroundStyle(Color.terracotta)
+                        }
+                        .buttonStyle(.plain)
                     }
                     if !isValidHex {
                         Text("Enter a valid 6-digit hex color")
@@ -111,6 +119,12 @@ struct AddThreadView: View {
                     Button("Save") { saveThread() }
                         .disabled(brand.isEmpty || number.isEmpty || !isValidHex)
                         .foregroundStyle(Color.terracotta)
+                }
+            }
+            .sheet(isPresented: $showColorSampler) {
+                ColorSamplerView { hex in
+                    colorHex = hex
+                    pickerColor = Color(hex: hex)
                 }
             }
         }
