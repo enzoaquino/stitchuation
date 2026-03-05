@@ -38,6 +38,18 @@ extension Color {
         )
     }
 
+    /// Returns the color as a hex string like "#AA33FF".
+    var hexString: String {
+        #if canImport(UIKit)
+        let uiColor = UIColor(self)
+        var r: CGFloat = 0; var g: CGFloat = 0; var b: CGFloat = 0; var a: CGFloat = 0
+        uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+        return String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
+        #else
+        return "#000000"
+        #endif
+    }
+
     init(light lightHex: String, dark darkHex: String) {
         #if canImport(UIKit)
         self.init(uiColor: UIColor { traits in

@@ -10,7 +10,8 @@ struct AddThreadView: View {
     @State private var colorName = ""
     @State private var colorHex = ""
     @State private var fiberType: FiberType = .wool
-    @State private var format: ThreadFormat?
+    @State private var format: ThreadFormat? = .card
+    @State private var pickerColor: Color = .white
     @State private var quantity = 1
     @State private var barcode = ""
     @State private var weightOrLength = ""
@@ -33,13 +34,19 @@ struct AddThreadView: View {
                         TextField("Color Hex (#000000)", text: $colorHex)
                             .autocorrectionDisabled()
                             .textInputAutocapitalization(.never)
-                        if !colorHex.isEmpty && isValidHex {
-                            let hex = colorHex.hasPrefix("#") ? colorHex : "#\(colorHex)"
-                            Circle()
-                                .fill(Color(hex: hex))
-                                .frame(width: 24, height: 24)
-                                .overlay(Circle().stroke(Color.clay.opacity(0.3), lineWidth: 0.5))
-                        }
+                            .onChange(of: colorHex) { _, newValue in
+                                guard !newValue.isEmpty else { return }
+                                let hex = newValue.hasPrefix("#") ? newValue : "#\(newValue)"
+                                if hex.range(of: "^#[0-9A-Fa-f]{6}$", options: .regularExpression) != nil {
+                                    pickerColor = Color(hex: hex)
+                                }
+                            }
+                        ColorPicker("", selection: $pickerColor, supportsOpacity: false)
+                            .labelsHidden()
+                            .frame(width: 30, height: 30)
+                            .onChange(of: pickerColor) { _, newColor in
+                                colorHex = newColor.hexString
+                            }
                     }
                     if !isValidHex {
                         Text("Enter a valid 6-digit hex color")
@@ -57,6 +64,7 @@ struct AddThreadView: View {
                             Text(fmt.displayName).tag(ThreadFormat?.some(fmt))
                         }
                     }
+                    TextField("Lot #", text: $lotNumber)
                 } header: {
                     Text("Thread Info")
                         .font(.playfair(15, weight: .semibold))
@@ -78,7 +86,6 @@ struct AddThreadView: View {
                 Section {
                     TextField("Barcode / UPC", text: $barcode)
                     TextField("Weight or Length", text: $weightOrLength)
-                    TextField("Lot #", text: $lotNumber)
                     TextField("Notes", text: $notes, axis: .vertical)
                         .lineLimit(3...6)
                 } header: {
