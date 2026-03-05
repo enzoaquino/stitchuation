@@ -128,17 +128,29 @@ struct MaterialsSection: View {
                     message: "Add supplies manually or scan your stitch guide"
                 )
             } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(activeMaterials.enumerated()), id: \.element.id) { index, material in
+                List {
+                    ForEach(activeMaterials) { material in
                         MaterialRowView(material: material)
                             .onTapGesture { onEditMaterial(material) }
-
-                        if index < activeMaterials.count - 1 {
-                            Divider()
-                                .background(Color.parchment)
-                        }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    withAnimation(Motion.gentle) {
+                                        material.deletedAt = Date()
+                                        material.updatedAt = Date()
+                                    }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                            .listRowBackground(Color.cream)
+                            .listRowSeparatorTint(Color.parchment)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                     }
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollDisabled(true)
+                .frame(minHeight: CGFloat(activeMaterials.count) * 60)
             }
 
             HStack(spacing: Spacing.md) {
