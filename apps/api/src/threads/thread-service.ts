@@ -16,6 +16,7 @@ export class ThreadService {
         colorName: input.colorName,
         colorHex: input.colorHex,
         fiberType: input.fiberType,
+        format: input.format,
         quantity: input.quantity ?? 0,
         barcode: input.barcode,
         weightOrLength: input.weightOrLength,
