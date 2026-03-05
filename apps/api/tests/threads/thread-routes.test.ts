@@ -203,6 +203,31 @@ describe("Thread Routes", () => {
     expect(body.quantity).toBe(10);
   });
 
+
+  it("PUT /threads/:id with fractional quantity", async () => {
+    const createRes = await app.request("/threads", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ brand: "Caron", number: "100", quantity: 1 }),
+    });
+    const created = await createRes.json();
+
+    const res = await app.request(`/threads/${created.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ quantity: 2.5 }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.quantity).toBe(2.5);
+  });
   it("DELETE /threads/:id soft deletes a thread", async () => {
     const createRes = await app.request("/threads", {
       method: "POST",

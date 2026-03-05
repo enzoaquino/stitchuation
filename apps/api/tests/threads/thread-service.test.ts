@@ -201,4 +201,18 @@ describe("ThreadService", () => {
 
     expect(thread.id).toBe(clientId);
   });
+
+  it("supports fractional quantities", async () => {
+    const thread = await threadService.create(userId, {
+      brand: "DMC",
+      number: "350",
+      quantity: 2.75,
+    });
+    expect(thread.quantity).toBe(2.75);
+
+    const updated = await threadService.update(userId, thread.id, {
+      quantity: 0.5,
+    });
+    expect(updated.quantity).toBe(0.5);
+  });
 });
