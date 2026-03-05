@@ -34,8 +34,8 @@ struct ParsedMaterialsReviewView: View {
 
                                     Spacer()
 
-                                    if materials[index].quantity > 0, let unit = materials[index].unit {
-                                        Text("\(materials[index].quantity) \(unit)")
+                                    if materials[index].quantity > 0 {
+                                        Text(materials[index].unit.map { "\(materials[index].quantity) \($0)" } ?? "\(materials[index].quantity)")
                                             .font(.typeStyle(.data))
                                             .foregroundStyle(Color.walnut)
                                     }
