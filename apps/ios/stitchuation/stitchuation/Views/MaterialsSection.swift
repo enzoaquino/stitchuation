@@ -171,6 +171,22 @@ struct MaterialsSection: View {
                         .fontWeight(.medium)
                         .foregroundStyle(Color.terracotta)
                 }
+
+                if acquiredCount < activeMaterials.count {
+                    Button {
+                        withAnimation(Motion.gentle) {
+                            for material in activeMaterials where !material.acquired {
+                                material.acquired = true
+                                material.updatedAt = Date()
+                            }
+                        }
+                    } label: {
+                        Label("Mark All", systemImage: "checkmark.circle")
+                            .font(.typeStyle(.subheadline))
+                            .fontWeight(.medium)
+                            .foregroundStyle(Color.terracotta)
+                    }
+                }
             }
             .padding(.top, Spacing.sm)
         }
