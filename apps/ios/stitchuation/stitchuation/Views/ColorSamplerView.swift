@@ -14,6 +14,7 @@ struct ColorSamplerView: View {
     @State private var image: UIImage?
     @State private var sampledColor: UIColor?
     @State private var sampledHex: String?
+    @State private var hasPickedSource = false
 
     var body: some View {
         NavigationStack {
@@ -70,30 +71,6 @@ struct ColorSamplerView: View {
                             .foregroundStyle(Color.clay)
                             .padding(.vertical, Spacing.md)
                     }
-                } else {
-                    Spacer()
-                    VStack(spacing: Spacing.md) {
-                        Image(systemName: "eyedropper")
-                            .font(.system(size: 48))
-                            .foregroundStyle(Color.clay)
-
-                        Text("Choose a photo to sample a color from")
-                            .font(.typeStyle(.body))
-                            .foregroundStyle(Color.walnut)
-
-                        Button {
-                            showPhotoOptions = true
-                        } label: {
-                            Text("Select Photo")
-                                .font(.typeStyle(.headline))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, Spacing.xl)
-                                .padding(.vertical, Spacing.sm)
-                                .background(Color.terracotta)
-                                .cornerRadius(10)
-                        }
-                    }
-                    Spacer()
                 }
             }
             .background(Color.linen)
@@ -115,11 +92,27 @@ struct ColorSamplerView: View {
                     }
                 }
             }
+            .onAppear {
+                showPhotoOptions = true
+            }
             .confirmationDialog("Choose Photo Source", isPresented: $showPhotoOptions) {
                 if CameraView.isCameraAvailable {
-                    Button("Take Photo") { showCamera = true }
+                    Button("Take Photo") {
+                        hasPickedSource = true
+                        showCamera = true
+                    }
                 }
-                Button("Choose from Library") { showLibraryPicker = true }
+                Button("Choose from Library") {
+                    hasPickedSource = true
+                    showLibraryPicker = true
+                }
+            } message: {
+                Text("Select a photo to sample a color from")
+            }
+            .onChange(of: showPhotoOptions) { _, isShowing in
+                if !isShowing && !hasPickedSource && image == nil {
+                    dismiss()
+                }
             }
             .fullScreenCover(isPresented: $showCamera) {
                 CameraView { capturedImage, _ in
