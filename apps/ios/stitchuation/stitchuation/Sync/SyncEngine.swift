@@ -530,7 +530,10 @@ final class SyncEngine {
             if v.value is NSNull { thread.format = nil }
             else if let str = v.value as? String { thread.format = ThreadFormat(rawValue: str) }
         }
-        if let quantity = data["quantity"]?.value as? Int { thread.quantity = quantity }
+        if let v = data["quantity"]?.value {
+            if let d = v as? Double { thread.quantity = d }
+            else if let i = v as? Int { thread.quantity = Double(i) }
+        }
         if let v = data["barcode"] {
             thread.barcode = v.value is NSNull ? nil : v.value as? String
         }
