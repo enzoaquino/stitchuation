@@ -166,6 +166,30 @@ describe("ThreadService", () => {
     expect(updated.lotNumber).toBe("LOT-99");
   });
 
+  it("creates a thread with a format", async () => {
+    const thread = await threadService.create(userId, {
+      brand: "DMC",
+      number: "321",
+      format: "skein",
+      quantity: 2,
+    });
+
+    expect(thread.format).toBe("skein");
+
+    const fetched = await threadService.getById(userId, thread.id);
+    expect(fetched?.format).toBe("skein");
+  });
+
+  it("creates a thread without format (nullable)", async () => {
+    const thread = await threadService.create(userId, {
+      brand: "Kreinik",
+      number: "002",
+      quantity: 1,
+    });
+
+    expect(thread.format).toBeNull();
+  });
+
   it("creates a thread with a client-provided UUID", async () => {
     const clientId = crypto.randomUUID();
     const thread = await threadService.create(userId, {
