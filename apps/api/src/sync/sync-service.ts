@@ -144,7 +144,7 @@ export class SyncService {
         colorName: allowed.colorName as string | undefined,
         colorHex: allowed.colorHex as string | undefined,
         fiberType: (allowed.fiberType as any) ?? "wool",
-        format: allowed.format as string | undefined,
+        format: allowed.format as any,
         quantity: (allowed.quantity as number) ?? 0,
         barcode: allowed.barcode as string | undefined,
         weightOrLength: allowed.weightOrLength as string | undefined,
