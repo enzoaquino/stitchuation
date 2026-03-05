@@ -9,6 +9,7 @@ final class NeedleThread {
     var colorName: String?
     var colorHex: String?
     var fiberType: FiberType
+    var format: ThreadFormat?
     var quantity: Int
     var barcode: String?
     var weightOrLength: String?
@@ -26,6 +27,7 @@ final class NeedleThread {
         colorName: String? = nil,
         colorHex: String? = nil,
         fiberType: FiberType = .wool,
+        format: ThreadFormat? = nil,
         quantity: Int = 0,
         barcode: String? = nil,
         weightOrLength: String? = nil,
@@ -38,6 +40,7 @@ final class NeedleThread {
         self.colorName = colorName
         self.colorHex = colorHex
         self.fiberType = fiberType
+        self.format = format
         self.quantity = quantity
         self.barcode = barcode
         self.weightOrLength = weightOrLength
