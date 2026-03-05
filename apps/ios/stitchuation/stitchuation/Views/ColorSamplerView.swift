@@ -7,7 +7,6 @@ struct ColorSamplerView: View {
 
     let onColorSelected: (String) -> Void
 
-    @State private var showPhotoOptions = false
     @State private var showCamera = false
     @State private var showLibraryPicker = false
     @State private var selectedPhoto: PhotosPickerItem?
@@ -81,8 +80,15 @@ struct ColorSamplerView: View {
                             .font(.typeStyle(.body))
                             .foregroundStyle(Color.walnut)
 
-                        Button {
-                            showPhotoOptions = true
+                        Menu {
+                            if CameraView.isCameraAvailable {
+                                Button("Take Photo", systemImage: "camera") {
+                                    showCamera = true
+                                }
+                            }
+                            Button("Choose from Library", systemImage: "photo") {
+                                showLibraryPicker = true
+                            }
                         } label: {
                             Text("Select Photo")
                                 .font(.typeStyle(.headline))
@@ -107,20 +113,21 @@ struct ColorSamplerView: View {
                 }
                 if image != nil {
                     ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            showPhotoOptions = true
+                        Menu {
+                            if CameraView.isCameraAvailable {
+                                Button("Take Photo", systemImage: "camera") {
+                                    showCamera = true
+                                }
+                            }
+                            Button("Choose from Library", systemImage: "photo") {
+                                showLibraryPicker = true
+                            }
                         } label: {
                             Image(systemName: "arrow.triangle.2.circlepath.camera")
                                 .foregroundStyle(Color.terracotta)
                         }
                     }
                 }
-            }
-            .confirmationDialog("Choose Photo Source", isPresented: $showPhotoOptions) {
-                if CameraView.isCameraAvailable {
-                    Button("Take Photo") { showCamera = true }
-                }
-                Button("Choose from Library") { showLibraryPicker = true }
             }
             .fullScreenCover(isPresented: $showCamera) {
                 CameraView { capturedImage, _ in
