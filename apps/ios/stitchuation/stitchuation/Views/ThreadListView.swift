@@ -23,6 +23,7 @@ struct ThreadListView: View {
                 let matches = thread.brand.lowercased().contains(search)
                     || thread.number.lowercased().contains(search)
                     || (thread.colorName?.lowercased().contains(search) ?? false)
+                    || ColorMatch.matchesColorName(search, hex: thread.colorHex)
                 if !matches { return false }
             }
             if let brand = viewModel.selectedBrandFilter, thread.brand != brand {
