@@ -4,6 +4,10 @@ export const fiberTypeEnum = pgEnum("fiber_type", [
   "wool", "cotton", "silk", "synthetic", "blend", "other"
 ]);
 
+export const threadFormatEnum = pgEnum("thread_format", [
+  "skein", "card", "hank", "spool", "ball", "cone", "other"
+]);
+
 export const pieceStatusEnum = pgEnum("piece_status", [
   "stash", "kitting", "wip", "stitched", "at_finishing", "finished"
 ]);
@@ -29,6 +33,7 @@ export const threads = pgTable("threads", {
   colorName: text("color_name"),
   colorHex: text("color_hex"),
   fiberType: fiberTypeEnum("fiber_type").notNull().default("wool"),
+  format: threadFormatEnum("format"),
   quantity: integer("quantity").notNull().default(0),
   barcode: text("barcode"),
   weightOrLength: text("weight_or_length"),
