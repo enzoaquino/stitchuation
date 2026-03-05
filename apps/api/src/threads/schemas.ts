@@ -11,7 +11,7 @@ export const createThreadSchema = z.object({
   colorHex: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   fiberType: z.enum(fiberTypes).default("wool"),
   format: z.enum(threadFormats).optional(),
-  quantity: z.number().int().min(0).default(0),
+  quantity: z.number().min(0).multipleOf(0.25).default(0),
   barcode: z.string().max(50).optional(),
   weightOrLength: z.string().max(100).optional(),
   lotNumber: z.string().max(50).optional(),
