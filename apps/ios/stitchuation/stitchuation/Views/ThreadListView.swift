@@ -106,7 +106,7 @@ struct ThreadRowView: View {
             }
             Spacer()
             HStack(spacing: Spacing.sm) {
-                Button { updateQuantity(-1) } label: {
+                Button { updateQuantity(-1.0) } label: {
                     Image(systemName: "minus")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.terracotta)
@@ -115,15 +115,17 @@ struct ThreadRowView: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .disabled(thread.quantity <= 0)
+                .disabled(thread.quantity < 1)
 
-                Text("\(thread.quantity)")
+                Text(thread.quantity.truncatingRemainder(dividingBy: 1) == 0
+                     ? String(format: "%.0f", thread.quantity)
+                     : String(format: "%g", thread.quantity))
                     .font(.typeStyle(.data))
                     .foregroundStyle(Color.espresso)
                     .frame(minWidth: 24)
                     .scaleEffect(quantityScale)
 
-                Button { updateQuantity(1) } label: {
+                Button { updateQuantity(1.0) } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.terracotta)
@@ -137,7 +139,7 @@ struct ThreadRowView: View {
         .padding(.vertical, Spacing.sm)
     }
 
-    private func updateQuantity(_ delta: Int) {
+    private func updateQuantity(_ delta: Double) {
         thread.quantity = max(0, thread.quantity + delta)
         thread.updatedAt = Date()
         try? modelContext.save()
