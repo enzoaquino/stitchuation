@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer, pgEnum, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, integer, pgEnum, index, real } from "drizzle-orm/pg-core";
 
 export const fiberTypeEnum = pgEnum("fiber_type", [
   "wool", "cotton", "silk", "synthetic", "blend", "other"
@@ -34,7 +34,7 @@ export const threads = pgTable("threads", {
   colorHex: text("color_hex"),
   fiberType: fiberTypeEnum("fiber_type").notNull().default("wool"),
   format: threadFormatEnum("format"),
-  quantity: integer("quantity").notNull().default(0),
+  quantity: real("quantity").notNull().default(0),
   barcode: text("barcode"),
   weightOrLength: text("weight_or_length"),
   lotNumber: text("lot_number"),

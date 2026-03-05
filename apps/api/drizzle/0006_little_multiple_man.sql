@@ -1,0 +1,1 @@
+ALTER TABLE "threads" ALTER COLUMN "quantity" SET DATA TYPE real;

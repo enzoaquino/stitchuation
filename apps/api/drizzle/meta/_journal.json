@@ -43,6 +43,13 @@
       "when": 1772743932111,
       "tag": "0005_kind_daredevil",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772748037872,
+      "tag": "0006_little_multiple_man",
+      "breakpoints": true
     }
   ]
 }
