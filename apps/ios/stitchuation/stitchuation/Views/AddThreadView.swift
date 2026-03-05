@@ -10,6 +10,7 @@ struct AddThreadView: View {
     @State private var colorName = ""
     @State private var colorHex = ""
     @State private var fiberType: FiberType = .wool
+    @State private var format: ThreadFormat?
     @State private var quantity = 1
     @State private var barcode = ""
     @State private var weightOrLength = ""
@@ -25,7 +26,7 @@ struct AddThreadView: View {
         NavigationStack {
             Form {
                 Section {
-                    ValidatedTextField("Brand (e.g. DMC)", text: $brand)
+                    BrandPicker(text: $brand)
                     ValidatedTextField("Number (e.g. 310)", text: $number)
                     TextField("Color Name", text: $colorName)
                     HStack {
@@ -48,6 +49,12 @@ struct AddThreadView: View {
                     Picker("Fiber Type", selection: $fiberType) {
                         ForEach(FiberType.allCases, id: \.self) { type in
                             Text(type.rawValue.capitalized).tag(type)
+                        }
+                    }
+                    Picker("Format", selection: $format) {
+                        Text("None").tag(ThreadFormat?.none)
+                        ForEach(ThreadFormat.allCases, id: \.self) { fmt in
+                            Text(fmt.displayName).tag(ThreadFormat?.some(fmt))
                         }
                     }
                 } header: {
@@ -114,6 +121,7 @@ struct AddThreadView: View {
             colorName: colorName.isEmpty ? nil : colorName,
             colorHex: normalizedHex,
             fiberType: fiberType,
+            format: format,
             quantity: quantity,
             barcode: barcode.isEmpty ? nil : barcode,
             weightOrLength: weightOrLength.isEmpty ? nil : weightOrLength,
