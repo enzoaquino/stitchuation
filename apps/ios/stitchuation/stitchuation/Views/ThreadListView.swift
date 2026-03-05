@@ -15,6 +15,7 @@ struct ThreadListView: View {
 
     @State private var viewModel = ThreadListViewModel()
     @State private var showAddThread = false
+    @State private var selectedThread: NeedleThread?
 
     var filteredThreads: [NeedleThread] {
         threads.filter { thread in
@@ -48,8 +49,13 @@ struct ThreadListView: View {
             } else {
                 List {
                     ForEach(filteredThreads, id: \.id) { thread in
-                        ThreadRowView(thread: thread)
-                            .listRowBackground(Color.cream)
+                        Button {
+                            selectedThread = thread
+                        } label: {
+                            ThreadRowView(thread: thread)
+                        }
+                        .buttonStyle(.plain)
+                        .listRowBackground(Color.cream)
                     }
                     .onDelete { offsets in
                         deleteThreads(at: offsets)
@@ -68,6 +74,9 @@ struct ThreadListView: View {
         }
         .sheet(isPresented: $showAddThread) {
             AddThreadView()
+        }
+        .sheet(item: $selectedThread) { thread in
+            AddThreadView(thread: thread)
         }
     }
 

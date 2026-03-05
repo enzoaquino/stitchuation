@@ -5,6 +5,10 @@ struct AddThreadView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
+    var thread: NeedleThread?
+    private var isEditing: Bool { thread != nil }
+
+    @State private var hasLoadedThread = false
     @State private var brand = ""
     @State private var number = ""
     @State private var colorName = ""
@@ -12,7 +16,7 @@ struct AddThreadView: View {
     @State private var fiberType: FiberType = .wool
     @State private var format: ThreadFormat? = .card
     @State private var pickerColor: Color = .white
-    @State private var quantity = 1
+    @State private var quantity: Double = 1
     @State private var barcode = ""
     @State private var weightOrLength = ""
     @State private var lotNumber = ""
@@ -82,7 +86,10 @@ struct AddThreadView: View {
                 .listRowBackground(Color.parchment)
 
                 Section {
-                    Stepper("\(quantity)", value: $quantity, in: 0...999)
+                    Stepper(quantity.truncatingRemainder(dividingBy: 1) == 0
+                            ? String(format: "%.0f", quantity)
+                            : String(format: "%g", quantity),
+                            value: $quantity, in: 0...999, step: 0.25)
                 } header: {
                     Text("Quantity")
                         .font(.playfair(15, weight: .semibold))
@@ -104,12 +111,51 @@ struct AddThreadView: View {
                 }
                 .listRowBackground(Color.parchment)
 
-                Toggle("Add Another", isOn: $addAnother)
+                if isEditing {
+                    Section {
+                        Button(role: .destructive) {
+                            if let thread {
+                                thread.deletedAt = Date()
+                                thread.updatedAt = Date()
+                            }
+                            dismiss()
+                        } label: {
+                            HStack {
+                                Spacer()
+                                Text("Delete Thread")
+                                Spacer()
+                            }
+                        }
+                    }
+                    .listRowBackground(Color.parchment)
+                }
+
+                if !isEditing {
+                    Toggle("Add Another", isOn: $addAnother)
+                }
+            }
+            .onAppear {
+                guard let thread, !hasLoadedThread else { return }
+                hasLoadedThread = true
+                brand = thread.brand
+                number = thread.number
+                colorName = thread.colorName ?? ""
+                colorHex = thread.colorHex ?? ""
+                if !colorHex.isEmpty {
+                    pickerColor = Color(hex: colorHex)
+                }
+                fiberType = thread.fiberType
+                format = thread.format
+                quantity = thread.quantity
+                barcode = thread.barcode ?? ""
+                weightOrLength = thread.weightOrLength ?? ""
+                lotNumber = thread.lotNumber ?? ""
+                notes = thread.notes ?? ""
             }
             .font(.typeStyle(.body))
             .scrollContentBackground(.hidden)
             .background(Color.linen)
-            .navigationTitle("Add Thread")
+            .navigationTitle(isEditing ? "Edit Thread" : "Add Thread")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -136,32 +182,48 @@ struct AddThreadView: View {
             return colorHex.hasPrefix("#") ? colorHex : "#\(colorHex)"
         }()
 
-        let thread = NeedleThread(
-            brand: brand,
-            number: number,
-            colorName: colorName.isEmpty ? nil : colorName,
-            colorHex: normalizedHex,
-            fiberType: fiberType,
-            format: format,
-            quantity: quantity,
-            barcode: barcode.isEmpty ? nil : barcode,
-            weightOrLength: weightOrLength.isEmpty ? nil : weightOrLength,
-            lotNumber: lotNumber.isEmpty ? nil : lotNumber,
-            notes: notes.isEmpty ? nil : notes
-        )
-        modelContext.insert(thread)
-
-        if addAnother {
-            number = ""
-            colorName = ""
-            colorHex = ""
-            quantity = 1
-            barcode = ""
-            weightOrLength = ""
-            lotNumber = ""
-            notes = ""
-        } else {
+        if let thread {
+            thread.brand = brand
+            thread.number = number
+            thread.colorName = colorName.isEmpty ? nil : colorName
+            thread.colorHex = normalizedHex
+            thread.fiberType = fiberType
+            thread.format = format
+            thread.quantity = quantity
+            thread.barcode = barcode.isEmpty ? nil : barcode
+            thread.weightOrLength = weightOrLength.isEmpty ? nil : weightOrLength
+            thread.lotNumber = lotNumber.isEmpty ? nil : lotNumber
+            thread.notes = notes.isEmpty ? nil : notes
+            thread.updatedAt = Date()
             dismiss()
+        } else {
+            let newThread = NeedleThread(
+                brand: brand,
+                number: number,
+                colorName: colorName.isEmpty ? nil : colorName,
+                colorHex: normalizedHex,
+                fiberType: fiberType,
+                format: format,
+                quantity: quantity,
+                barcode: barcode.isEmpty ? nil : barcode,
+                weightOrLength: weightOrLength.isEmpty ? nil : weightOrLength,
+                lotNumber: lotNumber.isEmpty ? nil : lotNumber,
+                notes: notes.isEmpty ? nil : notes
+            )
+            modelContext.insert(newThread)
+
+            if addAnother {
+                number = ""
+                colorName = ""
+                colorHex = ""
+                quantity = 1
+                barcode = ""
+                weightOrLength = ""
+                lotNumber = ""
+                notes = ""
+            } else {
+                dismiss()
+            }
         }
     }
 }
