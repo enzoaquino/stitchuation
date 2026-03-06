@@ -8,6 +8,9 @@ struct AddMaterialView: View {
     let piece: StitchPiece
     var editing: PieceMaterial? = nil
 
+    @Query(filter: #Predicate<NeedleThread> { $0.deletedAt == nil })
+    private var threads: [NeedleThread]
+
     @State private var materialType: MaterialType = .thread
     @State private var brand = ""
     @State private var name = ""
@@ -157,6 +160,7 @@ struct AddMaterialView: View {
                 sortOrder: nextSortOrder
             )
             modelContext.insert(material)
+            MaterialMatcher.matchMaterials([material], against: threads)
         }
 
         dismiss()

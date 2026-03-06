@@ -8,6 +8,9 @@ struct ParsedMaterialsReviewView: View {
     let piece: StitchPiece
     @State var materials: [ParsedMaterial]
 
+    @Query(filter: #Predicate<NeedleThread> { $0.deletedAt == nil })
+    private var threads: [NeedleThread]
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -91,6 +94,7 @@ struct ParsedMaterialsReviewView: View {
             .map(\.sortOrder)
             .max() ?? -1
 
+        var newMaterials: [PieceMaterial] = []
         for (index, parsed) in materials.enumerated() {
             let material = PieceMaterial(
                 piece: piece,
@@ -103,7 +107,10 @@ struct ParsedMaterialsReviewView: View {
                 sortOrder: existingMaxSort + 1 + index
             )
             modelContext.insert(material)
+            newMaterials.append(material)
         }
+
+        MaterialMatcher.matchMaterials(newMaterials, against: threads)
 
         dismiss()
     }
