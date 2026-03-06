@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import AuthenticationServices
+@preconcurrency import SafariServices
 
 struct AuthResponse: Decodable {
     let user: AuthUser
@@ -56,6 +57,7 @@ final class AuthViewModel {
     var needsDisplayName = false
 
     private let networkClient: NetworkClient
+    private var webAuthSession: ASWebAuthenticationSession?
 
     init(networkClient: NetworkClient) {
         self.networkClient = networkClient
@@ -180,6 +182,42 @@ final class AuthViewModel {
         }
     }
 
+    func loginWithOAuth(provider: String) {
+        isLoading = true
+        errorMessage = nil
+
+        let authorizeURL = networkClient.baseURL.appendingPathComponent("/auth/\(provider)/authorize")
+
+        let session = ASWebAuthenticationSession(
+            url: authorizeURL,
+            callbackURLScheme: "stitchuation"
+        ) { [weak self] callbackURL, error in
+            Task { @MainActor in
+                guard let self else { return }
+                self.isLoading = false
+
+                if let error {
+                    if (error as NSError).code == ASWebAuthenticationSessionError.canceledLogin.rawValue {
+                        return
+                    }
+                    self.errorMessage = "Sign-in failed. Please try again."
+                    return
+                }
+
+                // Token extraction is handled by onOpenURL in stitchuationApp
+                guard callbackURL != nil else {
+                    self.errorMessage = "Sign-in failed. Please try again."
+                    return
+                }
+            }
+        }
+
+        session.prefersEphemeralWebBrowserSession = true
+        session.presentationContextProvider = WebAuthContextProvider.shared
+        session.start()
+        webAuthSession = session
+    }
+
     func updateDisplayName() async {
         guard !displayName.isEmpty else { return }
         isLoading = true
@@ -203,5 +241,17 @@ final class AuthViewModel {
         email = ""
         password = ""
         displayName = ""
+    }
+}
+
+private class WebAuthContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
+    static let shared = WebAuthContextProvider()
+
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = scene.windows.first else {
+            return ASPresentationAnchor()
+        }
+        return window
     }
 }

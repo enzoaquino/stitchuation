@@ -4,7 +4,7 @@ actor NetworkClient {
     private static let accessTokenKey = "accessToken"
     private static let refreshTokenKey = "refreshToken"
 
-    private let baseURL: URL
+    let baseURL: URL
     private var accessToken: String?
     private var refreshToken: String?
     private var isRefreshing = false
