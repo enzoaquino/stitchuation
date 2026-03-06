@@ -1,17 +1,26 @@
 import UIKit
 import CryptoKit
+import SwiftData
 
 actor ImageCache {
     static let shared = ImageCache()
 
     private let memoryCache = NSCache<NSString, UIImage>()
     private let diskDirectory: URL
+    private var modelContainer: ModelContainer?
 
     init() {
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
         diskDirectory = caches.appendingPathComponent("images", isDirectory: true)
         try? FileManager.default.createDirectory(at: diskDirectory, withIntermediateDirectories: true)
         memoryCache.countLimit = 100
+    }
+
+    // MARK: - Configuration
+
+    /// Configures the cache with a SwiftData model container for pending upload lookups.
+    func configure(modelContainer: ModelContainer) {
+        self.modelContainer = modelContainer
     }
 
     // MARK: - URL Detection
@@ -22,11 +31,46 @@ actor ImageCache {
         return imageKey.hasPrefix("http://") || imageKey.hasPrefix("https://")
     }
 
+    // MARK: - Pending Key Detection
+
+    /// Returns true if the imageKey uses the `pending:{uuid}` scheme for locally-stored images.
+    static func isPendingKey(_ imageKey: String?) -> Bool {
+        guard let imageKey, !imageKey.isEmpty else { return false }
+        return imageKey.hasPrefix("pending:")
+    }
+
+    /// Extracts the entity UUID from a `pending:{uuid}` key, or returns nil if invalid.
+    static func pendingEntityId(_ imageKey: String?) -> UUID? {
+        guard let imageKey, isPendingKey(imageKey) else { return nil }
+        let uuidString = String(imageKey.dropFirst("pending:".count))
+        return UUID(uuidString: uuidString)
+    }
+
     // MARK: - Public API
 
     /// Full lookup: memory → disk → network. Returns nil on failure.
+    /// For `pending:{uuid}` keys, resolves from PendingUpload in SwiftData.
     func image(for imageKey: String?, networkClient: NetworkClient?) async -> UIImage? {
         guard let imageKey, !imageKey.isEmpty else { return nil }
+
+        // 0. Pending key — resolve from memory cache or SwiftData PendingUpload
+        if Self.isPendingKey(imageKey) {
+            if let cached = cachedImage(forKey: imageKey) {
+                return cached
+            }
+            guard let entityId = Self.pendingEntityId(imageKey),
+                  let container = modelContainer else { return nil }
+            let context = ModelContext(container)
+            let predicate = #Predicate<PendingUpload> { $0.entityId == entityId }
+            var descriptor = FetchDescriptor<PendingUpload>(predicate: predicate)
+            descriptor.fetchLimit = 1
+            if let pending = try? context.fetch(descriptor).first,
+               let image = UIImage(data: pending.imageData) {
+                store(image, forKey: imageKey)
+                return image
+            }
+            return nil
+        }
 
         // 1. Memory
         if let cached = cachedImage(forKey: imageKey) {
