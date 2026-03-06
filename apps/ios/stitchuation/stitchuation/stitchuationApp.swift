@@ -54,6 +54,8 @@ struct stitchuationApp: App {
                         UserDefaults.standard.removeObject(forKey: "lastSyncTimestamp")
                     }
 
+                    await ImageCache.shared.configure(modelContainer: modelContainer)
+
                     let auth = AuthViewModel(networkClient: networkClient)
                     await auth.checkExistingSession()
 
