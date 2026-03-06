@@ -7,6 +7,9 @@ struct MaterialRowView: View {
         HStack(spacing: Spacing.md) {
             Button {
                 material.acquired.toggle()
+                if !material.acquired {
+                    material.threadId = nil
+                }
                 material.updatedAt = Date()
             } label: {
                 Image(systemName: material.acquired ? "checkmark.circle.fill" : "circle")
