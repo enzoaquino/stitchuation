@@ -157,13 +157,29 @@ struct AddJournalEntryView: View {
         )
         modelContext.insert(entry)
 
-        // Create PendingUploads for each selected image — no JournalImage records yet
-        var pendingUploads: [PendingUpload] = []
+        // Create JournalImage + PendingUpload for each photo immediately
         for (index, selectedImage) in selectedImages.enumerated() {
             let imageId = UUID()
             let compressed = compressImage(selectedImage.data, maxBytes: 10 * 1024 * 1024)
             let uploadPath = "/pieces/\(piece.id.uuidString)/entries/\(entry.id.uuidString)/images"
 
+            // Create JournalImage with pending key — image shows immediately
+            let journalImage = JournalImage(
+                id: imageId,
+                entry: entry,
+                imageKey: "pending:\(imageId.uuidString)",
+                sortOrder: index
+            )
+            modelContext.insert(journalImage)
+
+            // Cache the image in memory so it renders instantly
+            if let uiImage = UIImage(data: compressed) {
+                Task {
+                    await ImageCache.shared.store(uiImage, forKey: "pending:\(imageId.uuidString)")
+                }
+            }
+
+            // Create PendingUpload for background upload
             let pendingUpload = PendingUpload(
                 entityType: "journalImage",
                 entityId: imageId,
@@ -173,61 +189,9 @@ struct AddJournalEntryView: View {
                 sortOrder: index
             )
             modelContext.insert(pendingUpload)
-            pendingUploads.append(pendingUpload)
         }
 
         try? modelContext.save()
-
-        if let networkClient, !pendingUploads.isEmpty {
-            let pieceIdString = piece.id.uuidString
-            let entryIdString = entry.id.uuidString
-            let entryNotesForServer = entryNotes.isEmpty ? nil : entryNotes
-
-            Task {
-                do {
-                    // Ensure entry exists on server
-                    var entryBody: [String: Any] = ["id": entryIdString]
-                    if let notes = entryNotesForServer { entryBody["notes"] = notes }
-                    let entryJSON = try JSONSerialization.data(withJSONObject: entryBody)
-                    _ = try? await networkClient.postJSON(path: "/pieces/\(pieceIdString)/entries", body: entryJSON)
-
-                    // Upload each image
-                    for (index, pendingUpload) in pendingUploads.enumerated() {
-                        let responseData = try await networkClient.uploadImage(
-                            path: pendingUpload.uploadPath,
-                            imageData: pendingUpload.imageData,
-                            filename: "\(pendingUpload.entityId.uuidString).jpg"
-                        )
-                        if let json = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
-                           let imageKey = json["imageKey"] as? String {
-                            // Cache the image BEFORE notifying the view
-                            if let cachedImage = UIImage(data: pendingUpload.imageData) {
-                                await ImageCache.shared.store(cachedImage, forKey: imageKey)
-                            }
-                            await ImageCache.shared.storeToDisk(pendingUpload.imageData, forKey: imageKey)
-
-                            await MainActor.run {
-                                // Now create the JournalImage with a real imageKey
-                                let journalImage = JournalImage(
-                                    id: pendingUpload.entityId,
-                                    entry: entry,
-                                    imageKey: imageKey,
-                                    sortOrder: index
-                                )
-                                modelContext.insert(journalImage)
-                                // Upload succeeded — delete PendingUpload
-                                modelContext.delete(pendingUpload)
-                                try? modelContext.save()
-                                NotificationCenter.default.post(name: .journalImagesDidChange, object: nil)
-                            }
-                        }
-                    }
-                } catch {
-                    // Network failed — PendingUploads persist for retry
-                }
-            }
-        }
-
         dismiss()
     }
 }
