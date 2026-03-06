@@ -245,7 +245,17 @@ struct AddCanvasView: View {
             let compressed = compressImage(imageData, maxBytes: 10 * 1024 * 1024)
             let uploadPath = "/pieces/\(piece.id.uuidString)/image"
 
-            // Persist PendingUpload before attempting network
+            // Set imageKey immediately with pending key — image shows right away
+            piece.imageKey = "pending:\(piece.id.uuidString)"
+
+            // Cache the image in memory so it renders instantly
+            if let uiImage = UIImage(data: compressed) {
+                Task {
+                    await ImageCache.shared.store(uiImage, forKey: "pending:\(piece.id.uuidString)")
+                }
+            }
+
+            // Create PendingUpload for background upload
             let pendingUpload = PendingUpload(
                 entityType: "piece",
                 entityId: piece.id,
@@ -253,46 +263,6 @@ struct AddCanvasView: View {
                 imageData: compressed
             )
             modelContext.insert(pendingUpload)
-
-            if let networkClient {
-                let pieceId = piece.id
-                let pieceDesigner = piece.designer
-                let pieceDesignName = piece.designName
-                Task {
-                    do {
-                        // Ensure piece exists on server
-                        let body: [String: Any] = [
-                            "id": pieceId.uuidString,
-                            "designer": pieceDesigner,
-                            "designName": pieceDesignName,
-                        ]
-                        let jsonData = try JSONSerialization.data(withJSONObject: body)
-                        _ = try await networkClient.postJSON(path: "/pieces", body: jsonData)
-
-                        let responseData = try await networkClient.uploadImage(
-                            path: uploadPath,
-                            imageData: compressed,
-                            filename: "\(pieceId.uuidString).jpg"
-                        )
-                        if let json = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
-                           let imageKey = json["imageKey"] as? String {
-                            await MainActor.run {
-                                piece.imageKey = imageKey
-                                piece.updatedAt = Date()
-                                // Upload succeeded — delete PendingUpload
-                                modelContext.delete(pendingUpload)
-                            }
-                            // Cache the image immediately
-                            if let cachedImage = UIImage(data: compressed) {
-                                await ImageCache.shared.store(cachedImage, forKey: imageKey)
-                            }
-                            await ImageCache.shared.storeToDisk(compressed, forKey: imageKey)
-                        }
-                    } catch {
-                        // Network failed — PendingUpload persists for retry
-                    }
-                }
-            }
         }
 
         if let onProjectStarted {
