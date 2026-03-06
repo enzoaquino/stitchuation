@@ -50,6 +50,7 @@ struct PieceMaterialTests {
         #expect(material.code == nil)
         #expect(material.unit == nil)
         #expect(material.notes == nil)
+        #expect(material.threadId == nil)
         #expect(material.deletedAt == nil)
     }
 
@@ -77,6 +78,18 @@ struct PieceMaterialTests {
         #expect(material.notes == "for 18 ct")
         #expect(material.acquired == true)
         #expect(material.sortOrder == 3)
+    }
+
+    @Test("PieceMaterial initializes with threadId")
+    func initWithThreadId() {
+        let piece = StitchPiece(designer: "Test", designName: "Test Canvas")
+        let threadId = UUID()
+        let material = PieceMaterial(
+            piece: piece,
+            name: "Dark Green",
+            threadId: threadId
+        )
+        #expect(material.threadId == threadId)
     }
 
     @Test("PieceMaterial displayLine formats correctly")

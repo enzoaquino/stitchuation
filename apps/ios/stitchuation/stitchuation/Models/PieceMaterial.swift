@@ -13,6 +13,7 @@ final class PieceMaterial: Identifiable {
     var unit: String?
     var notes: String?
     var acquired: Bool
+    var threadId: UUID?
     var sortOrder: Int
     var createdAt: Date
     var updatedAt: Date
@@ -30,6 +31,7 @@ final class PieceMaterial: Identifiable {
         unit: String? = nil,
         notes: String? = nil,
         acquired: Bool = false,
+        threadId: UUID? = nil,
         sortOrder: Int = 0
     ) {
         self.id = id
@@ -42,6 +44,7 @@ final class PieceMaterial: Identifiable {
         self.unit = unit
         self.notes = notes
         self.acquired = acquired
+        self.threadId = threadId
         self.sortOrder = sortOrder
         self.createdAt = Date()
         self.updatedAt = Date()

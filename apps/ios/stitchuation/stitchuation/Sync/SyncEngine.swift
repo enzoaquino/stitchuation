@@ -266,6 +266,7 @@ final class SyncEngine {
                     "unit": AnyCodable(material.unit ?? NSNull()),
                     "notes": AnyCodable(material.notes ?? NSNull()),
                     "acquired": AnyCodable(material.acquired),
+                    "threadId": AnyCodable(material.threadId?.uuidString ?? NSNull()),
                     "sortOrder": AnyCodable(material.sortOrder),
                 ]
             }
@@ -629,6 +630,13 @@ final class SyncEngine {
             material.notes = v.value is NSNull ? nil : v.value as? String
         }
         if let acquired = data["acquired"]?.value as? Bool { material.acquired = acquired }
+        if let v = data["threadId"] {
+            if v.value is NSNull {
+                material.threadId = nil
+            } else if let str = v.value as? String {
+                material.threadId = UUID(uuidString: str)
+            }
+        }
         if let sortOrder = data["sortOrder"]?.value as? Int { material.sortOrder = sortOrder }
     }
 
