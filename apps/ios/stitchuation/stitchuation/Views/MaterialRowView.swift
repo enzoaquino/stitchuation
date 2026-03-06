@@ -35,6 +35,12 @@ struct MaterialRowView: View {
                         }
                     }
                 }
+
+                if material.threadId != nil {
+                    Text("In your stash")
+                        .font(.typeStyle(.footnote))
+                        .foregroundStyle(Color.sage)
+                }
             }
 
             Spacer()
