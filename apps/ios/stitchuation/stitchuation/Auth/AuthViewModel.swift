@@ -186,7 +186,7 @@ final class AuthViewModel {
         isLoading = true
         errorMessage = nil
 
-        let authorizeURL = networkClient.baseURL.appendingPathComponent("/auth/\(provider)/authorize")
+        let authorizeURL = networkClient.baseURL.appendingPathComponent("auth/\(provider)/authorize")
 
         let session = ASWebAuthenticationSession(
             url: authorizeURL,
@@ -204,11 +204,12 @@ final class AuthViewModel {
                     return
                 }
 
-                // Token extraction is handled by onOpenURL in stitchuationApp
-                guard callbackURL != nil else {
+                guard let callbackURL else {
                     self.errorMessage = "Sign-in failed. Please try again."
                     return
                 }
+
+                self.handleOAuthCallback(url: callbackURL)
             }
         }
 
@@ -216,6 +217,32 @@ final class AuthViewModel {
         session.presentationContextProvider = WebAuthContextProvider.shared
         session.start()
         webAuthSession = session
+    }
+
+    private func handleOAuthCallback(url: URL) {
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let queryItems = components?.queryItems ?? []
+
+        if let error = queryItems.first(where: { $0.name == "error" })?.value {
+            errorMessage = "Sign-in failed: \(error)"
+            return
+        }
+
+        guard let accessToken = queryItems.first(where: { $0.name == "access_token" })?.value,
+              let refreshToken = queryItems.first(where: { $0.name == "refresh_token" })?.value else {
+            errorMessage = "Sign-in failed: missing tokens"
+            return
+        }
+
+        let isNewUser = queryItems.first(where: { $0.name == "is_new_user" })?.value == "true"
+
+        Task {
+            await networkClient.setTokens(access: accessToken, refresh: refreshToken)
+            isAuthenticated = true
+            if isNewUser {
+                needsDisplayName = true
+            }
+        }
     }
 
     func updateDisplayName() async {

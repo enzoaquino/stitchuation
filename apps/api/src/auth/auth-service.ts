@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "../db/connection.js";
 import { users } from "../db/schema.js";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "./jwt.js";
@@ -219,7 +219,7 @@ export class AuthService {
       throw error;
     }
 
-    // Check for existing user with this provider ID
+    // Check for existing user with this provider ID (scoped by provider)
     const [existing] = await db
       .select({
         id: users.id,
@@ -227,7 +227,7 @@ export class AuthService {
         displayName: users.displayName,
       })
       .from(users)
-      .where(eq(users.providerUserId, profile.id))
+      .where(and(eq(users.providerUserId, profile.id), eq(users.provider, provider)))
       .limit(1);
 
     if (existing) {
@@ -242,7 +242,7 @@ export class AuthService {
       };
     }
 
-    // Check for existing user with same email — link provider to their account
+    // Check for existing user with same email — log them in (don't overwrite their provider binding)
     if (profile.email) {
       const [emailMatch] = await db
         .select({
@@ -258,8 +258,6 @@ export class AuthService {
         await db
           .update(users)
           .set({
-            provider,
-            providerUserId: profile.id,
             profileImageUrl: profile.profileImageUrl,
           })
           .where(eq(users.id, emailMatch.id));
