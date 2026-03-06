@@ -51,6 +51,7 @@ const ALLOWED_JOURNAL_IMAGE_FIELDS = new Set([
 
 const ALLOWED_PIECE_MATERIAL_FIELDS = new Set([
   "pieceId",
+  "threadId",
   "materialType",
   "brand",
   "name",
@@ -448,6 +449,10 @@ export class SyncService {
       const targetPieceId = allowed.pieceId as string | undefined;
       if (!targetPieceId || !UUID_REGEX.test(targetPieceId)) return;
 
+      // Validate threadId — must be a valid UUID or absent
+      const threadId = allowed.threadId as string | undefined;
+      const validThreadId = threadId && UUID_REGEX.test(threadId) ? threadId : null;
+
       // Validate materialType enum value
       const materialType = materialTypes.includes(allowed.materialType as any)
         ? (allowed.materialType as any)
@@ -457,6 +462,7 @@ export class SyncService {
         id: change.id,
         userId,
         pieceId: targetPieceId,
+        threadId: validThreadId,
         materialType,
         brand: (allowed.brand as string) ?? null,
         name: (allowed.name as string) ?? "",
@@ -480,6 +486,10 @@ export class SyncService {
         // Validate materialType enum value
         if (allowed.materialType !== undefined && !materialTypes.includes(allowed.materialType as any)) {
           delete allowed.materialType;
+        }
+        // Validate threadId — must be null or a valid UUID
+        if (allowed.threadId !== undefined && allowed.threadId !== null && !UUID_REGEX.test(allowed.threadId as string)) {
+          delete allowed.threadId;
         }
         // Convert acquired boolean to integer
         if (allowed.acquired !== undefined) {
@@ -620,6 +630,7 @@ export class SyncService {
         ? undefined
         : {
             pieceId: m.pieceId,
+            threadId: m.threadId,
             materialType: m.materialType,
             brand: m.brand,
             name: m.name,

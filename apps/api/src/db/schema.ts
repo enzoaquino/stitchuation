@@ -103,6 +103,7 @@ export const pieceMaterials = pgTable("piece_materials", {
   id: uuid("id").primaryKey().defaultRandom(),
   pieceId: uuid("piece_id").notNull().references(() => stitchPieces.id),
   userId: uuid("user_id").notNull().references(() => users.id),
+  threadId: uuid("thread_id").references(() => threads.id),
   materialType: materialTypeEnum("material_type").notNull().default("other"),
   brand: text("brand"),
   name: text("name").notNull(),
