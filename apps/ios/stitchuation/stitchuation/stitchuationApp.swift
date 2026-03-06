@@ -72,6 +72,34 @@ struct stitchuationApp: App {
 
                     await subscriptionManager.checkSubscriptionStatus()
                 }
+                .onOpenURL { url in
+                    guard url.scheme == "stitchuation",
+                          url.host == "auth" else { return }
+
+                    let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+                    let queryItems = components?.queryItems ?? []
+
+                    if let error = queryItems.first(where: { $0.name == "error" })?.value {
+                        authViewModel?.errorMessage = "Sign-in failed: \(error)"
+                        return
+                    }
+
+                    guard let accessToken = queryItems.first(where: { $0.name == "access_token" })?.value,
+                          let refreshToken = queryItems.first(where: { $0.name == "refresh_token" })?.value else {
+                        authViewModel?.errorMessage = "Sign-in failed: missing tokens"
+                        return
+                    }
+
+                    let isNewUser = queryItems.first(where: { $0.name == "is_new_user" })?.value == "true"
+
+                    Task {
+                        await networkClient.setTokens(access: accessToken, refresh: refreshToken)
+                        authViewModel?.isAuthenticated = true
+                        if isNewUser {
+                            authViewModel?.needsDisplayName = true
+                        }
+                    }
+                }
                 #if canImport(UIKit)
                 .onReceive(NotificationCenter.default.publisher(
                     for: UIApplication.willEnterForegroundNotification
