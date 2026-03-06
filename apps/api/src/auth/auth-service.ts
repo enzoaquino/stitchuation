@@ -4,6 +4,7 @@ import { db } from "../db/connection.js";
 import { users } from "../db/schema.js";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "./jwt.js";
 import { verifyAppleIdentityToken, AppleTokenError } from "./apple-token-verifier.js";
+import { exchangeCodeForProfile, OAuthError } from "./oauth-providers.js";
 import type { RegisterInput, LoginInput, ProviderAuthInput } from "./schemas.js";
 
 function requireEnv(name: string, fallback: string): string {
@@ -188,6 +189,103 @@ export class AuthService {
         displayName,
         provider: "apple",
         providerUserId: claims.sub,
+      })
+      .returning({
+        id: users.id,
+        email: users.email,
+        displayName: users.displayName,
+      });
+
+    const tokenPayload = { userId: user.id, email: user.email };
+    const accessToken = signAccessToken(tokenPayload);
+    const refreshToken = signRefreshToken(tokenPayload);
+
+    return {
+      user,
+      accessToken,
+      refreshToken,
+      isNewUser: true,
+    };
+  }
+
+  async oauthProviderAuth(provider: string, code: string) {
+    let profile;
+    try {
+      profile = await exchangeCodeForProfile(provider, code);
+    } catch (error) {
+      if (error instanceof OAuthError) {
+        throw new AuthError(`OAuth failed: ${error.message}`);
+      }
+      throw error;
+    }
+
+    // Check for existing user with this provider ID
+    const [existing] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        displayName: users.displayName,
+      })
+      .from(users)
+      .where(eq(users.providerUserId, profile.id))
+      .limit(1);
+
+    if (existing) {
+      const tokenPayload = { userId: existing.id, email: existing.email };
+      const accessToken = signAccessToken(tokenPayload);
+      const refreshToken = signRefreshToken(tokenPayload);
+      return {
+        user: existing,
+        accessToken,
+        refreshToken,
+        isNewUser: false,
+      };
+    }
+
+    // Check for existing user with same email — link provider to their account
+    if (profile.email) {
+      const [emailMatch] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          displayName: users.displayName,
+        })
+        .from(users)
+        .where(eq(users.email, profile.email))
+        .limit(1);
+
+      if (emailMatch) {
+        await db
+          .update(users)
+          .set({
+            provider,
+            providerUserId: profile.id,
+            profileImageUrl: profile.profileImageUrl,
+          })
+          .where(eq(users.id, emailMatch.id));
+
+        const tokenPayload = { userId: emailMatch.id, email: emailMatch.email };
+        const accessToken = signAccessToken(tokenPayload);
+        const refreshToken = signRefreshToken(tokenPayload);
+        return {
+          user: emailMatch,
+          accessToken,
+          refreshToken,
+          isNewUser: false,
+        };
+      }
+    }
+
+    // Create new user
+    const email = profile.email ?? `${provider}-${profile.id}@noreply.stitchuation.app`;
+    const [user] = await db
+      .insert(users)
+      .values({
+        email,
+        displayName: profile.displayName,
+        provider,
+        providerUserId: profile.id,
+        profileImageUrl: profile.profileImageUrl,
       })
       .returning({
         id: users.id,
