@@ -8,6 +8,7 @@ struct LoginView: View {
     @State private var showTitle = false
     @State private var showTagline = false
     @State private var showForm = false
+    @State private var showEmailForm = false
 
     var body: some View {
         ZStack {
@@ -32,8 +33,9 @@ struct LoginView: View {
 
                 Spacer().frame(height: Spacing.lg)
 
-                // Form
-                VStack(spacing: Spacing.xl) {
+                // Social login buttons
+                VStack(spacing: Spacing.md) {
+                    // Apple
                     SignInWithAppleButton(.signIn) { request in
                         request.requestedScopes = [.email, .fullName]
                     } onCompletion: { result in
@@ -45,31 +47,43 @@ struct LoginView: View {
                     .frame(height: 50)
                     .cornerRadius(CornerRadius.subtle)
 
-                    HStack {
-                        Rectangle().fill(Color.clay.opacity(0.3)).frame(height: 0.5)
-                        Text("or")
-                            .font(.typeStyle(.footnote))
-                            .foregroundStyle(Color.clay)
-                        Rectangle().fill(Color.clay.opacity(0.3)).frame(height: 0.5)
-                    }
-
-                    VStack(spacing: Spacing.md) {
-                        if authViewModel.isRegistering {
-                            TextField("Display Name", text: $authViewModel.displayName)
+                    // Facebook
+                    Button {
+                        authViewModel.loginWithOAuth(provider: "facebook")
+                    } label: {
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: "f.circle.fill")
+                                .font(.system(size: 20))
+                            Text("Continue with Facebook")
                         }
-                        TextField("Email", text: $authViewModel.email)
-                            .textContentType(.emailAddress)
-                            .autocorrectionDisabled()
-                            .textInputAutocapitalization(.never)
-                        SecureField("Password", text: $authViewModel.password)
-                            .textContentType(authViewModel.isRegistering ? .newPassword : .password)
+                        .font(.typeStyle(.headline))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(Color(red: 0.231, green: 0.349, blue: 0.596))
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
                     }
-                    .textFieldStyle(.plain)
-                    .font(.typeStyle(.body))
-                    .padding(Spacing.md)
-                    .background(Color.parchment)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                    .disabled(authViewModel.isLoading)
 
+                    // TikTok
+                    Button {
+                        authViewModel.loginWithOAuth(provider: "tiktok")
+                    } label: {
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: "music.note")
+                                .font(.system(size: 18))
+                            Text("Continue with TikTok")
+                        }
+                        .font(.typeStyle(.headline))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(Color.espresso)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
+                    }
+                    .disabled(authViewModel.isLoading)
+
+                    // Error message
                     if let error = authViewModel.errorMessage {
                         HStack(spacing: Spacing.sm) {
                             Image(systemName: "exclamationmark.triangle.fill")
@@ -84,37 +98,73 @@ struct LoginView: View {
                         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
                     }
 
-                    Button {
-                        Task {
-                            if authViewModel.isRegistering {
-                                await authViewModel.register()
-                            } else {
-                                await authViewModel.login()
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: Spacing.sm) {
-                            if authViewModel.isLoading {
-                                ProgressView()
-                                    .tint(Color.cream)
-                            }
-                            Text(authViewModel.isRegistering ? "Create Account" : "Sign In")
-                        }
-                            .font(.typeStyle(.headline))
-                            .foregroundStyle(Color.cream)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, Spacing.md)
-                            .background(Color.terracotta)
-                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
-                            .warmShadow(.elevated)
+                    // Loading indicator
+                    if authViewModel.isLoading {
+                        ProgressView()
+                            .tint(Color.terracotta)
                     }
-                    .disabled(authViewModel.isLoading)
 
-                    Button(authViewModel.isRegistering ? "Already have an account? Sign in" : "Create an account") {
-                        authViewModel.isRegistering.toggle()
+                    // Email fallback
+                    if showEmailForm {
+                        HStack {
+                            Rectangle().fill(Color.clay.opacity(0.3)).frame(height: 0.5)
+                            Text("or")
+                                .font(.typeStyle(.footnote))
+                                .foregroundStyle(Color.clay)
+                            Rectangle().fill(Color.clay.opacity(0.3)).frame(height: 0.5)
+                        }
+
+                        VStack(spacing: Spacing.md) {
+                            if authViewModel.isRegistering {
+                                TextField("Display Name", text: $authViewModel.displayName)
+                            }
+                            TextField("Email", text: $authViewModel.email)
+                                .textContentType(.emailAddress)
+                                .autocorrectionDisabled()
+                                .textInputAutocapitalization(.never)
+                            SecureField("Password", text: $authViewModel.password)
+                                .textContentType(authViewModel.isRegistering ? .newPassword : .password)
+                        }
+                        .textFieldStyle(.plain)
+                        .font(.typeStyle(.body))
+                        .padding(Spacing.md)
+                        .background(Color.parchment)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+
+                        Button {
+                            Task {
+                                if authViewModel.isRegistering {
+                                    await authViewModel.register()
+                                } else {
+                                    await authViewModel.login()
+                                }
+                            }
+                        } label: {
+                            Text(authViewModel.isRegistering ? "Create Account" : "Sign In")
+                                .font(.typeStyle(.headline))
+                                .foregroundStyle(Color.cream)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, Spacing.md)
+                                .background(Color.terracotta)
+                                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card))
+                                .warmShadow(.elevated)
+                        }
+                        .disabled(authViewModel.isLoading)
+
+                        Button(authViewModel.isRegistering ? "Already have an account? Sign in" : "Create an account") {
+                            authViewModel.isRegistering.toggle()
+                        }
+                        .font(.typeStyle(.footnote))
+                        .foregroundStyle(Color.terracotta)
+                    } else {
+                        Button("Sign in with email") {
+                            withAnimation(Motion.gentle) {
+                                showEmailForm = true
+                            }
+                        }
+                        .font(.typeStyle(.footnote))
+                        .foregroundStyle(Color.walnut)
                     }
-                    .font(.typeStyle(.footnote))
-                    .foregroundStyle(Color.terracotta)
                 }
                 .padding(.horizontal, Spacing.xl)
                 .opacity(showForm ? 1 : 0)
