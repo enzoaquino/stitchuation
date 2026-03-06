@@ -3,11 +3,13 @@ import { SyncService } from "../../src/sync/sync-service.js";
 import { AuthService } from "../../src/auth/auth-service.js";
 import { PieceService } from "../../src/pieces/piece-service.js";
 import { MaterialService } from "../../src/pieces/material-service.js";
+import { ThreadService } from "../../src/threads/thread-service.js";
 
 describe("SyncService — PieceMaterial", () => {
   let syncService: SyncService;
   let pieceService: PieceService;
   let materialService: MaterialService;
+  let threadService: ThreadService;
   let userId: string;
   let pieceId: string;
 
@@ -15,6 +17,7 @@ describe("SyncService — PieceMaterial", () => {
     syncService = new SyncService();
     pieceService = new PieceService();
     materialService = new MaterialService();
+    threadService = new ThreadService();
     const authService = new AuthService();
     const { user } = await authService.register({
       email: `sync-material-${Date.now()}@example.com`,
@@ -212,5 +215,158 @@ describe("SyncService — PieceMaterial", () => {
 
     const material = await materialService.getById(userId, materialId);
     expect(material).toBeNull();
+  });
+
+  it("syncs threadId when pushing material with linked thread", async () => {
+    // Create a thread via sync
+    const threadId = crypto.randomUUID();
+    await syncService.sync(userId, {
+      lastSync: null,
+      changes: [
+        {
+          type: "thread",
+          action: "upsert",
+          id: threadId,
+          data: {
+            brand: "DMC",
+            number: "321",
+            colorName: "Red",
+            fiberType: "cotton",
+            quantity: 2,
+          },
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    // Push a material with threadId referencing the thread
+    const materialId = crypto.randomUUID();
+    await syncService.sync(userId, {
+      lastSync: null,
+      changes: [
+        {
+          type: "pieceMaterial",
+          action: "upsert",
+          id: materialId,
+          data: {
+            pieceId,
+            threadId,
+            materialType: "thread",
+            brand: "DMC",
+            name: "Red",
+            code: "321",
+            quantity: 2,
+          },
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    const material = await materialService.getById(userId, materialId);
+    expect(material).not.toBeNull();
+    expect(material?.threadId).toBe(threadId);
+  });
+
+  it("pulls threadId in sync response", async () => {
+    const before = new Date(Date.now() - 1000).toISOString();
+
+    // Create a thread
+    const thread = await threadService.create(userId, {
+      brand: "Appleton",
+      number: "992",
+      colorName: "Bright Yellow",
+      quantity: 1,
+    });
+
+    // Create a material linked to the thread
+    const materialId = crypto.randomUUID();
+    await syncService.sync(userId, {
+      lastSync: null,
+      changes: [
+        {
+          type: "pieceMaterial",
+          action: "upsert",
+          id: materialId,
+          data: {
+            pieceId,
+            threadId: thread.id,
+            materialType: "thread",
+            brand: "Appleton",
+            name: "Bright Yellow",
+            code: "992",
+            quantity: 1,
+          },
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    // Pull changes since before creation
+    const result = await syncService.sync(userId, {
+      lastSync: before,
+      changes: [],
+    });
+
+    const found = result.changes.find(
+      (c: any) => c.type === "pieceMaterial" && c.id === materialId,
+    );
+    expect(found).toBeDefined();
+    expect(found!.data?.threadId).toBe(thread.id);
+  });
+
+  it("allows clearing threadId via sync update", async () => {
+    // Create a thread
+    const thread = await threadService.create(userId, {
+      brand: "Silk Mori",
+      number: "100",
+      quantity: 3,
+    });
+
+    // Create a material with threadId
+    const materialId = crypto.randomUUID();
+    await syncService.sync(userId, {
+      lastSync: null,
+      changes: [
+        {
+          type: "pieceMaterial",
+          action: "upsert",
+          id: materialId,
+          data: {
+            pieceId,
+            threadId: thread.id,
+            materialType: "thread",
+            brand: "Silk Mori",
+            name: "White",
+            code: "100",
+            quantity: 3,
+          },
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    // Verify threadId is set
+    const before = await materialService.getById(userId, materialId);
+    expect(before?.threadId).toBe(thread.id);
+
+    // Send an update with threadId: null to clear it
+    const newerTimestamp = new Date(Date.now() + 60000).toISOString();
+    await syncService.sync(userId, {
+      lastSync: null,
+      changes: [
+        {
+          type: "pieceMaterial",
+          action: "upsert",
+          id: materialId,
+          data: {
+            threadId: null,
+          },
+          updatedAt: newerTimestamp,
+        },
+      ],
+    });
+
+    const updated = await materialService.getById(userId, materialId);
+    expect(updated?.threadId).toBeNull();
   });
 });
