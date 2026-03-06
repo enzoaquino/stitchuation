@@ -47,41 +47,42 @@ struct LoginView: View {
                     .frame(height: 50)
                     .cornerRadius(CornerRadius.subtle)
 
+                    // TODO: Re-enable when OAuth credentials are configured
                     // Facebook
-                    Button {
-                        authViewModel.loginWithOAuth(provider: "facebook")
-                    } label: {
-                        HStack(spacing: Spacing.sm) {
-                            Image(systemName: "f.circle.fill")
-                                .font(.system(size: 20))
-                            Text("Continue with Facebook")
-                        }
-                        .font(.typeStyle(.headline))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(Color(red: 0.231, green: 0.349, blue: 0.596))
-                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
-                    }
-                    .disabled(authViewModel.isLoading)
-
-                    // TikTok
-                    Button {
-                        authViewModel.loginWithOAuth(provider: "tiktok")
-                    } label: {
-                        HStack(spacing: Spacing.sm) {
-                            Image(systemName: "music.note")
-                                .font(.system(size: 18))
-                            Text("Continue with TikTok")
-                        }
-                        .font(.typeStyle(.headline))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(Color.espresso)
-                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
-                    }
-                    .disabled(authViewModel.isLoading)
+//                    Button {
+//                        authViewModel.loginWithOAuth(provider: "facebook")
+//                    } label: {
+//                        HStack(spacing: Spacing.sm) {
+//                            Image(systemName: "f.circle.fill")
+//                                .font(.system(size: 20))
+//                            Text("Continue with Facebook")
+//                        }
+//                        .font(.typeStyle(.headline))
+//                        .foregroundStyle(.white)
+//                        .frame(maxWidth: .infinity)
+//                        .frame(height: 50)
+//                        .background(Color(red: 0.231, green: 0.349, blue: 0.596))
+//                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
+//                    }
+//                    .disabled(authViewModel.isLoading)
+//
+//                    // TikTok
+//                    Button {
+//                        authViewModel.loginWithOAuth(provider: "tiktok")
+//                    } label: {
+//                        HStack(spacing: Spacing.sm) {
+//                            Image(systemName: "music.note")
+//                                .font(.system(size: 18))
+//                            Text("Continue with TikTok")
+//                        }
+//                        .font(.typeStyle(.headline))
+//                        .foregroundStyle(.white)
+//                        .frame(maxWidth: .infinity)
+//                        .frame(height: 50)
+//                        .background(Color.espresso)
+//                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.subtle))
+//                    }
+//                    .disabled(authViewModel.isLoading)
 
                     // Error message
                     if let error = authViewModel.errorMessage {
