@@ -17,10 +17,15 @@ final class PendingUpload {
     /// Sort order for journalImage uploads (needed for retry to create JournalImage)
     var sortOrder: Int?
 
-    static let maxRetries = 5
+    /// Minimum seconds to wait before next retry: 2^retryCount, capped at 1 hour.
+    var backoffSeconds: TimeInterval {
+        min(pow(2.0, Double(retryCount)), 3600)
+    }
 
-    var hasFailed: Bool {
-        retryCount >= Self.maxRetries
+    /// Whether enough time has passed since last attempt to retry.
+    var isReadyForRetry: Bool {
+        guard let lastAttempt = lastAttemptAt else { return true }
+        return Date().timeIntervalSince(lastAttempt) >= backoffSeconds
     }
 
     init(

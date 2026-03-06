@@ -24,7 +24,7 @@ final class UploadQueue {
         )
         guard let uploads = try? context.fetch(descriptor) else { return }
 
-        for upload in uploads where !upload.hasFailed {
+        for upload in uploads where upload.isReadyForRetry {
             await processUpload(upload, context: context)
         }
     }

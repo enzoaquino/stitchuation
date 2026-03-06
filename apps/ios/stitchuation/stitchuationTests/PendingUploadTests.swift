@@ -62,15 +62,69 @@ struct PendingUploadTests {
         #expect(upload.lastAttemptAt != nil)
     }
 
-    @Test("max retries threshold is 5")
-    func maxRetries() {
+    @Test("backoff seconds doubles with retry count")
+    func backoffSeconds() {
         let upload = PendingUpload(
             entityType: "piece",
             entityId: UUID(),
             uploadPath: "/pieces/abc/image",
             imageData: Data([0xFF, 0xD8])
         )
-        upload.retryCount = 5
-        #expect(upload.hasFailed)
+        #expect(upload.backoffSeconds == 1.0) // 2^0
+
+        upload.retryCount = 3
+        #expect(upload.backoffSeconds == 8.0) // 2^3
+
+        upload.retryCount = 10
+        #expect(upload.backoffSeconds == 1024.0) // 2^10
+    }
+
+    @Test("backoff caps at 1 hour")
+    func backoffCap() {
+        let upload = PendingUpload(
+            entityType: "piece",
+            entityId: UUID(),
+            uploadPath: "/pieces/abc/image",
+            imageData: Data([0xFF, 0xD8])
+        )
+        upload.retryCount = 20
+        #expect(upload.backoffSeconds == 3600.0)
+    }
+
+    @Test("isReadyForRetry returns true with no lastAttemptAt")
+    func readyNoLastAttempt() {
+        let upload = PendingUpload(
+            entityType: "piece",
+            entityId: UUID(),
+            uploadPath: "/pieces/abc/image",
+            imageData: Data([0xFF, 0xD8])
+        )
+        #expect(upload.isReadyForRetry == true)
+    }
+
+    @Test("isReadyForRetry returns false when recently attempted")
+    func notReadyRecentAttempt() {
+        let upload = PendingUpload(
+            entityType: "piece",
+            entityId: UUID(),
+            uploadPath: "/pieces/abc/image",
+            imageData: Data([0xFF, 0xD8])
+        )
+        upload.retryCount = 5  // backoff = 32 seconds
+        upload.lastAttemptAt = Date()  // just now
+        #expect(upload.isReadyForRetry == false)
+    }
+
+    @Test("isReadyForRetry returns true when backoff has elapsed")
+    func readyAfterBackoff() {
+        let upload = PendingUpload(
+            entityType: "piece",
+            entityId: UUID(),
+            uploadPath: "/pieces/abc/image",
+            imageData: Data([0xFF, 0xD8])
+        )
+        upload.retryCount = 1  // backoff = 2 seconds
+        upload.lastAttemptAt = Date(timeIntervalSinceNow: -10)  // 10 seconds ago
+        #expect(upload.isReadyForRetry == true)
     }
 }
