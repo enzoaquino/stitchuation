@@ -61,6 +61,12 @@ struct ParsedMaterialsReviewView: View {
                                             .foregroundStyle(Color.clay)
                                     }
                                 }
+
+                                if hasMatch(materials[index]) {
+                                    Text("In your stash")
+                                        .font(.typeStyle(.footnote))
+                                        .foregroundStyle(Color.sage)
+                                }
                             }
                             .padding(.vertical, Spacing.xs)
                             .listRowBackground(Color.cream)
@@ -86,6 +92,21 @@ struct ParsedMaterialsReviewView: View {
                 }
             }
         }
+    }
+
+    private func hasMatch(_ parsed: ParsedMaterial) -> Bool {
+        guard parsed.materialType == .thread,
+              let brand = parsed.brand, !brand.isEmpty,
+              let code = parsed.code, !code.isEmpty else { return false }
+
+        let normalizedBrand = MaterialMatcher.normalize(brand)
+        let normalizedCode = MaterialMatcher.normalize(code)
+
+        let matches = threads.filter { thread in
+            MaterialMatcher.normalize(thread.brand) == normalizedBrand
+                && MaterialMatcher.normalize(thread.number) == normalizedCode
+        }
+        return matches.count == 1
     }
 
     private func saveAll() {
