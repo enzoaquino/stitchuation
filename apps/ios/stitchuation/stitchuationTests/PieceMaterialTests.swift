@@ -4,9 +4,9 @@ import Foundation
 
 @Suite("PieceMaterial Tests")
 struct PieceMaterialTests {
-    @Test("MaterialType has 4 cases")
+    @Test("MaterialType has 5 cases")
     func materialTypeCaseCount() {
-        #expect(MaterialType.allCases.count == 4)
+        #expect(MaterialType.allCases.count == 5)
     }
 
     @Test("MaterialType raw values match API values")
@@ -14,6 +14,7 @@ struct PieceMaterialTests {
         #expect(MaterialType.thread.rawValue == "thread")
         #expect(MaterialType.bead.rawValue == "bead")
         #expect(MaterialType.accessory.rawValue == "accessory")
+        #expect(MaterialType.ribbon.rawValue == "ribbon")
         #expect(MaterialType.other.rawValue == "other")
     }
 
@@ -22,6 +23,7 @@ struct PieceMaterialTests {
         #expect(MaterialType.thread.displayName == "Thread")
         #expect(MaterialType.bead.displayName == "Bead")
         #expect(MaterialType.accessory.displayName == "Accessory")
+        #expect(MaterialType.ribbon.displayName == "Ribbon")
         #expect(MaterialType.other.displayName == "Other")
     }
 
