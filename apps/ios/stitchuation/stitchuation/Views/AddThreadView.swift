@@ -8,6 +8,9 @@ struct AddThreadView: View {
     var thread: NeedleThread?
     private var isEditing: Bool { thread != nil }
 
+    @Query(filter: #Predicate<PieceMaterial> { $0.deletedAt == nil })
+    private var allMaterials: [PieceMaterial]
+
     @State private var hasLoadedThread = false
     @State private var brand = ""
     @State private var number = ""
@@ -211,6 +214,11 @@ struct AddThreadView: View {
                 notes: notes.isEmpty ? nil : notes
             )
             modelContext.insert(newThread)
+
+            let unlinkedThreadMaterials = allMaterials.filter {
+                $0.threadId == nil && $0.materialType == .thread
+            }
+            MaterialMatcher.matchThread(newThread, against: unlinkedThreadMaterials)
 
             if addAnother {
                 number = ""
