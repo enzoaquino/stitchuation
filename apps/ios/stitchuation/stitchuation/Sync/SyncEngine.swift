@@ -169,7 +169,7 @@ final class SyncEngine {
                     "designer": AnyCodable(piece.designer),
                     "designName": AnyCodable(piece.designName),
                     "status": AnyCodable(piece.statusRaw),
-                    "imageKey": AnyCodable(piece.imageKey ?? NSNull()),
+                    "imageKey": AnyCodable(ImageCache.isPendingKey(piece.imageKey) ? NSNull() : (piece.imageKey ?? NSNull())),
                     "size": AnyCodable(piece.size ?? NSNull()),
                     "meshCount": AnyCodable(piece.meshCount ?? NSNull()),
                     "notes": AnyCodable(piece.notes ?? NSNull()),
@@ -220,8 +220,9 @@ final class SyncEngine {
         let allImageDescriptor = FetchDescriptor<JournalImage>()
         let allImages = try context.fetch(allImageDescriptor)
         let unsyncedImages = allImages.filter { image in
-            // Skip images with empty imageKey — upload hasn't completed yet
+            // Skip images with empty or pending imageKey — upload hasn't completed yet
             !image.imageKey.isEmpty &&
+            !ImageCache.isPendingKey(image.imageKey) &&
             (image.syncedAt == nil || image.updatedAt > (image.syncedAt ?? .distantPast))
         }
 
