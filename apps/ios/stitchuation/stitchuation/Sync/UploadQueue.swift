@@ -60,6 +60,10 @@ final class UploadQueue {
                 await ImageCache.shared.storeToDisk(upload.imageData, forKey: imageKey)
             }
 
+            // Evict the old pending key from memory cache
+            let pendingKey = "pending:\(upload.entityId.uuidString)"
+            await ImageCache.shared.evict(forKey: pendingKey)
+
             // Success — delete the pending upload
             context.delete(upload)
             try? context.save()
